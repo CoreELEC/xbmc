@@ -25,6 +25,8 @@
 
 #include <algorithm>
 
+#include <fstream>
+
 CLinuxTimezone::CLinuxTimezone()
 {
    char* line = NULL;
@@ -142,6 +144,16 @@ void CLinuxTimezone::OnSettingChanged(std::shared_ptr<const CSetting> setting)
   const std::string &settingId = setting->GetId();
   if (settingId == CSettings::SETTING_LOCALE_TIMEZONE)
   {
+    std::ofstream out("/storage/.cache/timezone");
+    if (out)
+    {
+      const std::string tz = std::string("TIMEZONE=") + (std::static_pointer_cast<const CSettingString>(setting)->GetValue().c_str());
+      out << tz << std::endl;
+      out.flush();
+      out.close();
+      system("systemctl restart tz-data.service");
+    }
+
     SetTimezone(std::static_pointer_cast<const CSettingString>(setting)->GetValue());
 
     CDateTime::ResetTimezoneBias();
