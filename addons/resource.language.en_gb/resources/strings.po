@@ -22417,7 +22417,22 @@ msgctxt "#37123"
 msgid "{0:d} GB"
 msgstr ""
 
-#empty strings from id 37124 to 38010
+#empty strings from id 37124 to 38006
+
+#: system/settings/settings.xml
+msgctxt "#38007"
+msgid "Boost centre channel when downmixing"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#38008"
+msgid "Increase this value to make the dialogue louder compared to background sounds when downmixing multichannel audio"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#38009"
+msgid "{0} dB"
+msgstr ""
 
 #. Setting #38011 "Show All Items entry"
 #: system/settings/settings.xml
