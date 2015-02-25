@@ -81,7 +81,9 @@ float GetAdjustmentValue(const std::shared_ptr<const CSetting>& setting)
 
 CGUIDialogVideoSettings::CGUIDialogVideoSettings()
     : CGUIDialogSettingsManualBase(WINDOW_DIALOG_VIDEO_OSD_SETTINGS, "DialogSettings.xml")
-{ }
+{
+  m_loadType = LOAD_ON_GUI_INIT;
+}
 
 CGUIDialogVideoSettings::~CGUIDialogVideoSettings() = default;
 
