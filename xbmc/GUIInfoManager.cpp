@@ -1921,7 +1921,6 @@ const infomap system_labels[] = {
     {"currentcontrol", SYSTEM_CURRENT_CONTROL},
     {"currentcontrolid", SYSTEM_CURRENT_CONTROL_ID},
     {"dvdlabel", SYSTEM_DVD_LABEL},
-    {"internetstate", SYSTEM_INTERNET_STATE},
     {"osversioninfo", SYSTEM_OS_VERSION_INFO},
     {"kernelversion", SYSTEM_OS_VERSION_INFO}, // old, not correct name
     {"uptime", SYSTEM_UPTIME},
