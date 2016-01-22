@@ -255,6 +255,10 @@ public:
    */
   virtual void Reopen() {}
 
+  /**
+  * Indicates that the decoder supports extention streams.
+  */
+  virtual bool SupportsExtention() { return false; }
 protected:
   CProcessInfo &m_processInfo;
 };
