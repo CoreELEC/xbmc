@@ -20,6 +20,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <queue>
 
 extern "C"
 {
@@ -49,6 +50,7 @@ extern "C"
 
 class CDVDOverlayImage;
 class IVideoPlayer;
+class CDVDDemux;
 
 class CDVDInputStreamBluray
   : public CDVDInputStream
@@ -56,6 +58,7 @@ class CDVDInputStreamBluray
   , public CDVDInputStream::IChapter
   , public CDVDInputStream::IPosTime
   , public CDVDInputStream::IMenus
+  , public CDVDInputStream::IExtentionStream
 {
 public:
   CDVDInputStreamBluray() = delete;
@@ -151,6 +154,11 @@ public:
   BLURAY_TITLE_INFO* GetTitleFile(const std::string& name);
 
   void ProcessEvent();
+  CDVDDemux* GetExtentionDemux() override { return m_pMVCDemux; };
+  bool HasExtention() override { return m_bMVCPlayback; }
+  bool AreEyesFlipped() override { return m_bFlipEyes; }
+  void DisableExtention() override;
+  bool OpenNextStream() override;
 
   void SaveCurrentState(const CStreamDetails& details) override;
   UpdateState UpdateItemFromSavedStates(CFileItem& item, double time, bool& closed) override;
@@ -163,6 +171,11 @@ protected:
   void OverlayClose();
   static void OverlayClear(SPlane& plane, int x, int y, int w, int h);
   static void OverlayInit (SPlane& plane, int w, int h);
+  bool ProcessItem(int playitem);
+
+  bool OpenMVCDemux(int playItem);
+  bool CloseMVCDemux();
+  void SeekMVCDemux(int64_t time);
 
   IVideoPlayer* m_player = nullptr;
   BLURAY* m_bd = nullptr;
@@ -180,6 +193,19 @@ protected:
   bool m_hasOverlay = false;
   bool m_navmode = false;
   int m_dispTimeBeforeRead = 0;
+  int                 m_nTitles = -1;
+  std::string         m_root;
+
+  // MVC related members
+  CDVDDemux*          m_pMVCDemux = nullptr;
+  CDVDInputStream    *m_pMVCInput = nullptr;
+  bool                m_bMVCPlayback = false;
+  int                 m_nMVCSubPathIndex = 0;
+  BLURAY_CLIP_INFO*   m_nMVCClip = nullptr;
+  bool                m_bFlipEyes = false;
+  bool                m_bMVCDisabled = false;
+  uint64_t            m_clipStartTime = 0;
+  std::queue<int>     m_clipQueue;
 
   typedef std::shared_ptr<CDVDOverlayImage> SOverlay;
   typedef std::list<SOverlay> SOverlays;
