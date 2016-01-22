@@ -75,6 +75,7 @@ public:
   int GetVideoBitrate() override;
   void SetSpeed(int iSpeed) override;
   std::string GetContentGeometryInfo() override { return m_liveGeometry.GetDebugInfo(); }
+  bool SupportsExtention() const override { return m_pVideoCodec && m_pVideoCodec->SupportsExtention(); }
 
   // classes
   CDVDOverlayContainer* m_pOverlayContainer;

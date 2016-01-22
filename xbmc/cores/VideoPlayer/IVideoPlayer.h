@@ -98,6 +98,7 @@ public:
   virtual int GetVideoBitrate() = 0;
   virtual void SetSpeed(int iSpeed) = 0;
   virtual bool IsEOS() { return false; }
+  virtual bool SupportsExtention() const = 0;
 
   //! \brief Live content geometry state for the debug overlay; empty when a player does not
   //! sample.

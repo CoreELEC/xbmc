@@ -4894,6 +4894,10 @@ bool CVideoPlayer::OpenVideoStream(CDVDStreamInfo& hint, bool reset)
 
     SendPresentationState(*player);
 
+    const std::shared_ptr<CDVDInputStream::IExtentionStream>  pExt = std::dynamic_pointer_cast<CDVDInputStream::IExtentionStream>(m_pInputStream);
+    if (pExt && !static_cast<IDVDStreamPlayerVideo*>(player)->SupportsExtention())
+      pExt->DisableExtention();
+
     // look for any EDL files
     m_Edl.Clear();
     float fFramesPerSecond = 0.0f;

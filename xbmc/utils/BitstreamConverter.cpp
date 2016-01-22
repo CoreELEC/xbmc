@@ -283,7 +283,10 @@ bool CBitstreamConverter::Open(enum AVCodecID codec, const uint8_t* in_extradata
       if (in_extradata[0] == 1)
       {
         CLog::LogF(LOGINFO, "Bitstream to annexb init");
-        return BitstreamConvertInit("h264_mp4toannexb", in_extradata, in_extrasize);
+        if (!BitstreamConvertInit("h264_mp4toannexb", in_extradata, in_extrasize))
+          return false;
+        AppendMvcParameterSets(in_extradata, in_extrasize);
+        return true;
       }
       CLog::LogF(LOGINFO, "Invalid avcC");
       return false;
@@ -578,6 +581,34 @@ bool CBitstreamConverter::BitstreamConvertInit(const char* filterName,
     m_nalLengthSize = (extraData[m_codec == AV_CODEC_ID_H264 ? 4 : 21] & 3) + 1;
   m_convert_bitstream = true;
   return true;
+}
+
+void CBitstreamConverter::AppendMvcParameterSets(const uint8_t* extraData, int extraDataSize)
+{
+  // the mvcC atom after the avcC carries the SPS and PPS of the dependent view
+  const uint8_t* const end = extraData + extraDataSize;
+  const uint8_t* p = std::search(extraData, end, "mvcC", "mvcC" + 4);
+  if (p == end || end - p < 4 + 6)
+    return;
+  p += 4 + 5;
+
+  std::vector<uint8_t> parameterSets(m_extraData.GetData(),
+                                     m_extraData.GetData() + m_extraData.GetSize());
+  for (int list = 0; list < 2 && p < end; ++list)
+  {
+    int count = list == 0 ? (*p++ & 0x1f) : *p++;
+    while (count-- > 0 && end - p >= 2)
+    {
+      const uint16_t size = static_cast<uint16_t>(p[0] << 8 | p[1]);
+      p += 2;
+      if (size > end - p)
+        return;
+      parameterSets.insert(parameterSets.end(), {0, 0, 0, 1});
+      parameterSets.insert(parameterSets.end(), p, p + size);
+      p += size;
+    }
+  }
+  m_extraData = FFmpegExtraData{parameterSets.data(), parameterSets.size()};
 }
 
 bool CBitstreamConverter::IsIDR(uint8_t unit_type)
