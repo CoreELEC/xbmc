@@ -9,6 +9,7 @@
 #pragma once
 
 #include "DVDDemux.h"
+#include "DemuxStreamSSIF.h"
 #include "threads/CriticalSection.h"
 #include "threads/SystemClock.h"
 #include <map>
@@ -129,7 +130,6 @@ protected:
   void CreateStreams(unsigned int program = UINT_MAX);
   void DisposeStreams();
   void RemoveStream(CDemuxStream *stream);
-  bool ProcessH264MVCExtradata(uint8_t *data, int data_size);
   void ParsePacket(AVPacket* pkt);
   void SaveProbedStreamParameters();
   void RestoreProbedStreamParameters();
@@ -161,6 +161,7 @@ protected:
   bool     m_bMatroska;
   bool     m_bAVI;
   bool     m_bSup;
+  CDemuxStreamSSIF* m_pSSIF;
   int      m_speed;
   unsigned int m_program;
   unsigned int m_streamsInProgram;
