@@ -120,6 +120,7 @@ protected:
 
 private:
   bool BitstreamConvertInit(const char* filterName, const uint8_t* extraData, int extraDataSize);
+  void AppendMvcParameterSets(const uint8_t* extraData, int extraDataSize);
   bool HasRecoveryPoint(const uint8_t* data, int size);
   bool BitstreamConvert(const uint8_t* pData, int iSize);
   bool ProcessAnnexB(uint8_t* data, int size);
