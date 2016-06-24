@@ -152,7 +152,7 @@ void CDebugRenderer::CRenderer::Render(int idx)
 {
   std::vector<COverlay*> render;
   std::vector<SElement>& list = m_buffers[idx];
-  float posY = 0.0f;
+  float posY = 200.0f;
   for (std::vector<SElement>::iterator it = list.begin(); it != list.end(); ++it)
   {
     COverlay* o = nullptr;
@@ -165,7 +165,7 @@ void CDebugRenderer::CRenderer::Render(int idx)
 
     COverlayText *text = dynamic_cast<COverlayText*>(o);
     if (text)
-      text->PrepareRender("arial.ttf", 1, 100, 15, 0, m_font, m_fontBorder, UTILS::COLOR::NONE,
+      text->PrepareRender("teletext.ttf", 1, 100, 12, 0, m_font, m_fontBorder, UTILS::COLOR::NONE,
                           m_rv);
 
     RESOLUTION_INFO res = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(CServiceBroker::GetWinSystem()->GetGfxContext().GetVideoResolution());
