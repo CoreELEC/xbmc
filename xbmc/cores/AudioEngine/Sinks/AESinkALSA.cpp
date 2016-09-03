@@ -27,6 +27,7 @@
 #include "settings/SettingsComponent.h"
 #if defined(HAS_LIBAMCODEC)
 #include "utils/AMLUtils.h"
+#include "utils/SysfsUtils.h"
 #endif
 
 #ifdef TARGET_POSIX
@@ -513,12 +514,48 @@ bool CAESinkALSA::Initialize(AEAudioFormat &format, std::string &device)
   {
     m_passthrough   = false;
   }
-#if defined(HAS_LIBAMCODEC)
-  if (aml_present())
+
+  if (device.find("M8AUDIO") != std::string::npos)
   {
+    int aml_digital_codec = 0;
+
+    if (m_passthrough)
+    {
+      switch(format.m_streamInfo.m_type)
+      {
+        case CAEStreamInfo::STREAM_TYPE_AC3:
+          aml_digital_codec = 2;
+          break;
+
+        case CAEStreamInfo::STREAM_TYPE_DTS_512:
+        case CAEStreamInfo::STREAM_TYPE_DTS_1024:
+        case CAEStreamInfo::STREAM_TYPE_DTS_2048:
+        case CAEStreamInfo::STREAM_TYPE_DTSHD_CORE:
+        case CAEStreamInfo::STREAM_TYPE_DTSHD:
+          aml_digital_codec = 3;
+          break;
+
+        case CAEStreamInfo::STREAM_TYPE_EAC3:
+          aml_digital_codec = 4;
+          break;
+
+        case CAEStreamInfo::STREAM_TYPE_DTSHD_MA:
+          aml_digital_codec = 8;
+          break;
+
+        case CAEStreamInfo::STREAM_TYPE_TRUEHD:
+          aml_digital_codec = 7;
+          break;
+      }
+    }
+    else
+    {
+      device = "@:CARD=AMLM8AUDIO,DEV=0";
+    }
+
     aml_set_audio_passthrough(m_passthrough);
+    SysfsUtils::SetInt("/sys/class/audiodsp/digital_codec", aml_digital_codec);
   }
-#endif
 
   if (inconfig.channels == 0)
   {
@@ -1571,6 +1608,11 @@ void CAESinkALSA::EnumerateDevice(AEDeviceInfoList &list, const std::string &dev
 
     if (snd_pcm_hw_params_test_format(pcmhandle, hwparams, fmt) >= 0)
       info.m_dataFormats.push_back(i);
+  }
+
+  if (info.m_displayName.find("AML-M8AUDIO") != std::string::npos && info.m_deviceType != AE_DEVTYPE_HDMI)
+  {
+    info.m_displayNameExtra = "PCM";
   }
 
   if (info.m_deviceType == AE_DEVTYPE_HDMI)
