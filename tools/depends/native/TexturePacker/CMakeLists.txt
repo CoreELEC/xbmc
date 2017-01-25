@@ -1,3 +1,5 @@
+set(CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/../../../..)
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 if(APPLE)
