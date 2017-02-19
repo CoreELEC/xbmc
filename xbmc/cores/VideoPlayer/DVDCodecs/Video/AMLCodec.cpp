@@ -1641,6 +1641,11 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
   am_private->gcodec.ratio64     = am_private->video_ratio64;
   am_private->gcodec.param       = NULL;
 
+  if (am_private->video_format == VFORMAT_VC1)
+    SysfsUtils::SetInt("/sys/module/di/parameters/bypass_prog", 0);
+  else
+    SysfsUtils::SetInt("/sys/module/di/parameters/bypass_prog", 1);
+
   switch(am_private->video_format)
   {
     default:
