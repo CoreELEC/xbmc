@@ -27,6 +27,15 @@ namespace ADDON
   void OnPreUnInstall(const AddonPtr& addon);
   void OnPostUnInstall(const AddonPtr& addon);
 
+typedef enum {
+  LE_ADDON_ENABLED,
+  LE_ADDON_DISABLED,
+  LE_ADDON_POST_UPDATE,
+  LE_ADDON_PRE_UNINSTALL,
+} LE_ADDON_CONTEXT;
+
+void LEAddonHook(const AddonPtr& addon, const LE_ADDON_CONTEXT context);
+
 class CAddon : public IAddon
 {
 public:
