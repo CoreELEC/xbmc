@@ -380,6 +380,37 @@ AddonVersion CAddon::GetDependencyVersion(const std::string &dependencyID) const
   return m_addonInfo->DependencyVersion(dependencyID);
 }
 
+void LEAddonHook(const AddonPtr& addon, const LE_ADDON_CONTEXT context) {
+
+  if (addon->Type() == ADDON_SERVICE) {
+    std::string contextStr;
+    char cmd[255];
+
+    switch (context) {
+    case LE_ADDON_ENABLED:
+      contextStr = "enable";
+      break;
+    case LE_ADDON_DISABLED:
+      contextStr = "disable";
+      break;
+    case LE_ADDON_POST_UPDATE:
+      contextStr = "post-update";
+      break;
+    case LE_ADDON_PRE_UNINSTALL:
+      contextStr = "pre-uninstall";
+      break;
+    default:
+      contextStr = StringUtils::Format("unknown(%d)", context);
+      break;
+    }
+
+    snprintf(cmd, sizeof(cmd), "/usr/sbin/service-addon-wrapper %s %s %s",
+      contextStr.c_str(), addon->ID().c_str(), addon->Path().c_str());
+
+    system(cmd);
+  }
+}
+
 void OnPreInstall(const AddonPtr& addon)
 {
   //Fallback to the pre-install callback in the addon.
@@ -411,11 +442,18 @@ void OnPostInstall(const AddonPtr& addon, bool update, bool modal)
   }
   // OE
 
+  if (update)
+    LEAddonHook(addon, LE_ADDON_POST_UPDATE);
+  else
+    LEAddonHook(addon, LE_ADDON_ENABLED);
+
   addon->OnPostInstall(update, modal);
 }
 
 void OnPreUnInstall(const AddonPtr& addon)
 {
+  LEAddonHook(addon, LE_ADDON_PRE_UNINSTALL);
+
   addon->OnPreUnInstall();
 }
 
