@@ -789,6 +789,7 @@ bool CAddonMgr::DisableAddon(const std::string& id, AddonDisabledReason disabled
   AddonPtr addon;
   if (GetAddon(id, addon, ADDON_UNKNOWN, OnlyEnabled::NO) && addon != NULL)
   {
+    ADDON::LEAddonHook(addon, ADDON::LE_ADDON_DISABLED);
     CServiceBroker::GetEventLog().Add(EventPtr(new CAddonManagementEvent(addon, 24141)));
   }
 
@@ -834,6 +835,7 @@ bool CAddonMgr::EnableSingle(const std::string& id)
   if (!m_database.EnableAddon(id))
     return false;
   m_disabled.erase(id);
+  ADDON::LEAddonHook(addon, ADDON::LE_ADDON_ENABLED);
 
   // If enabling a repo add-on without an origin, set its origin to its own id
   if (addon->HasType(ADDON_REPOSITORY) && addon->Origin().empty())
