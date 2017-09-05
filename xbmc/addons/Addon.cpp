@@ -440,6 +440,9 @@ void OnPostInstall(const AddonPtr& addon, bool update, bool modal)
     }
     closedir(addonsDir);
   }
+
+  if (update)
+    LEAddonHook(addon, LE_ADDON_POST_UPDATE);
   // OE
 
   if (update)
