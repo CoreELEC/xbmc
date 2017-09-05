@@ -867,6 +867,7 @@ bool CAddonMgr::DisableAddon(const std::string& id)
   AddonPtr addon;
   if (GetAddon(id, addon, ADDON_UNKNOWN, false) && addon != NULL)
   {
+    ADDON::LEAddonHook(addon, ADDON::LE_ADDON_DISABLED);
     CServiceBroker::GetEventLog().Add(EventPtr(new CAddonManagementEvent(addon, 24141)));
   }
 
@@ -895,6 +896,7 @@ bool CAddonMgr::EnableSingle(const std::string& id)
   if (!m_database.DisableAddon(id, false))
     return false;
   m_disabled.erase(id);
+  ADDON::LEAddonHook(addon, ADDON::LE_ADDON_ENABLED);
 
   CServiceBroker::GetEventLog().Add(EventPtr(new CAddonManagementEvent(addon, 24064)));
 
