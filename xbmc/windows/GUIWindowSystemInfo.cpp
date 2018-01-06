@@ -49,7 +49,7 @@ bool CGUIWindowSystemInfo::OnMessage(CGUIMessage& message)
     case GUI_MSG_WINDOW_INIT:
     {
       CGUIWindow::OnMessage(message);
-      SET_CONTROL_LABEL(52, CSysInfo::GetAppName() + " " + CSysInfo::GetVersion());
+      SET_CONTROL_LABEL(52, "AMLogic running " + CSysInfo::GetAppName() + " " + CSysInfo::GetVersion());
       SET_CONTROL_LABEL(53, CSysInfo::GetBuildDate());
       CONTROL_ENABLE_ON_CONDITION(CONTROL_BT_PVR, CServiceBroker::GetPVRManager().IsStarted());
       return true;
@@ -97,6 +97,7 @@ void CGUIWindowSystemInfo::FrameMove()
     SetControlLabel(i++, "%s: %s", 150, NETWORK_IP_ADDRESS);
     SetControlLabel(i++, "%s %s", 13287, SYSTEM_SCREEN_RESOLUTION);
     SetControlLabel(i++, "%s %s", 13283, SYSTEM_OS_VERSION_INFO);
+    SetControlLabel(i++, "%s: %s", 12395, SYSTEM_LINUX_VER);
     SetControlLabel(i++, "%s: %s", 144, SYSTEM_BUILD_VERSION);
     SetControlLabel(i++, "%s: %s", 174, SYSTEM_BUILD_DATE);
     SetControlLabel(i++, "%s: %s", 12390, SYSTEM_UPTIME);
@@ -141,7 +142,7 @@ void CGUIWindowSystemInfo::FrameMove()
 #else
     SetControlLabel(i++, "%s %s", 22024, SYSTEM_RENDER_VERSION);
 #endif
-#if !defined(__arm__) && !defined(__aarch64__) && !defined(HAS_DX)
+#if (defined(__arm__) || defined(__aarch64__)) && !defined(HAS_DX)
     SetControlLabel(i++, "%s %s", 22010, SYSTEM_GPU_TEMPERATURE);
 #endif
   }
@@ -151,11 +152,9 @@ void CGUIWindowSystemInfo::FrameMove()
     SET_CONTROL_LABEL(40,g_localizeStrings.Get(20160));
     SET_CONTROL_LABEL(i++, "CPU: " + CServiceBroker::GetCPUInfo()->GetCPUModel());
 #if defined(__arm__) && defined(TARGET_LINUX)
-    SET_CONTROL_LABEL(i++, "BogoMips: " + CServiceBroker::GetCPUInfo()->GetCPUBogoMips());
     if (!CServiceBroker::GetCPUInfo()->GetCPUSoC().empty())
       SET_CONTROL_LABEL(i++, "SoC: " + CServiceBroker::GetCPUInfo()->GetCPUSoC());
     SET_CONTROL_LABEL(i++, "Hardware: " + CServiceBroker::GetCPUInfo()->GetCPUHardware());
-    SET_CONTROL_LABEL(i++, "Revision: " + CServiceBroker::GetCPUInfo()->GetCPURevision());
     SET_CONTROL_LABEL(i++, "Serial: " + CServiceBroker::GetCPUInfo()->GetCPUSerial());
 #endif
     SetControlLabel(i++, "%s %s", 22011, SYSTEM_CPU_TEMPERATURE);

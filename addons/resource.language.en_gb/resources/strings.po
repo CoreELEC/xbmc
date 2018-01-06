@@ -5949,7 +5949,7 @@ msgstr ""
 
 #: xbmc/windows/GUIWindowSystemInfo.cpp
 msgctxt "#12395"
-msgid "Battery level"
+msgid "Linux version"
 msgstr ""
 
 #empty strings from id 12396 to 12599
