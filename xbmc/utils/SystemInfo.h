@@ -44,7 +44,7 @@ public:
   std::string cpuFrequency;
   std::string osVersionInfo;
   std::string macAddress;
-  std::string batteryLevel;
+  std::string linuxver;
 };
 
 class CSysInfoJob : public CJob
@@ -61,7 +61,6 @@ private:
   static std::string GetSystemUpTime(bool bTotalUptime);
   static std::string GetMACAddress();
   static std::string GetVideoEncoder();
-  static std::string GetBatteryLevel();
 
   CSysData m_info;
 };
