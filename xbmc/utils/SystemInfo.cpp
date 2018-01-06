@@ -277,9 +277,9 @@ bool CSysInfoJob::DoWork()
   m_info.videoEncoder      = GetVideoEncoder();
   m_info.cpuFrequency =
       StringUtils::Format("%4.0f MHz", CServiceBroker::GetCPUInfo()->GetCPUFrequency());
-  m_info.osVersionInfo     = CSysInfo::GetOsPrettyNameWithVersion() + " (kernel: " + CSysInfo::GetKernelName() + " " + CSysInfo::GetKernelVersionFull() + ")";
+  m_info.osVersionInfo     = CSysInfo::GetOsPrettyNameWithVersion();
   m_info.macAddress        = GetMACAddress();
-  m_info.batteryLevel      = GetBatteryLevel();
+  m_info.linuxver          = CSysInfo::GetKernelVersionFull();
   return true;
 }
 
@@ -309,11 +309,6 @@ std::string CSysInfoJob::GetMACAddress()
 std::string CSysInfoJob::GetVideoEncoder()
 {
   return "GPU: " + CServiceBroker::GetRenderSystem()->GetRenderRenderer();
-}
-
-std::string CSysInfoJob::GetBatteryLevel()
-{
-  return StringUtils::Format("%d%%", CServiceBroker::GetPowerManager().BatteryLevel());
 }
 
 bool CSysInfoJob::SystemUpTime(int iInputMinutes, int &iMinutes, int &iHours, int &iDays)
@@ -392,8 +387,8 @@ std::string CSysInfo::TranslateInfo(int info) const
       return g_localizeStrings.Get(13296);
     else
       return g_localizeStrings.Get(13297);
-  case SYSTEM_BATTERY_LEVEL:
-    return m_info.batteryLevel;
+  case SYSTEM_LINUX_VER:
+    return m_info.linuxver;
   default:
     return "";
   }
@@ -529,6 +524,10 @@ std::string CSysInfo::GetKernelVersionFull(void)
   static std::string kernelVersionFull;
   if (!kernelVersionFull.empty())
     return kernelVersionFull;
+  static std::string kernelVersionR;
+  static std::string kernelVersionV;
+  static std::string kernelVersionM;
+
 
 #if defined(TARGET_WINDOWS_DESKTOP)
   OSVERSIONINFOEXW osvi = {};
@@ -742,7 +741,7 @@ std::string CSysInfo::GetOsPrettyNameWithVersion(void)
   }
 
   if (osNameVer.find(GetOsVersion()) == std::string::npos)
-    osNameVer += " " + GetOsVersion();
+    osNameVer += " (" + GetOsVersion() + ")";
 #endif // defined(TARGET_LINUX)
 
   if (osNameVer.empty())
