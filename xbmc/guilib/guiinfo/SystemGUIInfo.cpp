@@ -150,7 +150,7 @@ bool CSystemGUIInfo::GetLabel(std::string& value, const CFileItem *item, int con
     case SYSTEM_INTERNET_STATE:
     case SYSTEM_UPTIME:
     case SYSTEM_TOTALUPTIME:
-    case SYSTEM_BATTERY_LEVEL:
+    case SYSTEM_LINUX_VER:
       value = g_sysinfo.GetInfo(info.m_info);
       return true;
     case SYSTEM_PRIVACY_POLICY:
@@ -371,9 +371,6 @@ bool CSystemGUIInfo::GetInt(int& value, const CGUIListItem *gitem, int contextWi
     }
     case SYSTEM_CPU_USAGE:
       value = CServiceBroker::GetCPUInfo()->GetUsedPercentage();
-      return true;
-    case SYSTEM_BATTERY_LEVEL:
-      value = CServiceBroker::GetPowerManager().BatteryLevel();
       return true;
   }
 
