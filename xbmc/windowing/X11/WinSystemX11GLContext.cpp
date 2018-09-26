@@ -40,39 +40,8 @@ std::unique_ptr<CWinSystemBase> CWinSystemBase::CreateWinSystem()
 
 CWinSystemX11GLContext::CWinSystemX11GLContext()
 {
-  std::string envSink;
-  if (getenv("KODI_AE_SINK"))
-    envSink = getenv("KODI_AE_SINK");
-  if (StringUtils::EqualsNoCase(envSink, "ALSA"))
-  {
-    OPTIONALS::ALSARegister();
-  }
-  else if (StringUtils::EqualsNoCase(envSink, "PULSE"))
-  {
-    OPTIONALS::PulseAudioRegister();
-  }
-  else if (StringUtils::EqualsNoCase(envSink, "OSS"))
-  {
-    OPTIONALS::OSSRegister();
-  }
-  else if (StringUtils::EqualsNoCase(envSink, "SNDIO"))
-  {
-    OPTIONALS::SndioRegister();
-  }
-  else
-  {
-    if (!OPTIONALS::PulseAudioRegister())
-    {
-      if (!OPTIONALS::ALSARegister())
-      {
-        if (!OPTIONALS::SndioRegister())
-        {
-          OPTIONALS::OSSRegister();
-        }
-      }
-    }
-  }
-
+  OPTIONALS::ALSARegister();
+  OPTIONALS::PulseAudioRegister();
   m_lirc.reset(OPTIONALS::LircRegister());
 }
 

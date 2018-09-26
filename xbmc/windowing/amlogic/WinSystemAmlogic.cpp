@@ -20,6 +20,7 @@
 // AESink Factory
 #include "cores/AudioEngine/AESinkFactory.h"
 #include "cores/AudioEngine/Sinks/AESinkALSA.h"
+#include "cores/AudioEngine/Sinks/AESinkPULSE.h"
 #include "windowing/GraphicContext.h"
 #include "windowing/Resolution.h"
 #include "platform/linux/powermanagement/LinuxPowerSyscall.h"
@@ -67,6 +68,7 @@ CWinSystemAmlogic::CWinSystemAmlogic() :
   // Register sink
   AE::CAESinkFactory::ClearSinks();
   CAESinkALSA::Register();
+  CAESinkPULSE::Register();
   CLinuxPowerSyscall::Register();
   m_lirc.reset(OPTIONALS::LircRegister());
   m_libinput->Start();
