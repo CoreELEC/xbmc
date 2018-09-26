@@ -22,7 +22,9 @@
 #include "guilib/DispResource.h"
 #include "utils/log.h"
 #include "cores/AudioEngine/AESinkFactory.h"
+#include "cores/AudioEngine/Sinks/AESinkALSA.h"
 #include "cores/AudioEngine/Sinks/AESinkPi.h"
+#include "cores/AudioEngine/Sinks/AESinkPULSE.h"
 #include "platform/linux/powermanagement/LinuxPowerSyscall.h"
 
 #include <EGL/egl.h>
@@ -45,19 +47,8 @@ CWinSystemRpi::CWinSystemRpi() :
   AE::CAESinkFactory::ClearSinks();
 
   CAESinkPi::Register();
-  std::string envSink;
-  if (getenv("KODI_AE_SINK"))
-    envSink = getenv("KODI_AE_SINK");
-
-  if (StringUtils::EqualsNoCase(envSink, "PULSE"))
-  {
-    OPTIONALS::PulseAudioRegister();
-  }
-  else
-  {
-    OPTIONALS::ALSARegister();
-  }
-
+  CAESinkALSA::Register();
+  CAESinkPULSE::Register();
   CLinuxPowerSyscall::Register();
   m_lirc.reset(OPTIONALS::LircRegister());
   m_libinput->Start();
