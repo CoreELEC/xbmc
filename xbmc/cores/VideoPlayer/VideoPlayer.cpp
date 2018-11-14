@@ -4701,12 +4701,6 @@ bool CVideoPlayer::OpenVideoStream(CDVDStreamInfo& hint, bool reset)
                                                    (double)DVD_TIME_BASE * hint.fpsscale /
                                                    (hint.fpsrate * (hint.interlaced ? 2 : 1)));
 
-      RESOLUTION res = CResolutionUtils::ChooseBestResolution(static_cast<float>(framerate), hint.width, hint.height, !hint.stereo_mode.empty());
-      // CloseFile() blocks the app thread in StopThread(), don't wait for it past that
-      CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(res, false,
-                                                                         &GetStopEvent());
-      if (m_bStop)
-        return false;
       m_renderManager.TriggerUpdateResolution(framerate, hint.width, hint.height, hint.stereo_mode);
     }
   }
