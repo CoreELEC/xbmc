@@ -8330,7 +8330,87 @@ msgctxt "#14277"
 msgid "Allow remote control from applications on other systems"
 msgstr ""
 
-#empty strings from id 14278 to 14300
+#: system/settings/settings.xml
+msgctxt "#14278"
+msgid "CoreELEC"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14279"
+msgid "This category contains settings added for CoreELEC."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14280"
+msgid "Disable noise reduction"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14281"
+msgid "Enable this to disable noise reduction. Requires reboot."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14282"
+msgid "Disable deinterlacing"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14283"
+msgid "Enable this to disable deinterlacing. Requires reboot."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14284"
+msgid "Limit display colour depth to 8-bit"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14285"
+msgid "Enable this to limit the display colour depth to 8-bit. Requires reboot."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14286"
+msgid "Use 4:2:2 colour subsampling"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14287"
+msgid "Enable this to use 4:2:2 colour subsampling. Some displays (usually LG) work better with this. Requires reboot."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14288"
+msgid "Enable HEVC seek workaround"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14289"
+msgid "Enable this if you have problems with HEVC content after seeking."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14290"
+msgid "Disable HDMI audio output"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14291"
+msgid "Disable HDMI audio output. Requires a reboot."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14292"
+msgid "Enable GPU overclock"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14293"
+msgid "Enable this to overclock the GPU. WARNING! This will increase chipset temperatures. Requires a reboot."
+msgstr ""
+
+#empty strings from id 14294 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml

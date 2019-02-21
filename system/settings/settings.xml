@@ -2995,6 +2995,58 @@
         </setting>
       </group>
     </category>
+    <category id="coreelec" label="14278" help="14279">
+      <group id="1" label="131">
+        <setting id="coreelec.amlogic.noisereduction" type="boolean" label="14280" help="14281">
+          <requirement>HAVE_AMCODEC</requirement>
+          <level>3</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="coreelec.amlogic.deinterlacing" type="boolean" label="14282" help="14283">
+          <requirement>HAVE_AMCODEC</requirement>
+          <level>3</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="coreelec.amlogic.limit8bit" type="boolean" label="14284" help="14285">
+          <requirement>HAVE_AMCODEC</requirement>
+          <level>3</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="coreelec.amlogic.force422" type="boolean" label="14286" help="14297">
+          <requirement>HAVE_AMCODEC</requirement>
+          <level>3</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+      </group>
+      <group id="2" label="14086">
+        <setting id="coreelec.amlogic.hevcworkaround" type="boolean" label="14288" help="14289">
+          <requirement>HAVE_AMCODEC</requirement>
+          <level>3</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+      </group>
+      <group id="3" label="14221">
+        <setting id="coreelec.amlogic.mutehdmiaudio" type="boolean" label="14290" help="14291">
+          <requirement>HAVE_AMCODEC</requirement>
+          <level>3</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+      </group>
+      <group id="4" label="10039">
+        <setting id="coreelec.amlogic.maxgpuclock" type="boolean" label="14292" help="14293">
+          <requirement>HAVE_AMCODEC</requirement>
+          <level>3</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+      </group>
+    </category>
     <category id="cache" label="439" help="36399">
       <visible>false</visible>
       <group id="1">
