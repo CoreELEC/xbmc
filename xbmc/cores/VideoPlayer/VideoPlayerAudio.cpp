@@ -111,7 +111,6 @@ void CVideoPlayerAudio::OpenStream(CDVDStreamInfo &hints, CDVDAudioCodec* codec)
   SAFE_DELETE(m_pAudioCodec);
   m_pAudioCodec = codec;
 
-  m_processInfo.ResetAudioCodecInfo();
 
   /* store our stream hints */
   m_streaminfo = hints;
@@ -188,6 +187,16 @@ void CVideoPlayerAudio::CloseStream(bool bWaitForBuffers)
     m_pAudioCodec->Dispose();
     delete m_pAudioCodec;
     m_pAudioCodec = NULL;
+  }
+
+  std::ostringstream s;
+  SInfo info;
+  info.info        = s.str();
+  info.pts         = DVD_NOPTS_VALUE;
+  info.passthrough = false;
+
+  { CSingleLock lock(m_info_section);
+    m_info = info;
   }
 }
 
