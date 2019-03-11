@@ -32,6 +32,14 @@ typedef struct mpeg2_sequence
   uint32_t ratio_info;
 } mpeg2_sequence;
 
+typedef struct h264_sequence
+{
+  uint32_t  width;
+  uint32_t  height;
+  float     ratio;
+  uint32_t  ratio_info;
+} h264_sequence;
+
 class CBitstreamParser
 {
 public:
@@ -68,6 +76,9 @@ public:
   static bool mpeg2_sequence_header(const uint8_t* data,
                                     const uint32_t size,
                                     mpeg2_sequence* sequence);
+  static bool h264_sequence_header(const uint8_t *data,
+                                   const uint32_t size,
+                                   h264_sequence *sequence);
 
 protected:
   // bitstream to bytestream (Annex B) conversion support.
