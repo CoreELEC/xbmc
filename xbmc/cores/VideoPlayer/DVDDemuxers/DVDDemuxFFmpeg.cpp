@@ -1291,7 +1291,7 @@ bool CDVDDemuxFFmpeg::SeekTime(double time, bool backwards, double* startpts)
   if (m_currentPts == DVD_NOPTS_VALUE)
     CLog::Log(LOGDEBUG, "%s - unknown position after seek", __FUNCTION__);
   else
-    CLog::Log(LOGDEBUG, "%s - seek ended up on time %d", __FUNCTION__, (int)(m_currentPts / DVD_TIME_BASE * 1000));
+    CLog::Log(LOGDEBUG, "%s - seek ended up on time %0.3f", __FUNCTION__, m_currentPts / DVD_TIME_BASE);
 
   // in this case the start time is requested time
   if (startpts)
@@ -1988,7 +1988,20 @@ bool CDVDDemuxFFmpeg::SeekChapter(int chapter, double* startpts)
 
   AVChapter* ch = m_pFormatContext->chapters[chapter - 1];
   double dts = ConvertTimestamp(ch->start, ch->time_base.den, ch->time_base.num);
-  return SeekTime(DVD_TIME_TO_MSEC(dts), true, startpts);
+  bool rtn = SeekTime(DVD_TIME_TO_MSEC(dts), true, startpts);
+  if (rtn)
+  {
+    double startpts_b;
+    if (SeekTime(DVD_TIME_TO_MSEC(dts), false, &startpts_b))
+    {
+      if (*startpts - dts < dts -startpts_b)
+        rtn = SeekTime(DVD_TIME_TO_MSEC(dts), true, startpts);
+      else
+        *startpts = startpts_b;
+    }
+  }
+  CLog::Log(LOGDEBUG, "CDVDDemuxFFmpeg::%s - seeking chapter:%d start:%0.3f key-frame:%0.3f ", __FUNCTION__, chapter, DVD_TIME_TO_MSEC(dts) / 1000.0, m_currentPts / DVD_TIME_BASE);
+  return rtn;
 }
 
 std::string CDVDDemuxFFmpeg::GetStreamCodecName(int iStreamId)
