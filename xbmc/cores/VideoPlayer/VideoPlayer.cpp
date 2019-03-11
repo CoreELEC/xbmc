@@ -1640,6 +1640,8 @@ void CVideoPlayer::ProcessAudioData(CDemuxStream* pStream, DemuxPacket* pPacket)
   {
     drop = true;
   }
+  CLog::Log(LOGDEBUG, LOGAUDIO, "CVideoPlayer::ProcessAudioData size:%d dts:%0.3f pts:%0.3f dur:%0.3fms, clock:%0.3f drop:%d level:%d",
+    pPacket->iSize, pPacket->dts/DVD_TIME_BASE, pPacket->pts/DVD_TIME_BASE, pPacket->duration/1000.0, m_clock.GetClock() / DVD_TIME_BASE, drop, m_VideoPlayerAudio->GetLevel());
 
   m_VideoPlayerAudio->SendMessage(new CDVDMsgDemuxerPacket(pPacket, drop));
   m_CurrentAudio.packets++;
@@ -1920,6 +1922,7 @@ void CVideoPlayer::HandlePlaySpeed()
         (m_CurrentAudio.avsync == CCurrentStream::AV_SYNC_CONT ||
          m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC))
     {
+      CLog::Log(LOGDEBUG, LOGAUDIO, "VideoPlayer::Sync - Audio - Waiting, clock: %0.3f", m_clock.GetClock());
       m_CurrentAudio.syncState = IDVDStreamPlayer::SYNC_INSYNC;
       m_CurrentAudio.avsync = CCurrentStream::AV_SYNC_NONE;
       m_VideoPlayerAudio->SendMessage(new CDVDMsgDouble(CDVDMsg::GENERAL_RESYNC, m_clock.GetClock()), 1);
@@ -2126,7 +2129,7 @@ bool CVideoPlayer::CheckPlayerInit(CCurrentStream& current)
   {
     if(current.dts == DVD_NOPTS_VALUE)
     {
-      CLog::Log(LOGDEBUG, "%s - dropping packet type:%d dts:%f to get to start point at %f", __FUNCTION__, current.player,  current.dts, current.startpts);
+      CLog::Log(LOGDEBUG, LOGAUDIO, "CVideoPlayer::%s - Dropping packet type:%d dts:%0.3f to get to start point at %0.3f", __FUNCTION__, current.player,  current.dts / 1000000.0, current.startpts / 1000000.0);
       return true;
     }
 
@@ -2147,7 +2150,7 @@ bool CVideoPlayer::CheckPlayerInit(CCurrentStream& current)
 
     if(current.dts < current.startpts)
     {
-      CLog::Log(LOGDEBUG, "%s - dropping packet type:%d dts:%f to get to start point at %f", __FUNCTION__, current.player,  current.dts, current.startpts);
+      CLog::Log(LOGDEBUG, LOGAUDIO, "CVideoPlayer::%s - dropping packet type:%d dts:%0.3f to get to start point at %0.3f", __FUNCTION__, current.player,  current.dts / 1000000.0, current.startpts / 1000000.0);
       return true;
     }
   }
