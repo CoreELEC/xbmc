@@ -19,11 +19,13 @@
 #include "settings/DisplaySettings.h"
 #include "settings/MediaSettings.h"
 #include "settings/Settings.h"
+#include "settings/SettingsComponent.h"
 #include "utils/AMLUtils.h"
 #include "utils/log.h"
 #include "utils/StringUtils.h"
 #include "utils/SysfsUtils.h"
 #include "utils/TimeUtils.h"
+#include "ServiceBroker.h"
 
 #include <unistd.h>
 #include <queue>
