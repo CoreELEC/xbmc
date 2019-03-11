@@ -2093,7 +2093,20 @@ bool CDVDDemuxFFmpeg::SeekChapter(int chapter, double* startpts)
 
   AVChapter* ch = m_pFormatContext->chapters[chapter - 1];
   double dts = ConvertTimestamp(ch->start, ch->time_base.den, ch->time_base.num);
-  return SeekTime(DVD_TIME_TO_MSEC(dts), true, startpts);
+  bool rtn = SeekTime(DVD_TIME_TO_MSEC(dts), true, startpts);
+  if (rtn)
+  {
+    double startpts_b;
+    if (SeekTime(DVD_TIME_TO_MSEC(dts), false, &startpts_b))
+    {
+      if (*startpts - dts < dts -startpts_b)
+        rtn = SeekTime(DVD_TIME_TO_MSEC(dts), true, startpts);
+      else
+        *startpts = startpts_b;
+    }
+  }
+  CLog::Log(LOGDEBUG, "CDVDDemuxFFmpeg::{} - seeking chapter:{:d} start:{:.3f} key-frame:{:.3f} ", __FUNCTION__, chapter, DVD_TIME_TO_MSEC(dts) / 1000.0, m_currentPts / DVD_TIME_BASE);
+  return rtn;
 }
 
 std::string CDVDDemuxFFmpeg::GetStreamCodecName(int iStreamId)
