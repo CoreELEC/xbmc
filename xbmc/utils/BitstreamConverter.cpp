@@ -107,7 +107,7 @@ enum {
  *  Copyright (C) 2005 Michal Benes <michal.benes@itonis.tv>
  *            (C) 2008 Wim Taymans <wim.taymans@gmail.com>
  *  gsth264parse.c
- *  
+ *
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  *  See LICENSES/README.md for more information.
  */
@@ -1581,7 +1581,7 @@ bool CBitstreamConverter::h264_sequence_header(const uint8_t *data, const uint32
                     break;
                 case 4:
                     // 16:11
-                    ratio *= 1.4545454545454546;
+                    ratio *= 1.4222222222222222;
                     break;
                 case 5:
                     // 40:33
@@ -1644,6 +1644,11 @@ bool CBitstreamConverter::h264_sequence_header(const uint8_t *data, const uint32
                 changed = true;
                 sequence->ratio = ratio;
                 sequence->ratio_info = aspect_ratio_idc;
+            }
+            if (changed)
+            {
+              CLog::Log(LOGDEBUG, "CBitstreamConverter::h264_sequence_header: "
+                "width({:d}), height({:d}), ratio({:f}), {:d}x{:d}", pic_width_cropped, pic_height_cropped, ratio, sar_width, sar_height);
             }
 
             break;
