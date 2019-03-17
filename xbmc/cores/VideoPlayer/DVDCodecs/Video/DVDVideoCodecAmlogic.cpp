@@ -471,6 +471,9 @@ void CDVDVideoCodecAmlogic::FrameRateTracking(uint8_t *pData, int iSize, double 
     // decode aspect ratio and frame rate.
     if (CBitstreamConverter::mpeg2_sequence_header(pData, iSize, m_mpeg2_sequence))
     {
+      if (!m_mpeg2_sequence->fps_scale)
+	return; 
+
       m_mpeg2_sequence_pts = pts;
       if (m_mpeg2_sequence_pts == DVD_NOPTS_VALUE)
         m_mpeg2_sequence_pts = dts;
