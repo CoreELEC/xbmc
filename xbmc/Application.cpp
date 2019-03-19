@@ -2030,12 +2030,12 @@ void CApplication::OnApplicationMessage(ThreadMessage* pMsg)
   switch (msg)
   {
   case TMSG_POWERDOWN:
-    Stop(EXITCODE_POWERDOWN);
+    SetExitCode(EXITCODE_POWERDOWN);
     CServiceBroker::GetPowerManager().Powerdown();
     break;
 
   case TMSG_QUIT:
-    Stop(EXITCODE_QUIT);
+    SetExitCode(EXITCODE_QUIT);
     break;
 
   case TMSG_SHUTDOWN:
@@ -2056,12 +2056,13 @@ void CApplication::OnApplicationMessage(ThreadMessage* pMsg)
 
   case TMSG_RESTART:
   case TMSG_RESET:
-    Stop(EXITCODE_REBOOT);
+    SetExitCode(EXITCODE_REBOOT);
     CServiceBroker::GetPowerManager().Reboot();
     break;
 
   case TMSG_RESTARTAPP:
 #if defined(TARGET_WINDOWS) || defined(TARGET_LINUX)
+    SetExitCode(EXITCODE_RESTARTAPP);
     Stop(EXITCODE_RESTARTAPP);
 #endif
     break;
@@ -2523,6 +2524,17 @@ bool CApplication::Cleanup()
   }
 }
 
+void CApplication::SetExitCode(int exitCode)
+{
+  if (!m_ExitCodeSet)
+  {
+    CLog::Log(LOGINFO, "Saving exitCode %d", exitCode);
+    // save it for CEC
+    m_ExitCode = exitCode;
+    m_ExitCodeSet = true;
+  }
+}
+
 void CApplication::Stop(int exitCode)
 {
   CLog::Log(LOGNOTICE, "Stopping player");
@@ -2549,7 +2561,7 @@ void CApplication::Stop(int exitCode)
     m_frameMoveGuard.unlock();
 
     CVariant vExitCode(CVariant::VariantTypeObject);
-    vExitCode["exitcode"] = exitCode;
+    vExitCode["exitcode"] = m_ExitCode;
     CServiceBroker::GetAnnouncementManager()->Announce(ANNOUNCEMENT::System, "xbmc", "OnQuit", vExitCode);
 
     // Abort any active screensaver
@@ -2581,7 +2593,6 @@ void CApplication::Stop(int exitCode)
     // Needs cleaning up
     CApplicationMessenger::GetInstance().Stop();
     m_AppFocused = false;
-    m_ExitCode = exitCode;
     CLog::Log(LOGNOTICE, "Stopping all");
 
     // cancel any jobs from the jobmanager
@@ -4130,7 +4141,7 @@ void CApplication::ProcessSlow()
   if (CPlatformPosix::TestQuitFlag())
   {
     CLog::Log(LOGNOTICE, "Quitting due to POSIX signal");
-    CApplicationMessenger::GetInstance().PostMsg(TMSG_QUIT);
+    CApplicationMessenger::GetInstance().PostMsg(TMSG_RESTARTAPP);
   }
 #endif
 
