@@ -156,6 +156,7 @@ public:
   bool StartServer(enum ESERVERS eServer, bool bStart, bool bWait = false);
 
   bool IsCurrentThread() const;
+  void SetExitCode(int exitCode);
   void Stop(int exitCode);
   void UnloadSkin(bool forReload = false);
   bool LoadCustomWindows();
