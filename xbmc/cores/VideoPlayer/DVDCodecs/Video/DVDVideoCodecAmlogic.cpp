@@ -471,7 +471,7 @@ void CDVDVideoCodecAmlogic::FrameRateTracking(uint8_t *pData, int iSize, double 
     // decode aspect ratio and frame rate.
     if (CBitstreamConverter::mpeg2_sequence_header(pData, iSize, m_mpeg2_sequence))
     {
-      if (!m_mpeg2_sequence->fps_scale)
+      if ((m_mpeg2_sequence->fps_rate == 0) || (m_mpeg2_sequence->fps_scale == 0))
 	return; 
 
       m_mpeg2_sequence_pts = pts;
@@ -489,7 +489,6 @@ void CDVDVideoCodecAmlogic::FrameRateTracking(uint8_t *pData, int iSize, double 
 
       m_processInfo.SetVideoFps(m_framerate);
       m_processInfo.SetVideoDAR(m_hints.aspect);
-      m_processInfo.SetVideoDAR(m_h264_sequence->ratio);
     }
     return;
   }
