@@ -48,6 +48,8 @@ public:
   float GetVideoFps();
   void SetVideoDAR(float dar);
   float GetVideoDAR();
+  void SetVideoInterlaced(bool interlaced);
+  bool GetVideoInterlaced();
 
   // player audio info
   void SetAudioDecoderName(std::string name);
@@ -167,6 +169,7 @@ protected:
 
   CCriticalSection m_stateSection;
   bool m_playerStateChanged = false;
+  bool m_videoIsInterlaced = false;
   struct SStateInfo
   {
     bool m_stateSeeking;
