@@ -42,7 +42,8 @@ std::map<GLenum, const char*> glErrors =
 std::map<GLenum, const char*> glErrorSource =
 {
 //! @todo remove TARGET_RASPBERRY_PI when Raspberry Pi updates their GL headers
-#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(TARGET_RASPBERRY_PI)
+#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(TARGET_RASPBERRY_PI) \
+    && !defined(HAS_LIBAMCODEC)
   X(GL_DEBUG_SOURCE_API_KHR),
   X(GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR),
   X(GL_DEBUG_SOURCE_SHADER_COMPILER_KHR),
@@ -55,7 +56,8 @@ std::map<GLenum, const char*> glErrorSource =
 std::map<GLenum, const char*> glErrorType =
 {
 //! @todo remove TARGET_RASPBERRY_PI when Raspberry Pi updates their GL headers
-#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(TARGET_RASPBERRY_PI)
+#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(TARGET_RASPBERRY_PI) \
+    && !defined(HAS_LIBAMCODEC)
   X(GL_DEBUG_TYPE_ERROR_KHR),
   X(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR),
   X(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR),
@@ -69,7 +71,8 @@ std::map<GLenum, const char*> glErrorType =
 std::map<GLenum, const char*> glErrorSeverity =
 {
 //! @todo remove TARGET_RASPBERRY_PI when Raspberry Pi updates their GL headers
-#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(TARGET_RASPBERRY_PI)
+#if defined(HAS_GLES) && defined(TARGET_LINUX) && !defined(TARGET_RASPBERRY_PI) \
+    && !defined(HAS_LIBAMCODEC)
   X(GL_DEBUG_SEVERITY_HIGH_KHR),
   X(GL_DEBUG_SEVERITY_MEDIUM_KHR),
   X(GL_DEBUG_SEVERITY_LOW_KHR),
