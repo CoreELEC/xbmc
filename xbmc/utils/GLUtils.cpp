@@ -41,14 +41,16 @@ std::map<GLenum, const char*> glErrors =
 #endif
 };
 
-std::map<GLenum, const char*> glErrorSource = {
-#if defined(HAS_GLES) && defined(TARGET_LINUX)
-    X(GL_DEBUG_SOURCE_API_KHR),
-    X(GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR),
-    X(GL_DEBUG_SOURCE_SHADER_COMPILER_KHR),
-    X(GL_DEBUG_SOURCE_THIRD_PARTY_KHR),
-    X(GL_DEBUG_SOURCE_APPLICATION_KHR),
-    X(GL_DEBUG_SOURCE_OTHER_KHR),
+std::map<GLenum, const char*> glErrorSource =
+{
+#if defined(HAS_GLES) && defined(TARGET_LINUX) \
+    && !defined(HAS_LIBAMCODEC)
+  X(GL_DEBUG_SOURCE_API_KHR),
+  X(GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR),
+  X(GL_DEBUG_SOURCE_SHADER_COMPILER_KHR),
+  X(GL_DEBUG_SOURCE_THIRD_PARTY_KHR),
+  X(GL_DEBUG_SOURCE_APPLICATION_KHR),
+  X(GL_DEBUG_SOURCE_OTHER_KHR),
 #endif
 #if defined(HAS_GL) && defined(TARGET_LINUX)
     X(GL_DEBUG_SOURCE_API),
@@ -60,15 +62,17 @@ std::map<GLenum, const char*> glErrorSource = {
 #endif
 };
 
-std::map<GLenum, const char*> glErrorType = {
-#if defined(HAS_GLES) && defined(TARGET_LINUX)
-    X(GL_DEBUG_TYPE_ERROR_KHR),
-    X(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR),
-    X(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR),
-    X(GL_DEBUG_TYPE_PORTABILITY_KHR),
-    X(GL_DEBUG_TYPE_PERFORMANCE_KHR),
-    X(GL_DEBUG_TYPE_OTHER_KHR),
-    X(GL_DEBUG_TYPE_MARKER_KHR),
+std::map<GLenum, const char*> glErrorType =
+{
+#if defined(HAS_GLES) && defined(TARGET_LINUX) \
+    && !defined(HAS_LIBAMCODEC)
+  X(GL_DEBUG_TYPE_ERROR_KHR),
+  X(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR),
+  X(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR),
+  X(GL_DEBUG_TYPE_PORTABILITY_KHR),
+  X(GL_DEBUG_TYPE_PERFORMANCE_KHR),
+  X(GL_DEBUG_TYPE_OTHER_KHR),
+  X(GL_DEBUG_TYPE_MARKER_KHR),
 #endif
 #if defined(HAS_GL) && defined(TARGET_LINUX)
     X(GL_DEBUG_TYPE_ERROR),
@@ -81,12 +85,14 @@ std::map<GLenum, const char*> glErrorType = {
 #endif
 };
 
-std::map<GLenum, const char*> glErrorSeverity = {
-#if defined(HAS_GLES) && defined(TARGET_LINUX)
-    X(GL_DEBUG_SEVERITY_HIGH_KHR),
-    X(GL_DEBUG_SEVERITY_MEDIUM_KHR),
-    X(GL_DEBUG_SEVERITY_LOW_KHR),
-    X(GL_DEBUG_SEVERITY_NOTIFICATION_KHR),
+std::map<GLenum, const char*> glErrorSeverity =
+{
+#if defined(HAS_GLES) && defined(TARGET_LINUX) \
+    && !defined(HAS_LIBAMCODEC)
+  X(GL_DEBUG_SEVERITY_HIGH_KHR),
+  X(GL_DEBUG_SEVERITY_MEDIUM_KHR),
+  X(GL_DEBUG_SEVERITY_LOW_KHR),
+  X(GL_DEBUG_SEVERITY_NOTIFICATION_KHR),
 #endif
 #if defined(HAS_GL) && defined(TARGET_LINUX)
     X(GL_DEBUG_SEVERITY_HIGH),
