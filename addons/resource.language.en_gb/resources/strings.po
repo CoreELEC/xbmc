@@ -8393,7 +8393,37 @@ msgctxt "#14277"
 msgid "Allow remote control from applications on other systems"
 msgstr ""
 
-#empty strings from id 14278 to 14300
+#: system/settings/settings.xml
+msgctxt "#14278"
+msgid "CoreELEC"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14279"
+msgid "This category contains settings added for CoreELEC."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14280"
+msgid "Disable noise reduction"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14281"
+msgid "Enable this to disable noise reduction. Requires reboot."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14282"
+msgid "Tone map SDR to HDR"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14283"
+msgid "Intended for HDR enabled displays - not recommended. Turn this On or set to Auto to have HDR10 mode always on. GUI and SDR content will be tone mapped. Requires reboot."
+msgstr ""
+
+#empty strings from id 14284 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
