@@ -13,6 +13,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 }
+#include "DVDClock.h"
 
 #define CODEC_FORCE_SOFTWARE 0x01
 #define CODEC_ALLOW_FALLBACK 0x02
@@ -60,6 +61,7 @@ public:
   int orientation; // orientation of the video in degrees counter clockwise
   int bitsperpixel;
   std::string stereo_mode; // stereoscopic 3d mode
+  CDVDClock *pClock;
 
   // AUDIO
   int channels;
