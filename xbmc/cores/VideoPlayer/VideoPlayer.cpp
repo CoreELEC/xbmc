@@ -54,6 +54,7 @@
 #include "threads/SingleLock.h"
 #include "utils/FontUtils.h"
 #include "utils/ItemProperties.h"
+#include "utils/MathUtils.h"
 #include "utils/StreamDetails.h"
 #include "utils/StreamUtils.h"
 #include "utils/StringUtils.h"
@@ -1987,6 +1988,13 @@ void CVideoPlayer::ProcessVideoData(CDemuxStream* pStream, DemuxPacket* pPacket)
   if (CheckSceneSkip(m_CurrentVideo))
     drop = true;
 
+  if ((m_CurrentVideo.lastdts == DVD_NOPTS_VALUE || pPacket->dts == DVD_NOPTS_VALUE) && (pPacket->pts != DVD_NOPTS_VALUE))
+    m_clock.Discontinuity(pPacket->pts - DVD_TIME_BASE/2);
+
+  m_CurrentVideo.lastdts = pPacket->dts;
+  CLog::Log(LOGDEBUG, LOGVIDEO, "CVideoPlayer::ProcessVideoData size:{:d} dts:{:.3f} pts:{:.3f} dur:{:.3f}ms, clock:{:.3f} level:{:d}",
+    pPacket->iSize, pPacket->dts/1000000, pPacket->pts/1000000, pPacket->duration/1000.0,
+    m_clock.GetClock()/1000000.0,m_processInfo->GetLevelVQ());
   m_VideoPlayerVideo->SendMessage(std::make_shared<CDVDMsgDemuxerPacket>(pPacket, drop));
 
   if (!drop)

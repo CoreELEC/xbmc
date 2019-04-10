@@ -106,5 +106,6 @@ private:
 
   static std::atomic_flag  m_pollSync;
   static int m_pollDevice;
+  static double m_ttd;
   CProcessInfo &m_processInfo;
 };
