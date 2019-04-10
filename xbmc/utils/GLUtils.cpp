@@ -44,7 +44,7 @@ constexpr auto glErrors = make_map<GLenum, std::string_view>({
 
 #ifdef TARGET_LINUX
 constexpr auto glErrorSource = make_map<GLenum, std::string_view>({
-#ifdef HAS_GLES
+#ifdef HAS_GLES && !defined(HAS_LIBAMCODEC)
     X(GL_DEBUG_SOURCE_API_KHR),
     X(GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR),
     X(GL_DEBUG_SOURCE_SHADER_COMPILER_KHR),
@@ -63,7 +63,7 @@ constexpr auto glErrorSource = make_map<GLenum, std::string_view>({
 });
 
 constexpr auto glErrorType = make_map<GLenum, std::string_view>({
-#ifdef HAS_GLES
+#ifdef HAS_GLES && !defined(HAS_LIBAMCODEC)
     X(GL_DEBUG_TYPE_ERROR_KHR),
     X(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR),
     X(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR),
@@ -84,7 +84,7 @@ constexpr auto glErrorType = make_map<GLenum, std::string_view>({
 });
 
 constexpr auto glErrorSeverity = make_map<GLenum, std::string_view>({
-#ifdef HAS_GLES
+#ifdef HAS_GLES && !defined(HAS_LIBAMCODEC)
     X(GL_DEBUG_SEVERITY_HIGH_KHR),
     X(GL_DEBUG_SEVERITY_MEDIUM_KHR),
     X(GL_DEBUG_SEVERITY_LOW_KHR),
