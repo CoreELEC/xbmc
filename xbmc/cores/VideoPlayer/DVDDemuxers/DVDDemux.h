@@ -124,7 +124,23 @@ public:
 class CDemuxStreamVideo : public CDemuxStream
 {
 public:
-  CDemuxStreamVideo() { type = STREAM_VIDEO; };
+  CDemuxStreamVideo() : CDemuxStream()
+  {
+    iFpsScale = 0;
+    iFpsRate = 0;
+    bInterlaced = true;
+    bUnknownIP = true;
+    iHeight = 0;
+    iWidth = 0;
+    fAspect = 0.0;
+    bVFR = false;
+    bPTSInvalid = false;
+    bForcedAspect = false;
+    type = STREAM_VIDEO;
+    iOrientation = 0;
+    iBitsPerPixel = 0;
+    iBitRate = 0;
+  }
 
   ~CDemuxStreamVideo() override = default;
   int iFpsScale = 0; // scale of 1000 and a rate of 29970 will result in 29.97 fps
@@ -148,6 +164,8 @@ public:
   std::shared_ptr<AVContentLightMetadata> contentLightMetaData;
 
   std::string stereo_mode; // expected stereo mode
+  bool bInterlaced; // progressive/interlaced flag
+  bool bUnknownIP; // progressive/interlace unknown
 };
 
 class CDemuxStreamAudio : public CDemuxStream
