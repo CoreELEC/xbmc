@@ -175,6 +175,20 @@ float CDataCacheCore::GetVideoFps()
   return m_playerVideoInfo.fps;
 }
 
+void CDataCacheCore::SetVideoInterlaced(bool interlaced)
+{
+  CSingleLock lock(m_videoPlayerSection);
+
+  m_videoIsInterlaced = interlaced;
+}
+
+bool CDataCacheCore::GetVideoInterlaced()
+{
+  CSingleLock lock(m_videoPlayerSection);
+
+  return m_videoIsInterlaced;
+}
+
 void CDataCacheCore::SetVideoDAR(float dar)
 {
   CSingleLock lock(m_videoPlayerSection);
