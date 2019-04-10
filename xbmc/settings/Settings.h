@@ -353,6 +353,8 @@ public:
   static const std::string SETTING_MASTERLOCK_LOCKCODE;
   static const std::string SETTING_MASTERLOCK_STARTUPLOCK;
   static const std::string SETTING_MASTERLOCK_MAXRETRIES;
+  static const std::string SETTING_COREELEC_AMLOGIC_NOISEREDUCTION;
+  static const std::string SETTING_COREELEC_AMLOGIC_SDR2HDR;
   static const std::string SETTING_CACHE_HARDDISK;
   static const std::string SETTING_CACHEVIDEO_DVDROM;
   static const std::string SETTING_CACHEVIDEO_LAN;
