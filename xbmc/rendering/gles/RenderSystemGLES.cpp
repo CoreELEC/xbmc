@@ -77,7 +77,8 @@ bool CRenderSystemGLES::InitRenderSystem()
   m_RenderExtensions += " ";
 
 //! @todo remove TARGET_RASPBERRY_PI when Raspberry Pi updates their GL headers
-#if defined(GL_KHR_debug) && defined(TARGET_LINUX) && !defined(TARGET_RASPBERRY_PI)
+#if defined(GL_KHR_debug) && defined(TARGET_LINUX) && !defined(TARGET_RASPBERRY_PI) \
+    && !defined(HAS_LIBAMCODEC)
   if (CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_openGlDebugging)
   {
     if (IsExtSupported("GL_KHR_debug"))
