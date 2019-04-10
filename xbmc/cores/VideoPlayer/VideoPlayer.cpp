@@ -64,6 +64,7 @@
 #include "Util.h"
 #include "LangInfo.h"
 #include "URL.h"
+#include "utils/MathUtils.h"
 
 #include "VideoPlayerAudio.h"
 #include "windowing/WinSystem.h"
@@ -3560,6 +3561,7 @@ bool CVideoPlayer::OpenAudioStream(CDVDStreamInfo& hint, bool reset)
 
 bool CVideoPlayer::OpenVideoStream(CDVDStreamInfo& hint, bool reset)
 {
+  m_processInfo->SetVideoInterlaced((hint.codecOptions & CODEC_INTERLACED) == CODEC_INTERLACED);
   if (m_pInputStream && m_pInputStream->IsStreamType(DVDSTREAM_TYPE_DVD))
   {
     /* set aspect ratio as requested by navigator for dvd's */
@@ -3614,6 +3616,17 @@ bool CVideoPlayer::OpenVideoStream(CDVDStreamInfo& hint, bool reset)
     if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) != ADJUST_REFRESHRATE_OFF)
     {
       double framerate = DVD_TIME_BASE / CDVDCodecUtils::NormalizeFrameduration((double)DVD_TIME_BASE * hint.fpsscale / hint.fpsrate);
+      if (MathUtils::FloatEquals(25.0f, static_cast<float>(framerate), 0.01f))
+      {
+        framerate = 50.0;
+        m_processInfo->SetVideoInterlaced(true);
+      }
+      if (MathUtils::FloatEquals(29.97f, static_cast<float>(framerate), 0.01f))
+      {
+        framerate = 60000.0 / 1001.0;
+        m_processInfo->SetVideoInterlaced(true);
+      }
+      m_processInfo->SetVideoFps(static_cast<float>(framerate));
       m_renderManager.TriggerUpdateResolution(framerate, hint.width, hint.height, hint.stereo_mode);
     }
   }
