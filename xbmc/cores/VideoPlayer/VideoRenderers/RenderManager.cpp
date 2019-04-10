@@ -1115,13 +1115,15 @@ void CRenderManager::PrepareNextRender()
     // skip late frames
     while (m_queued.front() != idx)
     {
+      m_presentsourcePast = m_queued.front();
+      m_queued.pop_front();
+
       if (m_presentsourcePast >= 0)
       {
         m_discard.push_back(m_presentsourcePast);
         m_QueueSkip++;
+        m_presentsourcePast = -1;
       }
-      m_presentsourcePast = m_queued.front();
-      m_queued.pop_front();
     }
 
     const int lateframes = static_cast<int>((renderPts - m_Queue[idx].pts) *
