@@ -1668,6 +1668,12 @@ void CVideoPlayer::ProcessVideoData(CDemuxStream* pStream, DemuxPacket* pPacket)
   if (CheckSceneSkip(m_CurrentVideo))
     drop = true;
 
+  if ((m_CurrentVideo.lastdts == DVD_NOPTS_VALUE || pPacket->dts == DVD_NOPTS_VALUE) && (pPacket->pts != DVD_NOPTS_VALUE))
+    m_clock.Discontinuity(pPacket->pts - DVD_TIME_BASE/2);
+
+  m_CurrentVideo.lastdts = pPacket->dts;
+  CLog::Log(LOGDEBUG, "CVideoPlayer::ProcessVideoData size:%d dts:%0.3f pts:%0.3f dur:%0.3fms, clock:%0.3f level:%d", 
+    pPacket->iSize, pPacket->dts/1000000, pPacket->pts/1000000, pPacket->duration/1000.0, m_clock.GetClock()/1000000.0, m_processInfo->GetLevelVQ());
   m_VideoPlayerVideo->SendMessage(new CDVDMsgDemuxerPacket(pPacket, drop));
   m_CurrentVideo.packets++;
 }
