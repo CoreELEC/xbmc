@@ -1126,7 +1126,7 @@ void CRenderManager::PrepareNextRender()
     // see if any future queued frames are already due
     auto iter = m_queued.begin();
     int idx = *iter;
-    ++iter;
+    int lateframes = 0;
     while (iter != m_queued.end())
     {
       // the slot for rendering in time is [pts .. (pts +  x * frametime)]
@@ -1136,6 +1136,7 @@ void CRenderManager::PrepareNextRender()
       double x = (m_lateframes <= 6) ? 0.98 : 0;
       if (renderPts < m_Queue[*iter].pts + x * frametime)
         break;
+      lateframes++;
       idx = *iter;
       ++iter;
     }
@@ -1154,7 +1155,6 @@ void CRenderManager::PrepareNextRender()
       }
     }
 
-    int lateframes = static_cast<int>((renderPts - m_Queue[idx].pts) * m_fps / DVD_TIME_BASE);
     if (lateframes)
       m_lateframes += lateframes;
     else
