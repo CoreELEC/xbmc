@@ -320,6 +320,9 @@ bool CPlayerGUIInfo::GetLabel(std::string& value, const CFileItem *item, int con
     case PLAYER_PROCESS_VIDEODAR:
       value = StringUtils::Format("%.2f", CServiceBroker::GetDataCacheCore().GetVideoDAR());
       return true;
+    case PLAYER_PROCESS_VIDEOINTERLACE:
+      value = StringUtils::Format("%s", CServiceBroker::GetDataCacheCore().GetVideoInterlaced() ? "i" : "p");
+      return true;
     case PLAYER_PROCESS_VIDEOWIDTH:
       value = StringUtils::FormatNumber(CServiceBroker::GetDataCacheCore().GetVideoWidth());
       return true;

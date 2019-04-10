@@ -1021,7 +1021,8 @@ const infomap player_process[] =
   { "audiodecoder", PLAYER_PROCESS_AUDIODECODER },
   { "audiochannels", PLAYER_PROCESS_AUDIOCHANNELS },
   { "audiosamplerate", PLAYER_PROCESS_AUDIOSAMPLERATE },
-  { "audiobitspersample", PLAYER_PROCESS_AUDIOBITSPERSAMPLE }
+  { "audiobitspersample", PLAYER_PROCESS_AUDIOBITSPERSAMPLE },
+  { "videointerlace", PLAYER_PROCESS_VIDEOINTERLACE }
 };
 
 /// \page modules__infolabels_boolean_conditions
