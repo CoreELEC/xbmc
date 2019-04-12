@@ -416,6 +416,7 @@ constexpr const char* CSettings::SETTING_MASTERLOCK_STARTUPLOCK;
 constexpr const char* CSettings::SETTING_MASTERLOCK_MAXRETRIES;
 constexpr const char* CSettings::SETTING_COREELEC_AMLOGIC_NOISEREDUCTION;
 constexpr const char* CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR;
+constexpr const char* CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR;
 constexpr const char* CSettings::SETTING_CACHE_HARDDISK;
 constexpr const char* CSettings::SETTING_CACHEVIDEO_DVDROM;
 constexpr const char* CSettings::SETTING_CACHEVIDEO_LAN;
