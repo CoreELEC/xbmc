@@ -85,7 +85,7 @@ bool CWinSystemAmlogic::InitWindowSystem()
   const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
 
   int sdr2hdr = settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
-  if (sdr2hdr)
+  if (sdr2hdr != 0) // Default is Off (0)
   {
     CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem -- setting sdr2hdr mode to %d", sdr2hdr);
     SysfsUtils::SetInt("/sys/module/am_vecm/parameters/sdr_mode", sdr2hdr);
