@@ -9,6 +9,7 @@
 #pragma once
 
 #include "threads/Thread.h"
+#include "interfaces/IAnnouncer.h"
 
 #include <libinput.h>
 #include <libudev.h>
@@ -20,11 +21,13 @@ class CLibInputPointer;
 class CLibInputSettings;
 class CLibInputTouch;
 
-class CLibInputHandler : CThread
+class CLibInputHandler : CThread, public ANNOUNCEMENT::IAnnouncer
 {
 public:
   CLibInputHandler();
   ~CLibInputHandler();
+
+  void Announce(ANNOUNCEMENT::AnnouncementFlag flag, const char *sender, const char *message, const CVariant &data) override;
 
   void Start();
 
