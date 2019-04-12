@@ -3013,7 +3013,7 @@
         <setting id="coreelec.amlogic.hevcworkaround" type="boolean" label="14280" help="14281">
           <requirement>HAVE_AMCODEC</requirement>
           <level>3</level>
-          <default>false</default>
+          <default>true</default>
           <control type="toggle" />
         </setting>
       </group>

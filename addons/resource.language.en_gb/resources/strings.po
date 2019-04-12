@@ -8337,25 +8337,25 @@ msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14280"
-msgid "Enable HEVC seek workaround"
+msgid "Enable HEVC workaround"
 msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14281"
-msgid "Enable this if you have problems with HEVC content after seeking."
+msgid "Enable this if you have playback issues with HEVC content."
 msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14282"
-msgid "SDR2HDR mode"
+msgid "Tone map SDR to HDR"
 msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14283"
-msgid "Select to change the SDR2HDR mode. Requires reboot."
+msgid "Intended for HDR enabled displays - not recommended. Turn this On or set to Auto to have HDR10 mode always on. GUI and SDR content will be tone mapped. Requires reboot."
 msgstr ""
 
-#empty strings from id 14282 to 14300
+#empty strings from id 14284 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
