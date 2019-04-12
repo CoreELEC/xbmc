@@ -8423,7 +8423,17 @@ msgctxt "#14283"
 msgid "Intended for HDR enabled displays - not recommended. Turn this On or set to Auto to have HDR10 mode always on. GUI and SDR content will be tone mapped. Requires reboot."
 msgstr ""
 
-#empty strings from id 14284 to 14300
+#: system/settings/settings.xml
+msgctxt "#14284"
+msgid "Tone map HDR to SDR"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14285"
+msgid "Intended for SDR displays. Turn this On or set to Auto to have HDR content tone mapped to SDR. This improves color saturation and contrast of HDR content on SDR displays. Requires reboot."
+msgstr ""
+
+#empty strings from id 14286 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
