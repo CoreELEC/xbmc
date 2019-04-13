@@ -8,13 +8,13 @@
 	<controls>
 		<control type="group">
 			<bottom>0</bottom>
-			<height>250</height>
+			<height>300</height>
 			<animation effect="slide" end="0,-20" time="150" condition="VideoPlayer.Content(LiveTV)">conditional</animation>
 			<control type="image">
 				<left>30</left>
 				<top>-220</top>
 				<right>30</right>
-				<height>330</height>
+				<height>420</height>
 				<texture border="40">dialogs/dialog-bg-nobo.png</texture>
 			</control>
 			<control type="grouplist">
@@ -207,7 +207,7 @@
 				<top>-204</top>
 				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
 				<control type="label">
-					<width>1600</width>
+					<width>1200</width>
 					<height>50</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(videodecoder),[COLOR button_focus]$LOCALIZE[31139]:[/COLOR] ]$VAR[VideoHWDecoder, (,)]</label>
@@ -216,16 +216,16 @@
 					<visible>Player.HasVideo</visible>
 				</control>
 				<control type="label">
-					<width>1600</width>
+					<width>1200</width>
 					<height>50</height>
 					<aligny>bottom</aligny>
-					<label>$INFO[Player.Process(pixformat),[COLOR button_focus]$LOCALIZE[31140]:[/COLOR] ]</label>
+					<label>$INFO[Player.Process(amlogic.pixformat),[COLOR button_focus]$LOCALIZE[31140]:[/COLOR] ]</label>
 					<font>font14</font>
 					<shadowcolor>black</shadowcolor>
 					<visible>Player.HasVideo</visible>
 				</control>
 				<control type="label">
-					<width>1600</width>
+					<width>1200</width>
 					<height>50</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(deintmethod),[COLOR button_focus]$LOCALIZE[16038]:[/COLOR] ]</label>
@@ -256,7 +256,7 @@
 				<top>-204</top>
 				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5554)</visible>
 				<control type="label">
-					<width>1600</width>
+					<width>1200</width>
 					<height>50</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[System.ScreenResolution,[COLOR button_focus]$LOCALIZE[31607]:[/COLOR] ]</label>
@@ -264,7 +264,7 @@
 					<shadowcolor>black</shadowcolor>
 				</control>
 				<control type="label">
-					<width>1600</width>
+					<width>1200</width>
 					<height>50</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[System.FPS,[COLOR button_focus]$LOCALIZE[31608]:[/COLOR] , fps]</label>
@@ -275,7 +275,7 @@
 					<width>1600</width>
 					<height>50</height>
 					<aligny>bottom</aligny>
-					<label>$INFO[System.Memory(used.percent),[COLOR button_focus]$LOCALIZE[31030]:[/COLOR] ]</label>
+					<label>[COLOR button_focus]$LOCALIZE[31030]:[/COLOR] $INFO[system.memory(used)] / $INFO[system.memory(total)] - $INFO[system.memory(used.percent)]</label>
 					<font>font14</font>
 					<shadowcolor>black</shadowcolor>
 					<visible>System.SupportsCPUUsage</visible>
@@ -287,16 +287,37 @@
 					<label>$INFO[System.CpuUsage,[COLOR button_focus]$LOCALIZE[31609]:[/COLOR] ]</label>
 					<font>font14</font>
 					<shadowcolor>black</shadowcolor>
-					<visible>System.SupportsCPUUsage</visible>
 				</control>
 				<control type="label">
 					<width>1600</width>
 					<height>50</height>
 					<aligny>bottom</aligny>
-					<label>$INFO[System.Memory(used.percent),[COLOR button_focus]$LOCALIZE[31030]:[/COLOR] ]</label>
+					<label>$INFO[System.CPUTemperature,[COLOR button_focus]SoC Temp:[/COLOR] ]</label>
 					<font>font14</font>
 					<shadowcolor>black</shadowcolor>
-					<visible>!System.SupportsCPUUsage</visible>
+				</control>
+			</control>
+			<control type="grouplist">
+				<left>1250</left>
+				<top>-204</top>
+				<visible>Control.HasFocus(5553)</visible>
+				<control type="label">
+					<width>600</width>
+					<height>50</height>
+					<aligny>bottom</aligny>
+					<label>$INFO[Player.Process(amlogic.displaymode),[COLOR button_focus]$LOCALIZE[32100]:[/COLOR] ]</label>
+					<font>font14</font>
+					<shadowcolor>black</shadowcolor>
+					<visible>Player.HasVideo</visible>
+				</control>
+				<control type="label">
+					<width>600</width>
+					<height>50</height>
+					<aligny>bottom</aligny>
+					<label>$INFO[Player.Process(amlogic.eoft_gamut),[COLOR button_focus]$LOCALIZE[32101]:[/COLOR] ]</label>
+					<font>font14</font>
+					<shadowcolor>black</shadowcolor>
+					<visible>Player.HasVideo</visible>
 				</control>
 			</control>
 			<control type="grouplist" id="5550">
