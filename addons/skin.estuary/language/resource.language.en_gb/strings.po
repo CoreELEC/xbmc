@@ -928,6 +928,15 @@ msgstr ""
 #. Label to show the system info page
 msgctxt "#31611"
 msgid "System"
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#32100"
+msgid "Display mode"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#32101"
+msgid "EOTF & Gamut"
 msgstr ""
 
 #: /xml/Includes_DialogSelect.xml
