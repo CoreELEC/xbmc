@@ -792,3 +792,33 @@ msgstr ""
 msgctxt "#31169"
 msgid "Artwork related settings."
 msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#32100"
+msgid "Display mode"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#32101"
+msgid "Colour depth"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#32102"
+msgid "Colour space"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#32103"
+msgid "Colour range"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#32104"
+msgid "EOTF"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#32105"
+msgid "Colourimetry"
+msgstr ""
