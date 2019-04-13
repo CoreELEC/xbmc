@@ -765,3 +765,33 @@ msgstr ""
 msgctxt "#31167"
 msgid "Animate background"
 msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31168"
+msgid "Display mode"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31169"
+msgid "Colour depth"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31170"
+msgid "Colour space"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31171"
+msgid "Colour range"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31172"
+msgid "EOTF"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31173"
+msgid "Colourimetry"
+msgstr ""
