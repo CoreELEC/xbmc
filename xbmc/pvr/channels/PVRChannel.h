@@ -151,6 +151,11 @@ namespace PVR
     void SetRadioRDSInfoTag(const std::shared_ptr<CPVRRadioRDSInfoTag>& tag);
 
     /*!
+     * @return True if this channel has a server-side back buffer, false otherwise
+     */
+    bool HasArchive(void) const;
+
+    /*!
      * @return The path to the icon for this channel.
      */
     std::string IconPath(void) const;
@@ -439,6 +444,7 @@ namespace PVR
     time_t           m_iLastWatched;            /*!< last time channel has been watched */
     bool             m_bChanged;                /*!< true if anything in this entry was changed that needs to be persisted */
     CPVRChannelNumber m_channelNumber;          /*!< the number this channel has in the currently selected channel group */
+    bool             m_bHasArchive;             /*!< true if this channel supports archive */
     std::shared_ptr<CPVRRadioRDSInfoTag> m_rdsTag; /*! < the radio rds data, if available for the channel. */
     //@}
 
