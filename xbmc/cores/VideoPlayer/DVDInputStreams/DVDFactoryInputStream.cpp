@@ -11,6 +11,7 @@
 #include "DVDInputStreamFile.h"
 #include "DVDInputStreamNavigator.h"
 #include "DVDInputStreamFFmpeg.h"
+#include "DVDInputStreamFFmpegArchive.h"
 #include "InputStreamAddon.h"
 #include "InputStreamMultiSource.h"
 #include "InputStreamPVRChannel.h"
@@ -29,6 +30,7 @@
 #include "ServiceBroker.h"
 #include "addons/binary-addons/BinaryAddonManager.h"
 #include "Util.h"
+#include "utils/log.h"
 
 
 std::shared_ptr<CDVDInputStream> CDVDFactoryInputStream::CreateInputStream(IVideoPlayer* pPlayer, const CFileItem &fileitem, bool scanforextaudio)
@@ -143,8 +145,18 @@ std::shared_ptr<CDVDInputStream> CDVDFactoryInputStream::CreateInputStream(IVide
       }
     }
 
-    if (finalFileitem.IsType(".m3u8"))
-      return std::shared_ptr<CDVDInputStreamFFmpeg>(new CDVDInputStreamFFmpeg(finalFileitem));
+    if (finalFileitem.IsType(".m3u8") || finalFileitem.IsType(".php"))
+    {
+      if (fileitem.IsPVRChannelWithArchive() || fileitem.IsEPGWithArchive())
+      {
+        CLog::Log(LOGDEBUG, "%s: CDVDInputStreamFFmpegArchive", __FUNCTION__);
+        return std::shared_ptr<CDVDInputStreamFFmpegArchive>(new CDVDInputStreamFFmpegArchive(finalFileitem));
+      }
+      else
+      {
+        return std::shared_ptr<CDVDInputStreamFFmpeg>(new CDVDInputStreamFFmpeg(finalFileitem));
+      }
+    }
 
     if (finalFileitem.GetMimeType() == "application/vnd.apple.mpegurl")
       return std::shared_ptr<CDVDInputStreamFFmpeg>(new CDVDInputStreamFFmpeg(finalFileitem));
@@ -154,6 +166,7 @@ std::shared_ptr<CDVDInputStream> CDVDFactoryInputStream::CreateInputStream(IVide
   }
 
   // our file interface handles all these types of streams
+  CLog::Log(LOGDEBUG, "%s: All else failed, creating CDVDInputStreamFile", __FUNCTION__);
   return std::shared_ptr<CDVDInputStreamFile>(new CDVDInputStreamFile(finalFileitem,
                                                                       XFILE::READ_TRUNCATED |
                                                                       XFILE::READ_BITRATE |

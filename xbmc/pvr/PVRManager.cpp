@@ -956,12 +956,28 @@ bool CPVRManager::FillStreamFileItem(CFileItem &fileItem)
   const CPVRClientPtr client = GetClient(fileItem);
   if (client)
   {
+    if (client->GetBackendName() == "IPTV Archive PVR Add-on")
+      client->CloseLiveStream();
     if (fileItem.IsPVRChannel())
       return client->FillChannelStreamFileItem(fileItem) == PVR_ERROR_NO_ERROR;
     else if (fileItem.IsPVRRecording())
       return client->FillRecordingStreamFileItem(fileItem) == PVR_ERROR_NO_ERROR;
     else if (fileItem.IsEPG())
-      return client->FillEpgTagStreamFileItem(fileItem) == PVR_ERROR_NO_ERROR;
+    {
+      PVR_ERROR error = client->FillEpgTagStreamFileItem(fileItem);
+      if (error == PVR_ERROR_NOT_IMPLEMENTED)
+      {
+        // PVR_ERROR_NOT_IMPLEMENTED is returned when Play EPG as Live TV is selected.
+        const std::shared_ptr<CPVRChannel> channel = CServiceBroker::GetPVRManager().ChannelGroups()->GetChannelForEpgTag(fileItem.GetEPGInfoTag());
+        if (channel)
+        {
+          fileItem = CFileItem(channel);
+          return client->FillChannelStreamFileItem(fileItem) == PVR_ERROR_NO_ERROR;
+        }
+      }
+
+      return error == PVR_ERROR_NO_ERROR;
+    }
   }
   return false;
 }
