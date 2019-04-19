@@ -223,7 +223,9 @@ public:
   bool IsMusicDb() const;
   bool IsVideoDb() const;
   bool IsEPG() const;
+  bool IsEPGWithArchive() const;
   bool IsPVRChannel() const;
+  bool IsPVRChannelWithArchive() const;
   bool IsPVRRecording() const;
   bool IsUsablePVRRecording() const;
   bool IsDeletedPVRRecording() const;
