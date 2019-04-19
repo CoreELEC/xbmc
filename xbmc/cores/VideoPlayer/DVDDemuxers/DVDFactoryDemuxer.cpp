@@ -11,6 +11,7 @@
 #include "DVDInputStreams/DVDInputStream.h"
 
 #include "DVDDemuxFFmpeg.h"
+#include "DVDDemuxFFmpegArchive.h"
 #include "DVDDemuxBXA.h"
 #include "DVDDemuxCDDA.h"
 #include "DVDDemuxClient.h"
@@ -85,6 +86,17 @@ CDVDDemux* CDVDFactoryDemuxer::CreateDemuxer(std::shared_ptr<CDVDInputStream> pI
       return NULL;
   }
 
+  if (pInputStream->IsStreamType(DVDSTREAM_TYPE_PVR_ARCHIVE))
+  {
+    CLog::Log(LOGDEBUG, "DVDFactoryDemuxer: Create CDVDDemuxFFmpegArchive.");
+    std::unique_ptr<CDVDDemuxFFmpegArchive> demuxer(new CDVDDemuxFFmpegArchive());
+    if (demuxer->Open(pInputStream, streaminfo, fileinfo))
+      return demuxer.release();
+    else
+      return NULL;
+  }
+
+  CLog::Log(LOGDEBUG, "DVDFactoryDemuxer: Create CDVDDemuxFFmpeg.");
   std::unique_ptr<CDVDDemuxFFmpeg> demuxer(new CDVDDemuxFFmpeg());
   if(demuxer->Open(pInputStream, streaminfo, fileinfo))
     return demuxer.release();
