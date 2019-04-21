@@ -773,25 +773,10 @@ msgstr ""
 
 #: /xml/DialogPlayerProcessInfo.xml
 msgctxt "#31169"
-msgid "Colour depth"
+msgid "Pixel format"
 msgstr ""
 
 #: /xml/DialogPlayerProcessInfo.xml
 msgctxt "#31170"
-msgid "Colour space"
-msgstr ""
-
-#: /xml/DialogPlayerProcessInfo.xml
-msgctxt "#31171"
-msgid "Colour range"
-msgstr ""
-
-#: /xml/DialogPlayerProcessInfo.xml
-msgctxt "#31172"
-msgid "EOTF"
-msgstr ""
-
-#: /xml/DialogPlayerProcessInfo.xml
-msgctxt "#31173"
-msgid "Colourimetry"
+msgid "EOTF & Gamut"
 msgstr ""
