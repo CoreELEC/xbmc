@@ -115,6 +115,7 @@ public:
   virtual int codec_checkin_pts(codec_para_t *pcodec, unsigned long pts)=0;
   virtual int codec_get_vbuf_state(codec_para_t *pcodec, struct buf_status *buf)=0;
   virtual int codec_get_vdec_state(codec_para_t *pcodec, struct vdec_status *vdec)=0;
+  virtual int codec_get_vdec_info(codec_para_t *pcodec, struct vdec_info *vdec) = 0;
 
   virtual int codec_init_cntl(codec_para_t *pcodec)=0;
   virtual int codec_poll_cntl(codec_para_t *pcodec)=0;
@@ -142,6 +143,7 @@ class DllLibAmCodec : public DllDynamic, DllLibamCodecInterface
   DEFINE_METHOD2(int, codec_checkin_pts,        (codec_para_t *p1, unsigned long p2))
   DEFINE_METHOD2(int, codec_get_vbuf_state,     (codec_para_t *p1, struct buf_status * p2))
   DEFINE_METHOD2(int, codec_get_vdec_state,     (codec_para_t *p1, struct vdec_status * p2))
+  DEFINE_METHOD2(int, codec_get_vdec_info,      (codec_para_t *p1, struct vdec_info * p2))
 
   DEFINE_METHOD1(int, codec_init_cntl,          (codec_para_t *p1))
   DEFINE_METHOD1(int, codec_poll_cntl,          (codec_para_t *p1))
@@ -164,6 +166,7 @@ class DllLibAmCodec : public DllDynamic, DllLibamCodecInterface
     RESOLVE_METHOD(codec_checkin_pts)
     RESOLVE_METHOD(codec_get_vbuf_state)
     RESOLVE_METHOD(codec_get_vdec_state)
+    RESOLVE_METHOD(codec_get_vdec_info)
 
     RESOLVE_METHOD(codec_init_cntl)
     RESOLVE_METHOD(codec_poll_cntl)
@@ -2278,7 +2281,7 @@ void CAMLCodec::SetVideoRect(const CRect &SrcRect, const CRect &DestRect)
   unsigned int video_rate = GetDecoderVideoRate();
   if (video_rate > 0 && video_rate != am_private->video_rate)
   {
-    CLog::Log(LOGDEBUG, "CAMLCodec::SetVideoRect: decoder fps has changed, video_rate adjusted from %d to %d", am_private->video_rate, video_rate);
+    CLog::Log(LOGDEBUG, "CAMLCodec::SetVideoRect: decoder fps has changed, video_rate adjusted from %u to %u", am_private->video_rate, video_rate);
     am_private->video_rate = video_rate;
   }
 
@@ -2428,10 +2431,9 @@ unsigned int CAMLCodec::GetDecoderVideoRate()
   if (m_speed != DVD_PLAYSPEED_NORMAL || m_pollDevice < 0)
     return 0;
 
-  struct vdec_status vs;
-  m_dll->codec_get_vdec_state(&am_private->vcodec, &vs);
-  if (vs.fps > 0)
-    return static_cast<unsigned int>(0.5 + (static_cast<float>(UNIT_FREQ) / static_cast<float>(vs.fps)));
+  struct vdec_info vi = {};
+  if (m_dll->codec_get_vdec_info(&am_private->vcodec, &vi) == 0 && vi.frame_dur > 0)
+    return vi.frame_dur;
   else
     return 0;
 }
