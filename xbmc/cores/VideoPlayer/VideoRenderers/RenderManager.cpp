@@ -313,8 +313,7 @@ void CRenderManager::FrameMove()
       m_presentTimer.Set(1000);
     }
 
-    if (m_presentstep == PRESENT_READY)
-      PrepareNextRender();
+    PrepareNextRender();
 
     if (m_presentstep == PRESENT_FLIP)
     {
@@ -1076,6 +1075,21 @@ int CRenderManager::WaitForBuffer(volatile std::atomic_bool&bStop, int timeout)
 
 void CRenderManager::PrepareNextRender()
 {
+  double frameOnScreen = m_dvdClock.GetClock();
+  double frametime = 1.0 / CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS() * DVD_TIME_BASE;
+
+  if (m_presentstep != PRESENT_READY)
+  {
+    if (last_frameOnScreen > 0)
+    {
+      m_dvdClock.ErrorAdjust(-(frameOnScreen - last_frameOnScreen), "adjusted renderPts because of present not ready");
+      last_frameOnScreen = m_dvdClock.GetClock();
+    }
+    return;
+  }
+
+  last_frameOnScreen = frameOnScreen;
+
   if (m_queued.empty())
   {
     CLog::Log(LOGERROR, "CRenderManager::PrepareNextRender - asked to prepare with nothing available");
@@ -1086,9 +1100,6 @@ void CRenderManager::PrepareNextRender()
 
   if (!m_showVideo && !m_forceNext)
     return;
-
-  double frameOnScreen = m_dvdClock.GetClock();
-  double frametime = 1.0 / CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS() * DVD_TIME_BASE;
 
   m_displayLatency = DVD_MSEC_TO_TIME(m_latencyTweak + CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency() - m_videoDelay - CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment());
 
