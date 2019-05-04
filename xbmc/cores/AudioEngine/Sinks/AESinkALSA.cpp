@@ -1619,9 +1619,12 @@ void CAESinkALSA::EnumerateDevice(AEDeviceInfoList &list, const std::string &dev
       info.m_dataFormats.push_back(i);
   }
 
-  if (GetAMLDeviceType(info.m_displayName) != AML_NONE && info.m_deviceType != AE_DEVTYPE_HDMI)
+  if (GetAMLDeviceType(info.m_displayName) != AML_NONE)
   {
-    info.m_displayNameExtra = "PCM";
+    if (info.m_deviceType == AE_DEVTYPE_IEC958)
+      info.m_displayNameExtra = "S/PDIF";
+    else if (info.m_deviceType != AE_DEVTYPE_HDMI)
+      info.m_displayNameExtra = "PCM";
   }
 
   if (info.m_deviceType == AE_DEVTYPE_HDMI)
