@@ -221,6 +221,7 @@ bool CRenderManager::Configure()
     m_bTriggerUpdateResolution = true;
     m_presentstep = PRESENT_IDLE;
     m_presentpts = DVD_NOPTS_VALUE;
+    m_frameOnScreenLast = DVD_NOPTS_VALUE;
     m_lateframes = -1;
     m_presentevent.notifyAll();
     m_renderedOverlay = false;
@@ -423,6 +424,7 @@ bool CRenderManager::Flush(bool wait, bool saveBuffers)
     CSingleLock lock2(m_presentlock);
     CSingleLock lock3(m_datalock);
 
+    m_frameOnScreenLast = DVD_NOPTS_VALUE;
     if (m_pRenderer)
     {
       m_overlays.Flush();
@@ -1076,19 +1078,27 @@ int CRenderManager::WaitForBuffer(volatile std::atomic_bool&bStop, int timeout)
 void CRenderManager::PrepareNextRender()
 {
   double frameOnScreen = m_dvdClock.GetClock();
-  double frametime = 1.0 / CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS() * DVD_TIME_BASE;
+  double fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
+  double frametime;
+
+  if (fps == 0.0)
+    return;
+
+  frametime = 1.0 / fps * DVD_TIME_BASE;
 
   if (m_presentstep != PRESENT_READY)
   {
-    if (last_frameOnScreen > 0)
+    if (m_frameOnScreenLast != DVD_NOPTS_VALUE)
     {
-      m_dvdClock.ErrorAdjust(-(frameOnScreen - last_frameOnScreen), "adjusted renderPts because of present not ready");
-      last_frameOnScreen = m_dvdClock.GetClock();
+      if (fabs(frameOnScreen - m_frameOnScreenLast) < 200000.0)   // < 200 msec
+        m_dvdClock.ErrorAdjust(-(frameOnScreen - m_frameOnScreenLast), "adjusted renderPts because of present not ready");
+
+      m_frameOnScreenLast = m_dvdClock.GetClock();
     }
     return;
   }
 
-  last_frameOnScreen = frameOnScreen;
+  m_frameOnScreenLast = frameOnScreen;
 
   if (m_queued.empty())
   {
@@ -1130,7 +1140,8 @@ void CRenderManager::PrepareNextRender()
     m_dvdClock.SetVsyncAdjust(0);
   }
 
-  CLog::LogF(LOGDEBUG, LOGAVTIMING, "frameOnScreen: %f renderPts: %f nextFramePts: %f -> diff: %f  render: %u forceNext: %u", frameOnScreen, renderPts, nextFramePts, (renderPts - nextFramePts), renderPts >= nextFramePts, m_forceNext);
+  CLog::LogF(LOGDEBUG, LOGAVTIMING, "frameOnScreen: %0.3f renderPts: %0.3f nextFramePts: %0.3f -> diff: %0.3f  render: %u forceNext: %u",
+	 frameOnScreen, renderPts, nextFramePts, (renderPts - nextFramePts), renderPts >= nextFramePts, m_forceNext);
 
   bool combined = false;
   if (m_presentsourcePast >= 0)
