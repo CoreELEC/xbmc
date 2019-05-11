@@ -1648,6 +1648,11 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
   am_private->gcodec.ratio64     = am_private->video_ratio64;
   am_private->gcodec.param       = NULL;
 
+  if (am_private->video_format == VFORMAT_VC1) 					/* workaround to fix slowdown VC1 progressive */
+    SysfsUtils::SetInt("/sys/module/di/parameters/di_debug_flag", 0x10000);
+  else
+    SysfsUtils::SetInt("/sys/module/di/parameters/di_debug_flag", 0);
+
   switch(am_private->video_format)
   {
     default:
