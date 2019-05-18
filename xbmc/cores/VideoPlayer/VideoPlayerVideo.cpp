@@ -941,17 +941,17 @@ CVideoPlayerVideo::EOutputState CVideoPlayerVideo::OutputPicture(const VideoPict
   }
 
   int timeToDisplay = DVD_TIME_TO_MSEC(pPicture->pts - iPlayingClock);
-  std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
 
   // make sure waiting time is not negative
   int maxWaitTime = std::min(std::max(timeToDisplay + 500, 50), 500);
   // don't wait when going ff
   if (m_speed > DVD_PLAYSPEED_NORMAL)
     maxWaitTime = std::max(timeToDisplay, 0);
-  int buffer = m_renderManager.WaitForBuffer(m_bAbortOutput, maxWaitTime);
-  CLog::Log(LOGDEBUG,"CVideoPlayerVideo::%s - ttd:%dms pts:%0.3lf Clock:%0.3f Level:%d elapsed:%0.3fms",
-        __FUNCTION__, timeToDisplay, pPicture->pts/1000000, iPlayingClock/1000000.0, buffer, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - now).count() / 1000.0);
-  if (buffer < 0)
+
+  int level = m_renderManager.WaitForBuffer(m_bAbortOutput, maxWaitTime);
+  CLog::Log(LOGDEBUG,"CVideoPlayerVideo::%s - ttd:%dms pts:%0.3lf Clock:%0.3f Level:%d",
+        __FUNCTION__, timeToDisplay, pPicture->pts / DVD_TIME_BASE, static_cast<double>(iPlayingClock) / DVD_TIME_BASE, level);
+  if (level < 0)
   {
     if (m_speed != DVD_PLAYSPEED_PAUSE)
       CLog::Log(LOGWARNING, "{} - timeout waiting for buffer", __FUNCTION__);
