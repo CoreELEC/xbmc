@@ -1090,7 +1090,7 @@ void CRenderManager::PrepareNextRender()
   {
     if (m_frameOnScreenLast != DVD_NOPTS_VALUE)
     {
-      if (fabs(frameOnScreen - m_frameOnScreenLast) < 200000.0)   // < 200 msec
+      if ((m_dvdClock.GetClockSpeed() == 1.0) && (fabs(frameOnScreen - m_frameOnScreenLast) < 200000.0))   // < 200 msec
         m_dvdClock.ErrorAdjust(-(frameOnScreen - m_frameOnScreenLast), "adjusted renderPts because of present not ready");
 
       m_frameOnScreenLast = m_dvdClock.GetClock();
