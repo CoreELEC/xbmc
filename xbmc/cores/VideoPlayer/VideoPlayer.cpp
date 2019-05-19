@@ -1963,26 +1963,26 @@ void CVideoPlayer::HandlePlaySpeed()
       else if (m_CurrentAudio.starttime != DVD_NOPTS_VALUE && m_CurrentAudio.packets > 0)
       {
         if (m_pInputStream->IsRealtime())
-          clock = m_CurrentAudio.starttime - m_CurrentAudio.cachetime - DVD_MSEC_TO_TIME(1000);
+          clock = m_CurrentAudio.starttime - m_CurrentAudio.cachetime - DVD_MSEC_TO_TIME(800);
         else
           clock = m_CurrentAudio.starttime - m_CurrentAudio.cachetime;
 
         if (m_CurrentVideo.starttime != DVD_NOPTS_VALUE && (m_CurrentVideo.packets > 0))
         {
-          if (m_CurrentVideo.starttime - m_CurrentVideo.cachetotal - DVD_MSEC_TO_TIME(1200) < clock)
+          if (m_CurrentVideo.starttime - m_CurrentVideo.cachetotal < clock)
           {
-            clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal - DVD_MSEC_TO_TIME(1200);
+            clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal;
           }
-          else if (m_CurrentVideo.starttime - DVD_MSEC_TO_TIME(1800) > m_CurrentAudio.starttime &&
+          else if (m_CurrentVideo.starttime > m_CurrentAudio.starttime &&
                    !m_pInputStream->IsRealtime())
           {
             int audioLevel = m_VideoPlayerAudio->GetLevel();
             //@todo hardcoded 8 seconds in message queue
             double maxAudioTime = clock + DVD_MSEC_TO_TIME(40 * audioLevel);
-            if ((m_CurrentVideo.starttime - m_CurrentVideo.cachetotal - DVD_MSEC_TO_TIME(1800)) > maxAudioTime)
+            if ((m_CurrentVideo.starttime - m_CurrentVideo.cachetotal) > maxAudioTime)
               clock = maxAudioTime;
             else
-              clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal - DVD_MSEC_TO_TIME(1800);
+              clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal;
           }
         }
       }
