@@ -202,7 +202,6 @@ protected:
 
   int m_lateframes = -1;
   double m_presentpts = 0.0;
-  double last_frameOnScreen = 0.0;
   EPRESENTSTEP m_presentstep = PRESENT_IDLE;
   XbmcThreads::EndTime m_presentTimer;
   bool m_forceNext = false;
