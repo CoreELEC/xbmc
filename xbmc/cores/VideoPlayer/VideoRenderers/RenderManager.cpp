@@ -221,7 +221,6 @@ bool CRenderManager::Configure()
     m_bTriggerUpdateResolution = true;
     m_presentstep = PRESENT_IDLE;
     m_presentpts = DVD_NOPTS_VALUE;
-    m_frameOnScreenLast = DVD_NOPTS_VALUE;
     m_lateframes = -1;
     m_presentevent.notifyAll();
     m_renderedOverlay = false;
@@ -424,7 +423,6 @@ bool CRenderManager::Flush(bool wait, bool saveBuffers)
     CSingleLock lock2(m_presentlock);
     CSingleLock lock3(m_datalock);
 
-    m_frameOnScreenLast = DVD_NOPTS_VALUE;
     if (m_pRenderer)
     {
       m_overlays.Flush();
@@ -1078,27 +1076,19 @@ int CRenderManager::WaitForBuffer(volatile std::atomic_bool&bStop, int timeout)
 void CRenderManager::PrepareNextRender()
 {
   double frameOnScreen = m_dvdClock.GetClock();
-  double fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
-  double frametime;
-
-  if (fps == 0.0)
-    return;
-
-  frametime = 1.0 / fps * DVD_TIME_BASE;
+  double frametime = 1.0 / CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS() * DVD_TIME_BASE;
 
   if (m_presentstep != PRESENT_READY)
   {
-    if (m_frameOnScreenLast != DVD_NOPTS_VALUE)
+    if (last_frameOnScreen > 0)
     {
-      if (fabs(frameOnScreen - m_frameOnScreenLast) < 200000.0)   // < 200 msec
-        m_dvdClock.ErrorAdjust(-(frameOnScreen - m_frameOnScreenLast), "adjusted renderPts because of present not ready");
-
-      m_frameOnScreenLast = m_dvdClock.GetClock();
+      m_dvdClock.ErrorAdjust(-(frameOnScreen - last_frameOnScreen), "adjusted renderPts because of present not ready");
+      last_frameOnScreen = m_dvdClock.GetClock();
     }
     return;
   }
 
-  m_frameOnScreenLast = frameOnScreen;
+  last_frameOnScreen = frameOnScreen;
 
   if (m_queued.empty())
   {
