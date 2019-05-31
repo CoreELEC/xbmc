@@ -393,7 +393,6 @@ const std::string CSettings::SETTING_EVENTLOG_SHOW = "eventlog.show";
 const std::string CSettings::SETTING_MASTERLOCK_LOCKCODE = "masterlock.lockcode";
 const std::string CSettings::SETTING_MASTERLOCK_STARTUPLOCK = "masterlock.startuplock";
 const std::string CSettings::SETTING_MASTERLOCK_MAXRETRIES = "masterlock.maxretries";
-const std::string CSettings::SETTING_COREELEC_AMLOGIC_HEVCWORKAROUND = "coreelec.amlogic.hevcworkaround";
 const std::string CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR = "coreelec.amlogic.sdr2hdr";
 const std::string CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR = "coreelec.amlogic.hdr2sdr";
 const std::string CSettings::SETTING_CACHE_HARDDISK = "cache.harddisk";
