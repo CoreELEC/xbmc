@@ -2124,6 +2124,7 @@ float CAMLCodec::GetTimeSize()
 CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
 {
   std::string vfmt;
+  struct vdec_info vi;
 
   if (!m_opened)
     return CDVDVideoCodec::VC_ERROR;
@@ -2144,8 +2145,14 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
     pVideoPicture->dts = DVD_NOPTS_VALUE;
     pVideoPicture->pts = static_cast<double>(m_cur_pts);
 
-    CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::GetPicture: index: %u, pts: %0.3lf, dur:%0.3lfms",
-		m_bufferIndex, pVideoPicture->pts / DVD_TIME_BASE, pVideoPicture->iDuration / 1000);
+    m_dll->codec_get_vdec_info(&am_private->vcodec, &vi);
+    if  (vi.ratio_control ) {
+      m_hints.aspect = 65536.0 / vi.ratio_control;
+      m_processInfo.SetVideoDAR(m_hints.aspect);
+    }
+
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::GetPicture: index: %u, pts: %0.3lf, dur:%0.0lfms ar:%0.2f",
+		m_bufferIndex, pVideoPicture->pts / DVD_TIME_BASE, pVideoPicture->iDuration / 1000, m_hints.aspect);
 
     return CDVDVideoCodec::VC_PICTURE;
   }
