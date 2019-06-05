@@ -100,6 +100,7 @@ namespace PERIPHERALS
 
     // public CEC methods
     void ActivateSource(void);
+    void UnregisterDevice(void);
     void StandbyDevices(void);
     bool ToggleDeviceState(CecStateChange mode = STATE_SWITCH_TOGGLE, bool forceType = false);
 
