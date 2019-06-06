@@ -72,13 +72,15 @@ ifeq ($(OS),linux)
   DEPENDS += alsa-lib
   ALSA_LIB = alsa-lib
   CROSSGUID_DEPS = libuuid
-  ifeq ($(TARGET_PLATFORM),$(filter $(TARGET_PLATFORM),raspberry-pi gbm))
+  ifeq ($(TARGET_PLATFORM),$(filter $(TARGET_PLATFORM),raspberry-pi aml gbm))
     DEPENDS += libxkbcommon libinput libudev libevdev mtdev
   endif
 endif
 
 ifeq ($(TARGET_PLATFORM),wayland)
   DEPENDS += wayland waylandpp wayland-protocols
+else ifeq ($(TARGET_PLATFORM),aml)
+  DEPENDS += libamcodec
 endif
 
 .PHONY: $(DEPENDS)

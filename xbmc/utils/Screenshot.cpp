@@ -35,6 +35,10 @@
 #include "settings/SettingsComponent.h"
 #include "settings/windows/GUIControlSettings.h"
 
+#if defined(HAS_LIBAMCODEC)
+#include "utils/ScreenshotAML.h"
+#endif
+
 #if defined(TARGET_WINDOWS)
 #include "rendering/dx/DeviceResources.h"
 #include <wrl/client.h>
@@ -168,6 +172,11 @@ bool CScreenshotSurface::capture()
   }
 
   delete [] surface;
+
+#if defined(HAS_LIBAMCODEC)
+  // Captures the current visible videobuffer and blend it into m_buffer (captured overlay)
+  CScreenshotAML::CaptureVideoFrame(m_buffer, m_width, m_height);
+#endif
 
 #else
   //nothing to take a screenshot from
