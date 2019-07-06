@@ -46,6 +46,7 @@ bool aml_permissions();
 bool aml_wired_present();
 bool aml_support_hevc();
 bool aml_support_hevc_4k2k();
+bool aml_support_hevc_8k4k();
 bool aml_support_hevc_10bit();
 AML_SUPPORT_H264_4K2K aml_support_h264_4k2k();
 bool aml_support_vp9();
