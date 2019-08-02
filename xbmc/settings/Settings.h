@@ -356,6 +356,8 @@ public:
   static const std::string SETTING_COREELEC_AMLOGIC_NOISEREDUCTION;
   static const std::string SETTING_COREELEC_AMLOGIC_SDR2HDR;
   static const std::string SETTING_COREELEC_AMLOGIC_HDR2SDR;
+  static const std::string SETTING_COREELEC_AMLOGIC_LIMIT8BIT;
+  static const std::string SETTING_COREELEC_AMLOGIC_FORCE422;
   static const std::string SETTING_CACHE_HARDDISK;
   static const std::string SETTING_CACHEVIDEO_DVDROM;
   static const std::string SETTING_CACHEVIDEO_LAN;
