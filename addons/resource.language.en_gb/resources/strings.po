@@ -8433,7 +8433,27 @@ msgctxt "#14285"
 msgid "Intended for SDR displays. Turn this On or set to Auto to have HDR content tone mapped to SDR. This improves color saturation and contrast of HDR content on SDR displays. Requires reboot."
 msgstr ""
 
-#empty strings from id 14286 to 14300
+#: system/settings/settings.xml
+msgctxt "#14286"
+msgid "Limit display colour depth to 8-bit"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14287"
+msgid "Enable this to limit the display colour depth to 8-bit. Requires reboot."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14288"
+msgid "Use 4:2:2 colour subsampling"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14289"
+msgid "Enable this to use 4:2:2 colour subsampling. Some displays (usually LG) work better with this. Requires reboot."
+msgstr ""
+
+#empty strings from id 14290 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
