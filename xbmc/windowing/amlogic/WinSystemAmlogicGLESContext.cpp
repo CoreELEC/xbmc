@@ -8,6 +8,7 @@
 
 #include "VideoSyncAML.h"
 #include "WinSystemAmlogicGLESContext.h"
+#include "cores/DataCacheCore.h"
 #include "platform/linux/SysfsPath.h"
 #include "ServiceBroker.h"
 #include "utils/AMLUtils.h"
@@ -246,4 +247,23 @@ std::unique_ptr<CVideoSync> CWinSystemAmlogicGLESContext::GetVideoSync(CVideoRef
 {
   std::unique_ptr<CVideoSync> pVSync(new CVideoSyncAML(clock));
   return pVSync;
+}
+
+bool CWinSystemAmlogicGLESContext::SupportsStereo(const RenderStereoMode mode) const
+{
+  const std::string videoStereoMode{CServiceBroker::GetDataCacheCore().GetVideoStereoMode()};
+
+  if (aml_display_support_3d() &&
+      mode == RenderStereoMode::HARDWAREBASED &&
+      (videoStereoMode.empty() || videoStereoMode == "mono" || videoStereoMode == "block_lr" ||
+       videoStereoMode == "block_rl")) {
+    // yes, we support hardware based MVC decoding
+    return true;
+  }
+
+  if (mode == RenderStereoMode::SPLIT_VERTICAL &&
+      (videoStereoMode == "block_lr" || videoStereoMode == "block_rl"))
+    return false;
+
+  return CRenderSystemGLES::SupportsStereo(mode);
 }
