@@ -302,7 +302,7 @@ int CStereoscopicsManager::ConvertVideoToGuiStereoMode(const std::string &mode)
   size_t i = 0;
   while (VideoModeToGuiModeMap[i].name)
   {
-    if (mode == VideoModeToGuiModeMap[i].name)
+    if (mode == VideoModeToGuiModeMap[i].name && CServiceBroker::GetRenderSystem()->SupportsStereo(VideoModeToGuiModeMap[i].mode))
       return VideoModeToGuiModeMap[i].mode;
     i++;
   }
