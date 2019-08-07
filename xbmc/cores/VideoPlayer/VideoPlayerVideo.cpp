@@ -297,25 +297,25 @@ bool CVideoPlayerVideo::IsInited() const
 inline void CVideoPlayerVideo::SendMessage(CDVDMsg* pMsg, int priority)
 {
   m_messageQueue.Put(pMsg, priority);
-  m_processInfo.SetLevelVQ(m_messageQueue.GetLevel());
+  SetLevel();
 }
 
 inline void CVideoPlayerVideo::SendMessageBack(CDVDMsg* pMsg, int priority)
 {
   m_messageQueue.PutBack(pMsg, priority);
-  m_processInfo.SetLevelVQ(m_messageQueue.GetLevel());
+  SetLevel();
 }
 
 inline void CVideoPlayerVideo::FlushMessages()
 {
   m_messageQueue.Flush();
-  m_processInfo.SetLevelVQ(m_messageQueue.GetLevel());
+  SetLevel();
 }
 
 inline MsgQueueReturnCode CVideoPlayerVideo::GetMessage(CDVDMsg** pMsg, unsigned int iTimeoutInMilliSeconds, int &priority)
 {
   MsgQueueReturnCode ret = m_messageQueue.Get(pMsg, iTimeoutInMilliSeconds, priority);
-  m_processInfo.SetLevelVQ(m_messageQueue.GetLevel());
+  SetLevel();
   return ret;
 }
 
@@ -335,6 +335,7 @@ void CVideoPlayerVideo::Process()
   m_iDroppedFrames = 0;
   m_rewindStalled = false;
   m_outputSate = OUTPUT_NORMAL;
+  m_pts = DVD_NOPTS_VALUE;
 
   while (!m_bStop)
   {
@@ -472,6 +473,7 @@ void CVideoPlayerVideo::Process()
       m_packets.clear();
       pts = 0;
       m_rewindStalled = false;
+      m_pts = DVD_NOPTS_VALUE;
 
       m_ptsTracker.Flush();
       //we need to recalculate the framerate
@@ -599,6 +601,7 @@ void CVideoPlayerVideo::Process()
         {
           onlyPrioMsgs = true;
         }
+        m_pts = pPacket->pts;
       }
       else
       {

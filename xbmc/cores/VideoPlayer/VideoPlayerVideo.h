@@ -75,6 +75,7 @@ public:
   // classes
   CDVDOverlayContainer* m_pOverlayContainer;
   CDVDClock* m_pClock;
+  double m_pts;
 
 protected:
 
@@ -100,6 +101,8 @@ protected:
   void ResetFrameRateCalc();
   void CalcFrameRate();
   int CalcDropRequirement(double pts);
+  void SetLevel(){ m_processInfo.SetLevelVQ((m_pts == DVD_NOPTS_VALUE) || (m_pts < m_pClock->GetClock() + 80000) ?
+                     m_messageQueue.GetLevel() : m_messageQueue.GetLevel() + int((m_pts - m_pClock->GetClock() - 80000) / 80000));}
 
   double m_iSubtitleDelay;
 
