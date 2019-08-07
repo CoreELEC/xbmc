@@ -126,6 +126,8 @@ public:
   {
     iFpsScale = 0;
     iFpsRate = 0;
+    bInterlaced = true;
+    bUnknownIP = true;
     iHeight = 0;
     iWidth = 0;
     fAspect = 0.0;
@@ -151,6 +153,8 @@ public:
   int iBitsPerPixel;
   int iBitRate;
   std::string stereo_mode; // expected stereo mode
+  bool bInterlaced; // progressive/interlaced flag
+  bool bUnknownIP; // progressive/interlace unknown
 };
 
 class CDemuxStreamAudio : public CDemuxStream
