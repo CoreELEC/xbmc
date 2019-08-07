@@ -10,6 +10,7 @@
 
 #include <sstream>
 #include <utility>
+#include <cmath>
 
 #include "commons/Exception.h"
 #include "cores/FFmpeg.h"
@@ -1508,6 +1509,7 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
       case AVMEDIA_TYPE_VIDEO:
       {
         CDemuxStreamVideoFFmpeg* st = new CDemuxStreamVideoFFmpeg(pStream);
+        float fps = 0;        
         stream = st;
         if(strcmp(m_pFormatContext->iformat->name, "flv") == 0)
           st->bVFR = true;
@@ -1519,24 +1521,49 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
           st->bPTSInvalid = true;
 
         AVRational r_frame_rate = pStream->r_frame_rate;
+        CLog::Log(LOGDEBUG, "DVDDemuxFFmpeg::%s - fps:%d/%d tbr:%d/%d tbn:%d/%d", __FUNCTION__,
+            pStream->avg_frame_rate.num, pStream->avg_frame_rate.den, r_frame_rate.num, r_frame_rate.den, pStream->codec->time_base.den, pStream->codec->time_base.num);
 
-        //average fps is more accurate for mkv files
-        if (m_bMatroska && pStream->avg_frame_rate.den && pStream->avg_frame_rate.num)
+        st->bUnknownIP = false;
+        st->bInterlaced = false;
+        st->iFpsRate  = 0;
+        st->iFpsScale = 0;
+
+        if (pStream->avg_frame_rate.den && pStream->avg_frame_rate.num)
         {
-          st->iFpsRate = pStream->avg_frame_rate.num;
+          st->iFpsRate  = pStream->avg_frame_rate.num;
           st->iFpsScale = pStream->avg_frame_rate.den;
         }
         else if(r_frame_rate.den && r_frame_rate.num)
         {
-          st->iFpsRate = r_frame_rate.num;
+          st->iFpsRate  = r_frame_rate.num;
           st->iFpsScale = r_frame_rate.den;
         }
-        else
+        if (st->iFpsScale)
+          fps = static_cast<float>(st->iFpsRate) / static_cast<float>(st->iFpsScale);
+
+        if (fps > 24.5f && pStream->codec->time_base.num && pStream->codec->time_base.den &&
+            pStream->codec->field_order != AV_FIELD_PROGRESSIVE && pStream->codec->field_order != AV_FIELD_UNKNOWN)
         {
-          st->iFpsRate  = 0;
-          st->iFpsScale = 0;
+          if (static_cast<float>(pStream->codec->time_base.den) / static_cast<float>(pStream->codec->time_base.num) < 61.0)
+          {
+            st->iFpsRate  = pStream->codec->time_base.den;
+            st->iFpsScale = pStream->codec->time_base.num;
+          }
+          else
+            st->iFpsRate  *= 2;
+
+          st->bInterlaced = true;
+        }
+        else if (r_frame_rate.den && r_frame_rate.num && std::abs(static_cast<float>(r_frame_rate.num) / static_cast<float>(r_frame_rate.den) - 2.0f * fps) < 0.01f)
+        {
+          st->iFpsRate  = r_frame_rate.num;
+          st->iFpsScale = r_frame_rate.den;
+          st->bInterlaced = true;
         }
 
+        CLog::Log(LOGDEBUG, "DVDDemuxFFmpeg::%s - fps:%d/%d i/p:%d", __FUNCTION__, st->iFpsRate, st->iFpsScale, st->bInterlaced);
+ 
         if (pStream->codec_info_nb_frames > 0 &&
             pStream->codec_info_nb_frames <= 2 &&
             m_pInput->IsStreamType(DVDSTREAM_TYPE_DVD))
