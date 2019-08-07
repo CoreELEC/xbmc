@@ -225,6 +225,7 @@ void CVideoPlayerAudio::Process()
   audioframe.nb_frames = 0;
   audioframe.framesOut = 0;
   m_audioStats.Start();
+  m_pts = DVD_NOPTS_VALUE;
 
   bool onlyPrioMsgs = false;
 
@@ -333,6 +334,7 @@ void CVideoPlayerAudio::Process()
       m_stalled = true;
       m_audioClock = 0;
       audioframe.nb_frames = 0;
+      m_pts = DVD_NOPTS_VALUE;
 
       if (sync)
       {
@@ -415,7 +417,7 @@ void CVideoPlayerAudio::Process()
       {
         onlyPrioMsgs = true;
       }
-
+      m_pts = pPacket->pts;
     } // demuxer packet
 
     pMsg->Release();
