@@ -40,7 +40,8 @@ public:
   // waits until all available data has been rendered
   bool AcceptsData() const override;
   bool HasData() const override { return m_messageQueue.GetDataSize() > 0; }
-  int  GetLevel() const override { return m_messageQueue.GetLevel(); }
+  int  GetLevel() const override { return (m_pts == DVD_NOPTS_VALUE) || (m_pts < m_pClock->GetClock() + 80000) ?
+                                           m_messageQueue.GetLevel() : m_messageQueue.GetLevel() + int((m_pts - m_pClock->GetClock() - 80000) / 80000);}
   bool IsInited() const override { return m_messageQueue.IsInited(); }
   void SendMessage(CDVDMsg* pMsg, int priority = 0) override { m_messageQueue.Put(pMsg, priority); }
   void FlushMessages() override { m_messageQueue.Flush(); }
@@ -94,6 +95,7 @@ protected:
 
   bool   m_prevskipped;
   double m_maxspeedadjust;
+  double	   m_pts;
 
   struct SInfo
   {
