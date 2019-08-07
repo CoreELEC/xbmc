@@ -1869,6 +1869,15 @@ void CAMLCodec::Reset()
   if (!m_opened)
     return;
 
+  if (m_hints.codec == AV_CODEC_ID_HEVC && m_speed >= 0 && m_hints.width <= 1920)
+  {
+    if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HEVCWORKAROUND))
+    {
+      CLog::Log(LOGDEBUG, "CAMLCodec::Reset - reopen HEVC");
+      m_dll->codec_close(&am_private->vcodec);
+      m_dll->codec_init(&am_private->vcodec);
+    }
+  }
   SetPollDevice(-1);
 
   // set the system blackout_policy to leave the last frame showing
