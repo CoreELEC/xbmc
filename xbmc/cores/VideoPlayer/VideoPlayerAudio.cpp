@@ -279,9 +279,9 @@ void CVideoPlayerAudio::Process()
           !m_stalled && m_syncState == IDVDStreamPlayer::SYNC_INSYNC)
       {
         // while AE sync is active, we still have time to fill buffers
-        if (m_syncTimer.IsTimePast())
+        if (m_syncTimer.IsTimePast() && m_audioClock < m_pClock->GetClock())
         {
-          CLog::Log(LOGNOTICE, "CVideoPlayerAudio::Process - stream stalled");
+          CLog::Log(LOGNOTICE, "CVideoPlayerAudio::Process - stream stalled pts:%0.3f clock:%0.3f ", m_audioClock / DVD_TIME_BASE, m_pClock->GetClock() / DVD_TIME_BASE);
           m_stalled = true;
         }
       }
