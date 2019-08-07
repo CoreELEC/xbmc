@@ -72,6 +72,7 @@ private:
   bool             m_opened;
   bool             m_ptsIs64us;
   bool             m_drain = false;
+  int              m_try = 0;
   am_private_t    *am_private;
   CDVDStreamInfo   m_hints;
   int              m_speed;
@@ -104,5 +105,7 @@ private:
 
   static std::atomic_flag  m_pollSync;
   static int m_pollDevice;
+  static bool m_releaseFrame;
+  static double m_ttd;
   CProcessInfo &m_processInfo;
 };
