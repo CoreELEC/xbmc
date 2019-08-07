@@ -23,6 +23,7 @@
 #include <numeric>
 #include <iterator>
 #include "utils/log.h"
+#include <chrono>
 
 class CDVDMsgVideoCodecChange : public CDVDMsg
 {
@@ -116,7 +117,8 @@ bool CVideoPlayerVideo::OpenStream(CDVDStreamInfo hint)
       return false;
   }
 
-  CLog::Log(LOGNOTICE, "Creating video codec with codec id: %i", hint.codec);
+  CLog::Log(LOGNOTICE, "CVideoPlayerVideo::%s - Creating codec: %i",__FUNCTION__,  hint.codec);
+  hint.pClock = m_pClock;
 
   if (m_messageQueue.IsInited())
   {
@@ -200,7 +202,8 @@ void CVideoPlayerVideo::OpenStream(CDVDStreamInfo &hint, CDVDVideoCodec* codec)
   }
   if (!codec)
   {
-    CLog::Log(LOGNOTICE, "Creating video codec with codec id: %i", hint.codec);
+    CLog::Log(LOGNOTICE, "CVideoPlayerVideo::%s - Creating Codec: %i",__FUNCTION__,  hint.codec);
+    hint.pClock = m_pClock;
     hint.codecOptions |= CODEC_ALLOW_FALLBACK;
     codec = CDVDFactoryCodec::CreateVideoCodec(hint, m_processInfo);
     if (!codec)
@@ -900,6 +903,7 @@ CVideoPlayerVideo::EOutputState CVideoPlayerVideo::OutputPicture(const VideoPict
   }
 
   int timeToDisplay = DVD_TIME_TO_MSEC(pPicture->pts - iPlayingClock);
+  std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
 
   // make sure waiting time is not negative
   int maxWaitTime = std::min(std::max(timeToDisplay + 500, 50), 500);
@@ -907,6 +911,8 @@ CVideoPlayerVideo::EOutputState CVideoPlayerVideo::OutputPicture(const VideoPict
   if (m_speed > DVD_PLAYSPEED_NORMAL)
     maxWaitTime = std::max(timeToDisplay, 0);
   int buffer = m_renderManager.WaitForBuffer(m_bAbortOutput, maxWaitTime);
+  CLog::Log(LOGDEBUG,"CVideoPlayerVideo::%s - ttd:%dms pts:%0.3lf Clock:%0.3f Level:%d elapsed:%0.3fms",
+        __FUNCTION__, timeToDisplay, pPicture->pts/1000000, iPlayingClock/1000000.0, buffer, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - now).count() / 1000.0);
   if (buffer < 0)
   {
     return OUTPUT_AGAIN;
