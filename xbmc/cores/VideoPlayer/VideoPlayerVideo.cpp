@@ -163,11 +163,24 @@ void CVideoPlayerVideo::OpenStream(CDVDStreamInfo &hint, CDVDVideoCodec* codec)
   {
     m_fFrameRate = DVD_TIME_BASE / CDVDCodecUtils::NormalizeFrameduration((double)DVD_TIME_BASE * hint.fpsscale / hint.fpsrate);
     m_bFpsInvalid = false;
+
+    if (MathUtils::FloatEquals(static_cast<float>(m_fFrameRate), 25.0f, 0.01f))
+    {
+      m_fFrameRate = 50.0;
+      m_processInfo.SetVideoInterlaced(true);
+    }
+    if (MathUtils::FloatEquals(static_cast<float>(m_fFrameRate), 29.97f, 0.01f))
+    {
+      m_fFrameRate = 60000.0 / 1001.0;
+      m_processInfo.SetVideoInterlaced(true);
+    }
+    m_retryProgressive = 0;
     m_processInfo.SetVideoFps(static_cast<float>(m_fFrameRate));
   }
   else
   {
-    m_fFrameRate = 25;
+    m_fFrameRate = 50;
+    m_processInfo.SetVideoInterlaced(true);
     m_bFpsInvalid = true;
     m_processInfo.SetVideoFps(0);
   }
@@ -180,8 +193,9 @@ void CVideoPlayerVideo::OpenStream(CDVDStreamInfo &hint, CDVDVideoCodec* codec)
 
   if( m_fFrameRate > 120 || m_fFrameRate < 5 )
   {
-    CLog::Log(LOGERROR, "CVideoPlayerVideo::OpenStream - Invalid framerate %d, using forced 25fps and just trust timestamps", (int)m_fFrameRate);
-    m_fFrameRate = 25;
+    CLog::Log(LOGERROR, "CVideoPlayerVideo::OpenStream - Invalid framerate %d, using forced 50fps and just trust timestamps", (int)m_fFrameRate);
+    m_fFrameRate = 50;
+    m_processInfo.SetVideoInterlaced(true);
   }
 
   // use aspect in stream if available
@@ -658,6 +672,19 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(double &frametime, double &pts)
   if (decoderState == CDVDVideoCodec::VC_PICTURE)
   {
     bool hasTimestamp = true;
+
+    if (m_processInfo.GetVideoInterlaced() && 
+        MathUtils::FloatEquals(static_cast<float>(m_picture.iDuration), static_cast<float>(2 * DVD_TIME_BASE) / m_processInfo.GetVideoFps(), 700.0f))
+    {
+      if (++m_retryProgressive > 3)
+      {
+        m_processInfo.SetVideoFps(m_processInfo.GetVideoFps() / 2.0f);
+        m_processInfo.SetVideoInterlaced(false);
+        m_renderManager.TriggerUpdateResolution(m_processInfo.GetVideoFps() / 2.0f, m_hints.width, m_hints.height, m_hints.stereo_mode);
+      }
+    }
+    else
+      m_retryProgressive = 0;
 
     m_picture.iDuration = frametime;
 
