@@ -1710,6 +1710,12 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
       am_private->gcodec.param  = (void*)EXTERNAL_PTS;
       if (m_hints.ptsinvalid)
         am_private->gcodec.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
+
+      if (!CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HEVCWORKAROUND))
+        SysfsUtils::SetString("/sys/module/amvdec_h265/parameters/dynamic_buf_num_margin", "8");
+      else
+        SysfsUtils::SetString("/sys/module/amvdec_h265/parameters/dynamic_buf_num_margin", "16");
+
       break;
     case VFORMAT_VP9:
       am_private->gcodec.format = VIDEO_DEC_FORMAT_VP9;

@@ -8390,7 +8390,17 @@ msgctxt "#14289"
 msgid "Enable this to use 4:2:2 colour subsampling. Some displays (usually LG) work better with this. Requires reboot."
 msgstr ""
 
-#empty strings from id 14290 to 14300
+#: system/settings/settings.xml
+msgctxt "#14290"
+msgid "Enable HEVC seek workaround"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14291"
+msgid "Enable this if you have problems with HEVC content after seeking."
+msgstr ""
+
+#empty strings from id 14292 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
