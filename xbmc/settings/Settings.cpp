@@ -398,6 +398,7 @@ const std::string CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR = "coreelec.amlogi
 const std::string CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR = "coreelec.amlogic.hdr2sdr";
 const std::string CSettings::SETTING_COREELEC_AMLOGIC_LIMIT8BIT = "coreelec.amlogic.limit8bit";
 const std::string CSettings::SETTING_COREELEC_AMLOGIC_FORCE422 = "coreelec.amlogic.force422";
+const std::string CSettings::SETTING_COREELEC_AMLOGIC_HEVCWORKAROUND = "coreelec.amlogic.hevcworkaround";
 const std::string CSettings::SETTING_CACHE_HARDDISK = "cache.harddisk";
 const std::string CSettings::SETTING_CACHEVIDEO_DVDROM = "cachevideo.dvdrom";
 const std::string CSettings::SETTING_CACHEVIDEO_LAN = "cachevideo.lan";
