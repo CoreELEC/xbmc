@@ -8453,7 +8453,17 @@ msgctxt "#14289"
 msgid "Enable this to use 4:2:2 colour subsampling. Some displays (usually LG) work better with this. Requires reboot."
 msgstr ""
 
-#empty strings from id 14290 to 14300
+#: system/settings/settings.xml
+msgctxt "#14290"
+msgid "Disable GUI scaling"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14291"
+msgid "For optimal performance across all devices, the GUI is rendered at 1080P and scaled to 4K by default, this option disables that scaling and renders the GUI at 4K. This can make thumbnails and other textures sharper, however some devices may have issues with this option being set. Requires reboot."
+msgstr ""
+
+#empty strings from id 14292 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
