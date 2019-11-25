@@ -419,6 +419,7 @@ constexpr const char* CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR;
 constexpr const char* CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR;
 constexpr const char* CSettings::SETTING_COREELEC_AMLOGIC_LIMIT8BIT;
 constexpr const char* CSettings::SETTING_COREELEC_AMLOGIC_FORCE422;
+constexpr const char* CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING;
 constexpr const char* CSettings::SETTING_CACHE_HARDDISK;
 constexpr const char* CSettings::SETTING_CACHEVIDEO_DVDROM;
 constexpr const char* CSettings::SETTING_CACHEVIDEO_LAN;
