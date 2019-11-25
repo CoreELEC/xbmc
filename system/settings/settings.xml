@@ -3037,9 +3037,14 @@
           <default>false</default>
           <control type="toggle" />
         </setting>
+        <setting id="coreelec.amlogic.disableguiscaling" type="boolean" label="14290" help="14291">
+          <requirement>HAVE_AMCODEC</requirement>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
       </group>
       <group id="2" label="14086">
-        <setting id="coreelec.amlogic.hevcworkaround" type="boolean" label="14290" help="14291">
+        <setting id="coreelec.amlogic.hevcworkaround" type="boolean" label="14292" help="14293">
           <requirement>HAVE_AMCODEC</requirement>
           <default>false</default>
           <control type="toggle" />

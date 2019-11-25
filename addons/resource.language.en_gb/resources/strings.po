@@ -8392,15 +8392,25 @@ msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14290"
-msgid "Enable HEVC seek workaround"
+msgid "Disable GUI scaling"
 msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14291"
+msgid "For optimal performance across all devices, the GUI is rendered at 1080P and scaled to 4K by default, this option disables that scaling and renders the GUI at 4K. This can make thumbnails and other textures sharper, however some devices may have issues with this option being set. Requires reboot."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14292"
+msgid "Enable HEVC seek workaround"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14293"
 msgid "Enable this if you have problems with HEVC content after seeking."
 msgstr ""
 
-#empty strings from id 14292 to 14300
+#empty strings from id 14294 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
