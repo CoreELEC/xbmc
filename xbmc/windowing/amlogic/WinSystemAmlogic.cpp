@@ -126,12 +126,6 @@ bool CWinSystemAmlogic::InitWindowSystem()
      SysfsUtils::SetString("/sys/class/amhdmitx/amhdmitx0/config", "audio_off");
   }
 
-  if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_MAXGPUCLOCK))
-  {
-     CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem -- increasing GPU clock rate");
-     SysfsUtils::SetString("/sys/class/mpgpu/scale_mode", "2");
-  }
-
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
 
   CDVDVideoCodecAmlogic::Register();
