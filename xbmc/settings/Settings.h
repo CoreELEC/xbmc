@@ -359,7 +359,6 @@ public:
   static const std::string SETTING_COREELEC_AMLOGIC_FORCE422;
   static const std::string SETTING_COREELEC_AMLOGIC_HEVCWORKAROUND;
   static const std::string SETTING_COREELEC_AMLOGIC_MUTEHDMIAUDIO;
-  static const std::string SETTING_COREELEC_AMLOGIC_MAXGPUCLOCK;
   static const std::string SETTING_CACHE_HARDDISK;
   static const std::string SETTING_CACHEVIDEO_DVDROM;
   static const std::string SETTING_CACHEVIDEO_LAN;

@@ -8404,17 +8404,7 @@ msgctxt "#14291"
 msgid "Disable HDMI audio output. Requires a reboot."
 msgstr ""
 
-#: system/settings/settings.xml
-msgctxt "#14292"
-msgid "Enable GPU overclock"
-msgstr ""
-
-#: system/settings/settings.xml
-msgctxt "#14293"
-msgid "Enable this to overclock the GPU. WARNING! This will increase chipset temperatures. Requires a reboot."
-msgstr ""
-
-#empty strings from id 14294 to 14300
+#empty strings from id 14292 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
