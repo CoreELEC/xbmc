@@ -3063,14 +3063,6 @@
           <control type="toggle" />
         </setting>
       </group>
-      <group id="4" label="10039">
-        <setting id="coreelec.amlogic.maxgpuclock" type="boolean" label="14292" help="14293">
-          <requirement>HAVE_AMCODEC</requirement>
-          <level>3</level>
-          <default>false</default>
-          <control type="toggle" />
-        </setting>
-      </group>
     </category>
     <category id="cache" label="439" help="36399">
       <visible>false</visible>
