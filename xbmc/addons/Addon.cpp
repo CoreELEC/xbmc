@@ -732,6 +732,9 @@ void OnPostInstall(const AddonPtr& addon, bool update, bool modal)
     LEAddonHook(addon, LE_ADDON_ENABLED);
 
   addon->OnPostInstall(update, modal);
+
+  if (addon->Type() == ADDON::AddonType::SERVICE || addon->Type() == ADDON::AddonType::SCRIPT)
+    system("/usr/bin/environment-setup");
 }
 
 void OnPreUnInstall(const AddonPtr& addon)
@@ -744,6 +747,9 @@ void OnPreUnInstall(const AddonPtr& addon)
 void OnPostUnInstall(const AddonPtr& addon)
 {
   addon->OnPostUnInstall();
+
+  if (addon->Type() == ADDON::AddonType::SERVICE || addon->Type() == ADDON::AddonType::SCRIPT)
+    system("/usr/bin/environment-setup");
 }
 
 } // namespace ADDON
