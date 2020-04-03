@@ -598,16 +598,6 @@ bool CDVDDemuxFFmpeg::Open(std::shared_ptr<CDVDInputStream> pInput, bool streami
   m_startTime = 0;
   m_seekStream = -1;
 
-  if (m_checkTransportStream && m_streaminfo)
-  {
-    int64_t duration = m_pFormatContext->duration;
-    std::shared_ptr<CDVDInputStream> pInputStream = m_pInput;
-    Dispose();
-    if (!Open(pInputStream, false))
-      return false;
-    m_pFormatContext->duration = duration;
-  }
-
   // seems to be a bug in ffmpeg, hls jumps back to start after a couple of seconds
   // this cures the issue
   if (m_pFormatContext->iformat && strcmp(m_pFormatContext->iformat->name, "hls,applehttp") == 0)
