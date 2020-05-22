@@ -1990,3 +1990,8 @@ std::string URIUtils::SanitiseUrlEncoding(std::string_view path)
   out += path.substr(hostEnd);
   return out;
 }
+
+bool URIUtils::IsUsingFastSwitch(const std::string& strFile)
+{
+  return IsUDP(strFile) || IsTCP(strFile) || IsPVRChannel(strFile);
+}
