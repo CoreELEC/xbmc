@@ -2022,3 +2022,8 @@ std::string URIUtils::GetDecodedPath(const std::string& path)
     decodedPath = CURL::Decode(decodedPath);
   return decodedPath;
 }
+
+bool URIUtils::IsUsingFastSwitch(const std::string& strFile)
+{
+  return IsUDP(strFile) || IsTCP(strFile) || IsPVRChannel(strFile);
+}
