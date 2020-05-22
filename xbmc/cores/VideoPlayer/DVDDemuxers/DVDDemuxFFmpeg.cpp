@@ -232,12 +232,11 @@ bool CDVDDemuxFFmpeg::Aborted()
   return false;
 }
 
-bool CDVDDemuxFFmpeg::Open(const std::shared_ptr<CDVDInputStream>& pInput, bool fileinfo)
+bool CDVDDemuxFFmpeg::Open(const std::shared_ptr<CDVDInputStream>& pInput, bool streaminfo, bool fileinfo)
 {
   const AVInputFormat* iformat = nullptr;
   std::string strFile;
-  m_streaminfo = !pInput->IsRealtime() && !m_reopen;
-  m_reopen = false;
+  m_streaminfo = streaminfo;
   m_currentPts = DVD_NOPTS_VALUE;
   m_speed = DVD_PLAYSPEED_NORMAL;
   m_program = UINT_MAX;
@@ -717,7 +716,6 @@ bool CDVDDemuxFFmpeg::Open(const std::shared_ptr<CDVDInputStream>& pInput, bool 
     SaveProbedStreamParameters();
     std::shared_ptr<CDVDInputStream> pInputStream = m_pInput;
     Dispose();
-    m_reopen = true;
     const bool opened = Open(pInputStream, false);
     ClearProbedStreamParameters();
     if (!opened)
@@ -762,7 +760,7 @@ bool CDVDDemuxFFmpeg::Reset()
 {
   std::shared_ptr<CDVDInputStream> pInputStream = m_pInput;
   Dispose();
-  return Open(pInputStream, false);
+  return Open(pInputStream, m_streaminfo);
 }
 
 void CDVDDemuxFFmpeg::Flush()
