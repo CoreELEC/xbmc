@@ -2118,7 +2118,11 @@ DRAIN:
   // parameter, because it was introduced since kernel 3.14.
   m_last_pts = m_cur_pts;
 
-  m_cur_pts = m_ptsOverflow * 100 / 9 + (static_cast<int64_t>(vbuf.timestamp.tv_sec) << 32);
+  if (m_last_pts != DVD_NOPTS_VALUE)
+    m_cur_pts = m_ptsOverflow * 100 / 9 + (static_cast<int64_t>(vbuf.timestamp.tv_sec) << 32);
+  else
+    m_cur_pts = static_cast<int64_t>(vbuf.timestamp.tv_sec) << 32;
+
   m_cur_pts += vbuf.timestamp.tv_usec & 0xFFFFFFFF;
 
   // since ptsOverflow is calculated from decoder input, we have to check at output if the new packets caused overflow increment
