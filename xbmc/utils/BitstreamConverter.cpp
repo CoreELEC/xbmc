@@ -215,6 +215,41 @@ static bool has_sei_recovery_point(const uint8_t* p, const uint8_t* end, int hea
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
+bool CBitstreamParser::CanStartDecode(const uint8_t* buf, int buf_size)
+{
+  if (!buf)
+    return false;
+
+  const uint8_t* const end = buf + buf_size;
+  const uint8_t* nal = avc_find_startcode(buf, end);
+  while (nal < end)
+  {
+    while (nal < end && !*nal)
+      ++nal;
+    if (nal >= end || *nal++ != 1 || nal >= end)
+      break;
+
+    const uint8_t* next = avc_find_startcode(nal, end);
+    switch (*nal & 0x1f)
+    {
+      case AVC_NAL_IDR_SLICE:
+      case AVC_NAL_SPS:
+        return true;
+      case AVC_NAL_SEI:
+        if (has_sei_recovery_point(nal, next))
+          return true;
+        break;
+      default:
+        break;
+    }
+    nal = next;
+  }
+
+  return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
 CBitstreamConverter::CBitstreamConverter()
 {
   m_convert_bitstream = false;
@@ -284,6 +319,15 @@ bool CBitstreamConverter::Open(enum AVCodecID codec, const uint8_t* in_extradata
   }
 }
 
+bool CBitstreamConverter::Open(enum AVCodecID codec,
+                               const uint8_t* in_extradata,
+                               int in_extrasize,
+                               bool to_annexb)
+{
+  m_to_annexb = to_annexb;
+  return Open(codec, in_extradata, in_extrasize);
+}
+
 void CBitstreamConverter::Close()
 {
   av_bsf_free(&m_bitstreamFilter);
@@ -323,6 +367,15 @@ bool CBitstreamConverter::Convert(uint8_t* pData, int iSize)
   {
     if (!m_start_decode)
       m_start_decode = HasVvcStartAnnexB(pData, iSize);
+    m_inputBuffer = pData;
+    m_inputSize = iSize;
+    return true;
+  }
+
+  // Annex B input is passed through as is
+  if (m_to_annexb && !m_convert_bitstream &&
+      (m_codec == AV_CODEC_ID_H264 || m_codec == AV_CODEC_ID_HEVC))
+  {
     m_inputBuffer = pData;
     m_inputSize = iSize;
     return true;
