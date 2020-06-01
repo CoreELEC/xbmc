@@ -11,6 +11,13 @@ if(NOT ENABLE_EXTERNAL_LIBAV)
   list(APPEND HEADERS DVDVideoPPFFmpeg.h)
 endif()
 
+if(AML_FOUND)
+  list(APPEND SOURCES AMLCodec.cpp
+                      DVDVideoCodecAmlogic.cpp)
+  list(APPEND HEADERS AMLCodec.h
+                      DVDVideoCodecAmlogic.h)
+endif()
+
 if(CORE_SYSTEM_NAME STREQUAL windows OR CORE_SYSTEM_NAME STREQUAL windowsstore)
   list(APPEND SOURCES DXVA.cpp)
   list(APPEND HEADERS DXVA.h)
