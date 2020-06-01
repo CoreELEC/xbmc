@@ -55,6 +55,9 @@ using namespace winrt::Windows::System::Profile;
 #if defined(TARGET_ANDROID)
 #include <androidjni/Build.h>
 #endif
+#if defined(HAS_LIBAMCODEC)
+#include "utils/AMLUtils.h"
+#endif
 
 /* Platform identification */
 #if defined(TARGET_DARWIN)
