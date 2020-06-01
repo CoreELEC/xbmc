@@ -138,6 +138,10 @@ constexpr const char* CSettings::SETTING_VIDEOPLAYER_STEREOSCOPICPLAYBACKMODE;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_QUITSTEREOMODEONSTOP;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_RENDERMETHOD;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_HQSCALERS;
+constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODEC;
+constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODECMPEG2;
+constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODECMPEG4;
+constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODECH264;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEMEDIACODEC;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEMEDIACODECSURFACE;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEVDPAU;
@@ -980,6 +984,7 @@ void CSettings::InitializeISettingCallbacks()
   settingSet.insert(CSettings::SETTING_AUDIOCDS_SETTINGS);
   settingSet.insert(CSettings::SETTING_VIDEOSCREEN_GUICALIBRATION);
   settingSet.insert(CSettings::SETTING_VIDEOSCREEN_TESTPATTERN);
+  settingSet.insert(CSettings::SETTING_VIDEOPLAYER_USEAMCODEC);
   settingSet.insert(CSettings::SETTING_VIDEOPLAYER_USEMEDIACODEC);
   settingSet.insert(CSettings::SETTING_VIDEOPLAYER_USEMEDIACODECSURFACE);
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_VOLUMESTEPS);
