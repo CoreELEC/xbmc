@@ -115,6 +115,10 @@ public:
       "videoplayer.quitstereomodeonstop";
   static constexpr auto SETTING_VIDEOPLAYER_RENDERMETHOD = "videoplayer.rendermethod";
   static constexpr auto SETTING_VIDEOPLAYER_HQSCALERS = "videoplayer.hqscalers";
+  static constexpr auto SETTING_VIDEOPLAYER_USEAMCODEC = "videoplayer.useamcodec";
+  static constexpr auto SETTING_VIDEOPLAYER_USEAMCODECMPEG2 = "videoplayer.useamcodecmpeg2";
+  static constexpr auto SETTING_VIDEOPLAYER_USEAMCODECMPEG4 = "videoplayer.useamcodecmpeg4";
+  static constexpr auto SETTING_VIDEOPLAYER_USEAMCODECH264 = "videoplayer.useamcodech264";
   static constexpr auto SETTING_VIDEOPLAYER_USEMEDIACODEC = "videoplayer.usemediacodec";
   static constexpr auto SETTING_VIDEOPLAYER_USEMEDIACODECSURFACE =
       "videoplayer.usemediacodecsurface";

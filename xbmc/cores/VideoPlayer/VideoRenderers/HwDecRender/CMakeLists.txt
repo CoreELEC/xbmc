@@ -34,6 +34,11 @@ if(CORE_SYSTEM_NAME STREQUAL darwin_embedded)
   list(APPEND HEADERS RendererVTBGLES.h)
 endif()
 
+if(AML_FOUND)
+  list(APPEND SOURCES RendererAML.cpp)
+  list(APPEND HEADERS RendererAML.h)
+endif()
+
 if(CORE_SYSTEM_NAME STREQUAL android)
   list(APPEND SOURCES RendererMediaCodec.cpp
                       RendererMediaCodecSurface.cpp)
