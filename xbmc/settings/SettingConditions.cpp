@@ -24,6 +24,9 @@
 #include "settings/SettingAddon.h"
 #include "settings/SettingsComponent.h"
 #include "utils/FontUtils.h"
+#if defined(HAS_LIBAMCODEC)
+#include "utils/AMLUtils.h"
+#endif // defined(HAS_LIBAMCODEC)
 #include "utils/StringUtils.h"
 #include "windowing/WinSystem.h"
 
@@ -428,6 +431,10 @@ void CSettingConditions::Initialize()
   // does not apply there.
   if (mse_available() && !tizen_emss_available())
     m_simpleConditions.emplace("has_browser_video_player");
+#endif
+#ifdef HAS_LIBAMCODEC
+  if (aml_present())
+    m_simpleConditions.insert("have_amcodec");
 #endif
 #if defined(TARGET_WINDOWS)
   m_simpleConditions.emplace("has_dx");

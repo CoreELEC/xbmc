@@ -6,7 +6,8 @@ if(TARGET ${APP_NAME_LC}::LircClient)
   list(APPEND HEADERS LIRC.h)
 endif()
 
-if("gbm" IN_LIST CORE_PLATFORM_NAME_LC)
+if("gbm" IN_LIST CORE_PLATFORM_NAME_LC OR
+   "aml" IN_LIST CORE_PLATFORM_NAME_LC)
   if(TARGET ${APP_NAME_LC}::LibInput)
     list(APPEND SOURCES LibInputHandler.cpp
                         LibInputKeyboard.cpp
@@ -22,7 +23,7 @@ if("gbm" IN_LIST CORE_PLATFORM_NAME_LC)
   endif()
 endif()
 
-if(("gbm" IN_LIST CORE_PLATFORM_NAME_LC AND TARGET ${APP_NAME_LC}::LibInput) OR "wayland" IN_LIST CORE_PLATFORM_NAME_LC)
+if(("gbm" IN_LIST CORE_PLATFORM_NAME_LC AND TARGET ${APP_NAME_LC}::LibInput) OR "wayland" IN_LIST CORE_PLATFORM_NAME_LC OR "aml" IN_LIST CORE_PLATFORM_NAME_LC)
   list(APPEND SOURCES EvdevKeyMapping.cpp)
   list(APPEND HEADERS EvdevKeyMapping.h
                       XkbCompat.h)

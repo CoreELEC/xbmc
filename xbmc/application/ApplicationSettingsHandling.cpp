@@ -60,6 +60,7 @@ void CApplicationSettingsHandling::RegisterSettings()
                                           CSettings::SETTING_VIDEOSCREEN_GUICALIBRATION,
                                           CSettings::SETTING_VIDEOSCREEN_SCREENALIGNMENT,
                                           CSettings::SETTING_VIDEOSCREEN_CALIBRATIONALIGNMENT,
+                                          CSettings::SETTING_VIDEOPLAYER_USEAMCODEC,
                                           CSettings::SETTING_SOURCE_VIDEOS,
                                           CSettings::SETTING_SOURCE_MUSIC,
                                           CSettings::SETTING_SOURCE_PICTURES,
