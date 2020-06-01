@@ -64,6 +64,7 @@ void CApplicationSettingsHandling::RegisterSettings()
                                        CSettings::SETTING_AUDIOCDS_SETTINGS,
                                        CSettings::SETTING_VIDEOSCREEN_GUICALIBRATION,
                                        CSettings::SETTING_VIDEOSCREEN_TESTPATTERN,
+                                       CSettings::SETTING_VIDEOPLAYER_USEAMCODEC,
                                        CSettings::SETTING_VIDEOPLAYER_USEMEDIACODEC,
                                        CSettings::SETTING_VIDEOPLAYER_USEMEDIACODECSURFACE,
                                        CSettings::SETTING_AUDIOOUTPUT_VOLUMESTEPS,
