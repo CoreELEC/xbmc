@@ -32,6 +32,16 @@ typedef struct mpeg2_sequence
   uint32_t ratio_info;
 } mpeg2_sequence;
 
+class CBitstreamParser
+{
+public:
+  CBitstreamParser() = default;
+  ~CBitstreamParser() = default;
+
+  static bool Open() { return true; }
+  static bool CanStartDecode(const uint8_t* buf, int buf_size);
+};
+
 class CBitstreamConverter
 {
 public:
@@ -39,6 +49,7 @@ public:
   ~CBitstreamConverter();
 
   bool Open(enum AVCodecID codec, const uint8_t* in_extradata, int in_extrasize);
+  bool Open(enum AVCodecID codec, const uint8_t* in_extradata, int in_extrasize, bool to_annexb);
   void Close();
   bool NeedConvert() const { return m_convert_bitstream; }
   bool Convert(uint8_t* pData, int iSize);
@@ -74,6 +85,7 @@ protected:
   bool m_vvcAnnexB{false};
   uint8_t* m_inputBuffer{nullptr};
   int m_inputSize{0};
+  bool m_to_annexb{false};
 
   bool m_convert_bitstream;
 
