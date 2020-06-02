@@ -1749,6 +1749,9 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
       if (m_hints.ptsinvalid)
         am_private->gcodec.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
       break;
+    case VFORMAT_AVS:
+      am_private->gcodec.multi_vdec = 0;
+      break;
   }
   am_private->gcodec.param = (void *)((std::uintptr_t)am_private->gcodec.param | (am_private->video_rotation_degree << 16));
 
