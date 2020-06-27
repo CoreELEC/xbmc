@@ -147,6 +147,7 @@ namespace PERIPHERALS
     bool m_bHasConnectedAudioSystem;
     std::string m_strMenuLanguage;
     CDateTime m_standbySent;
+    CDateTime m_ScreensaverStandbySent;
     std::vector<CecButtonPress> m_buttonQueue;
     CecButtonPress m_currentButton;
     std::queue<CecVolumeChange> m_volumeChangeQueue;
@@ -169,6 +170,7 @@ namespace PERIPHERALS
     bool m_bPlaybackPaused;
     std::string m_strComPort;
     bool m_bPowerOnScreensaver;
+    bool m_bPowerOffScreensaverPaused;
     bool m_bUseTVMenuLanguage;
     bool m_bSendInactiveSource;
     bool m_bPowerOffScreensaver;
