@@ -18431,7 +18431,17 @@ msgctxt "#36050"
 msgid "On start"
 msgstr ""
 
-#empty strings from id 36051 to 36098
+#: system/peripherals.xml
+msgctxt "#36051"
+msgid "Seconds standby is delayed after Screensaver is activated"
+msgstr ""
+
+#: system/peripherals.xml
+msgctxt "#36052"
+msgid "Put devices in standby by Screensaver on paused video"
+msgstr ""
+
+#empty strings from id 36053 to 36098
 
 #: system/settings/settings.xml
 msgctxt "#36099"
