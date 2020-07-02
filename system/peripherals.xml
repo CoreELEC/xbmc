@@ -29,7 +29,7 @@
     <setting key="volume_control" type="enum" value="36058" label="36057" lvalues="231|36058|20422" order="16" />
 
     <setting key="tv_vendor" type="int" value="0" configurable="0" />
-    <setting key="device_name" type="string" value="Kodi" configurable="0" />
+    <setting key="device_name" type="string" value="CoreELEC" configurable="0" />
     <setting key="wake_devices_advanced" type="string" value="" configurable="0" />
     <setting key="standby_devices_advanced" type="string" value="" configurable="0" />
     <setting key="double_tap_timeout_ms" type="int" min="0" max="1000" step="50" value="0" label="36054" order="17" />
