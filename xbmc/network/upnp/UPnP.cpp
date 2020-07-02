@@ -646,12 +646,12 @@ CUPnP::CreateServer(int port /* = 0 */)
                     CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_SERVICES_WEBSERVERPORT),
                     "/").ToString();
 
-    device->m_ModelName        = "Kodi";
+    device->m_ModelName        = "CoreELEC";
     device->m_ModelNumber      = CSysInfo::GetVersion().c_str();
-    device->m_ModelDescription = "Kodi - Media Server";
-    device->m_ModelURL         = "http://kodi.tv/";
-    device->m_Manufacturer     = "XBMC Foundation";
-    device->m_ManufacturerURL  = "http://kodi.tv/";
+    device->m_ModelDescription = "CoreELEC - Media Server";
+    device->m_ModelURL         = "https://coreelec.org/";
+    device->m_Manufacturer     = "CoreELEC";
+    device->m_ManufacturerURL  = "https://coreelec.org/";
 
     device->SetDelegate(device);
     return device;
@@ -730,12 +730,12 @@ CUPnP::CreateRenderer(int port /* = 0 */)
         NPT_HttpUrl(m_IP.c_str(),
                     CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_SERVICES_WEBSERVERPORT),
                     "/").ToString();
-    device->m_ModelName        = "Kodi";
+    device->m_ModelName        = "CoreELEC";
     device->m_ModelNumber      = CSysInfo::GetVersion().c_str();
-    device->m_ModelDescription = "Kodi - Media Renderer";
-    device->m_ModelURL         = "http://kodi.tv/";
-    device->m_Manufacturer     = "XBMC Foundation";
-    device->m_ManufacturerURL  = "http://kodi.tv/";
+    device->m_ModelDescription = "CoreELEC - Media Renderer";
+    device->m_ModelURL         = "https://coreelec.org/";
+    device->m_Manufacturer     = "CoreELEC";
+    device->m_ManufacturerURL  = "https://coreelec.org/";
 
     return device;
 }
