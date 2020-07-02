@@ -219,7 +219,7 @@
 				<onclick>ActivateWindow(Home)</onclick>
 			</control>
 			<control type="image">
-				<description>Kodi Logo</description>
+				<description>CoreELEC Logo</description>
 				<posx>22</posx>
 				<posy>16</posy>
 				<width>160</width>
