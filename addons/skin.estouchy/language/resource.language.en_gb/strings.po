@@ -300,7 +300,7 @@ msgstr ""
 #empty strings from id 31413 to 31420
 
 msgctxt "#31421"
-msgid "Select your Kodi user Profile[CR]to login and continue"
+msgid "Select your CoreELEC user Profile[CR]to login and continue"
 msgstr ""
 
 #empty strings from id 31422 to 31547
@@ -389,7 +389,7 @@ msgid "There are two things to know about navigating Estouchy"
 msgstr ""
 
 msgctxt "#31902"
-msgid "The Kodi logo functions as a 'HOME' button. Whenever you touch it, you will be taken back to the home screen."
+msgid "The CoreELEC logo functions as a 'HOME' button. Whenever you touch it, you will be taken back to the home screen."
 msgstr ""
 
 msgctxt "#31903"
