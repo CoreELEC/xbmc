@@ -10,7 +10,7 @@ this.helpers = {};
 
 this.config = {
   "static": {
-    appTitle: 'Kodi',
+    appTitle: 'CoreELEC',
     jsonRpcEndpoint: 'jsonrpc',
     socketsHost: location.hostname,
     socketsPort: 9090,
@@ -18992,7 +18992,7 @@ this.Kodi.module("SettingsApp", function(SettingsApp, App, Backbone, Marionette,
           var settingsNavView;
           App.execute("when:entity:fetched", collection, function() {
             var kodiSettingsView;
-            kodiSettingsView = App.request("navMain:collection:show", collection, t.gettext('Kodi settings'));
+            kodiSettingsView = App.request("navMain:collection:show", collection, t.gettext('CoreELEC settings'));
             return sidebarView.regionKodiNav.show(kodiSettingsView);
           });
           settingsNavView = App.request("navMain:children:show", API.subNavId, 'General');
@@ -19424,7 +19424,7 @@ this.Kodi.module("SettingsApp.Show.Kodi", function(Kodi, App, Backbone, Marionet
     Controller.prototype.saveCallback = function(data, formView) {
       return App.execute("settings:kodi:save:entities", data, (function(_this) {
         return function(resp) {
-          App.execute("notification:show", t.gettext("Saved Kodi settings"));
+          App.execute("notification:show", t.gettext("Saved CoreELEC settings"));
           App.vent.trigger("config:local:updated", {});
           return App.vent.trigger("config:kodi:updated", data);
         };
@@ -19506,7 +19506,7 @@ this.Kodi.module("SettingsApp.Show.Local", function(Local, App, Backbone, Marion
               type: 'select',
               options: {
                 auto: 'Auto',
-                kodi: 'Kodi',
+                kodi: 'CoreELEC',
                 local: 'Local'
               },
               defaultValue: 'auto',
@@ -19516,7 +19516,7 @@ this.Kodi.module("SettingsApp.Show.Local", function(Local, App, Backbone, Marion
               title: tr("Keyboard controls"),
               type: 'select',
               options: {
-                kodi: 'Kodi',
+                kodi: 'CoreELEC',
                 local: 'Browser',
                 both: 'Both'
               },
