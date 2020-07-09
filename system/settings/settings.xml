@@ -3421,7 +3421,7 @@
           <control type="toggle" />
         </setting>
         <setting id="coreelec.amlogic.disableguiscaling" type="boolean" label="14290" help="14291">
-          <requirement>HAVE_AMCODEC</requirement>
+          <requirement>HAVE_4K_GUI</requirement>
           <default>false</default>
           <control type="toggle" />
         </setting>

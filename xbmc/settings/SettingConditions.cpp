@@ -401,6 +401,8 @@ void CSettingConditions::Initialize()
 #ifdef HAS_LIBAMCODEC
   if (aml_present())
     m_simpleConditions.insert("have_amcodec");
+  if (aml_get_cpufamily_id() >= AML_G12A)
+    m_simpleConditions.insert("have_4k_gui");
 #endif
 #if defined(TARGET_WINDOWS)
   m_simpleConditions.insert("has_dx");
