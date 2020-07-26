@@ -62,7 +62,6 @@ CWinSystemAmlogic::CWinSystemAmlogic() :
   m_delayDispReset = false;
 
   aml_permissions();
-  aml_disable_freeScale();
 
   // Register sink
   AE::CAESinkFactory::ClearSinks();
