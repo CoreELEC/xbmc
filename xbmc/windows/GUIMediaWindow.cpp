@@ -568,8 +568,7 @@ bool CGUIMediaWindow::OnMessage(CGUIMessage& message)
         // moving to (so that we can move back to where we were onBack). If we are activating
         // the same window but with a different path, do nothing - we are simply adding to the
         // window history.
-        if (message.GetParam1() != message.GetParam2())
-          m_startDirectory = returning ? dir : GetRootPath();
+        m_startDirectory = returning ? dir : GetRootPath();
       }
       if (message.GetParam2() == PLUGIN_REFRESH_DELAY)
       {
