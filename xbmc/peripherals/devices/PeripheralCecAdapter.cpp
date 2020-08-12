@@ -1992,7 +1992,12 @@ void CPeripheralCecAdapter::ProcessStandbyDevices(void)
     bStandby = m_bStandbyPending;
     m_bStandbyPending = false;
     if (bStandby)
-      m_bGoingToStandby = true;
+    {
+      if (m_cecAdapter->IsLibCECActiveSource())
+        m_bGoingToStandby = true;
+      else
+        bStandby = false;
+    }
   }
 
   if (bStandby)
