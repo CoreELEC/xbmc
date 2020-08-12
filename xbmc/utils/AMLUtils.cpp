@@ -571,8 +571,10 @@ bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuf
   std::string mode = res.strId.c_str();
   std::string cur_mode;
   std::string custom_mode;
+  std::string vinfo_name;
 
   SysfsUtils::GetString("/sys/class/display/mode", cur_mode);
+  SysfsUtils::GetString("/sys/class/display/vinfo_name", vinfo_name);
   SysfsUtils::GetString("/sys/class/amhdmitx/amhdmitx0/custom_mode", custom_mode);
 
   if (custom_mode == mode)
@@ -592,6 +594,13 @@ bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuf
       SysfsUtils::SetString("/sys/class/display/mode", cur_mode.c_str());
       SysfsUtils::SetInt("/sys/class/amhdmitx/amhdmitx0/frac_rate_policy", fractional_rate);
     }
+  }
+
+  if (cur_mode != "null" && cur_mode != vinfo_name && cur_mode != "custombuilt")
+  {
+    CLog::Log(LOGERROR, "vinfo_name:%s, cur_mode:%s", vinfo_name.c_str(), cur_mode.c_str());
+    cur_mode = "null";
+    SysfsUtils::SetString("/sys/class/display/mode", cur_mode.c_str());
   }
 
   if (cur_mode != mode)
