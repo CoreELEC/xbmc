@@ -503,6 +503,9 @@ bool aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolutions)
     if (SysfsUtils::GetString(daddfile, addstr) == 0)
       valstr += "\n" + addstr;
 
+    if (SysfsUtils::GetString("/run/disp_add", addstr) == 0)
+      valstr += "\n" + addstr;
+
   }
   std::vector<std::string> probe_str = StringUtils::Split(valstr, "\n");
 
