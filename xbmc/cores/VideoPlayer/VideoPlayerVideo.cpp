@@ -119,7 +119,7 @@ bool CVideoPlayerVideo::OpenStream(CDVDStreamInfo hint)
       return false;
   }
 
-  CLog::Log(LOGNOTICE, "CVideoPlayerVideo::%s - Creating codec: %i",__FUNCTION__,  hint.codec);
+  CLog::Log(LOGINFO, "CVideoPlayerVideo::%s - Creating codec: %i",__FUNCTION__,  hint.codec);
   hint.pClock = m_pClock;
 
   if (m_messageQueue.IsInited())
@@ -226,7 +226,7 @@ void CVideoPlayerVideo::OpenStream(CDVDStreamInfo &hint, CDVDVideoCodec* codec)
   }
   if (!codec)
   {
-    CLog::Log(LOGNOTICE, "CVideoPlayerVideo::%s - Creating Codec: %i fps:%d/%d options:%02x", __FUNCTION__, hint.codec, hint.fpsrate, hint.fpsscale, hint.codecOptions);
+    CLog::Log(LOGINFO, "CVideoPlayerVideo::%s - Creating Codec: %i fps:%d/%d options:%02x", __FUNCTION__, hint.codec, hint.fpsrate, hint.fpsscale, hint.codecOptions);
     hint.pClock = m_pClock;
     hint.codecOptions |= CODEC_ALLOW_FALLBACK;
     codec = CDVDFactoryCodec::CreateVideoCodec(hint, m_processInfo);
