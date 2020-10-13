@@ -54,6 +54,7 @@ private:
   std::atomic_bool m_playerShowTime;
   std::atomic_bool m_playerShowInfo;
 
+  std::string GetAMLConfigInfo(std::string item) const;
   int GetTotalPlayTime() const;
   int GetPlayTime() const;
   int GetPlayTimeRemaining() const;
