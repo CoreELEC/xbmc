@@ -55,6 +55,7 @@ public:
   bool ToggleShowInfo();
 
 private:
+  std::string GetAMLConfigInfo(std::string item) const;
   int GetTotalPlayTime() const;
   int GetPlayTime() const;
   int GetPlayTimeRemaining() const;
