@@ -22,6 +22,7 @@
 #include "guilib/guiinfo/GUIInfo.h"
 #include "guilib/guiinfo/GUIInfoHelper.h"
 #include "guilib/guiinfo/GUIInfoLabels.h"
+#include "utils/SysfsUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/TimeUtils.h"
 #include "utils/URIUtils.h"
@@ -29,6 +30,7 @@
 #include "utils/log.h"
 
 #include <cmath>
+#include <fmt/format.h>
 
 using namespace KODI::GUILIB::GUIINFO;
 
@@ -43,6 +45,53 @@ CPlayerGUIInfo::~CPlayerGUIInfo() = default;
 int CPlayerGUIInfo::GetTotalPlayTime() const
 {
   return std::lrint(g_application.GetTotalTime());
+}
+
+std::string CPlayerGUIInfo::GetAMLConfigInfo(std::string item) const
+{
+  std::string aml_config = "";
+  std::string item_value = "unknown";
+  std::vector<std::string> aml_config_lines;
+  std::vector<std::string> aml_config_item;
+  std::vector<std::string>::iterator i;
+
+  SysfsUtils::GetString("/sys/class/amhdmitx/amhdmitx0/config", aml_config);
+
+  aml_config_lines = StringUtils::Split(aml_config, "\n");
+  for (i = aml_config_lines.begin(); i < aml_config_lines.end(); i++)
+  {
+    if (StringUtils::StartsWithNoCase(*i, item))
+    {
+      aml_config_item = StringUtils::Split(*i, ": ");
+      if (aml_config_item.size() > 1)
+      {
+        if (StringUtils::EqualsNoCase(item, "VIC"))
+        {
+          std::vector<std::string> sub_items = StringUtils::Split(aml_config_item.at(1), " ");
+
+          if (sub_items.size() > 1)
+          {
+            int cur_fractional_rate;
+            item_value = StringUtils::Left(sub_items.at(1), sub_items.at(1).length() - 4) + " ";
+            SysfsUtils::GetInt("/sys/class/amhdmitx/amhdmitx0/frac_rate_policy", cur_fractional_rate);
+
+            if (cur_fractional_rate)
+            {
+              float refreshrate = static_cast<float>(atof(StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2).c_str()));
+              item_value += fmt::format("{:.2f}", refreshrate / 1.001) + "Hz";
+            }
+            else
+              item_value += StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2) + "Hz";
+          }
+        }
+        else
+          item_value = aml_config_item.at(1);
+        break;
+      }
+    }
+  }
+
+  return item_value;
 }
 
 int CPlayerGUIInfo::GetPlayTime() const
@@ -340,6 +389,15 @@ bool CPlayerGUIInfo::GetLabel(std::string& value, const CFileItem *item, int con
       return true;
     case PLAYER_PROCESS_AUDIOBITSPERSAMPLE:
       value = StringUtils::FormatNumber(CServiceBroker::GetDataCacheCore().GetAudioBitsPerSample());
+      return true;
+    case PLAYER_PROCESS_AML_PIXELFORMAT:
+      value = GetAMLConfigInfo("Colour depth") + ", " + GetAMLConfigInfo("Colourspace");
+      return true;
+    case PLAYER_PROCESS_AML_DISPLAYMODE:
+      value =  GetAMLConfigInfo("VIC");
+      return true;
+    case PLAYER_PROCESS_AML_EOFT_GAMUT:
+      value = GetAMLConfigInfo("EOTF") + " " + GetAMLConfigInfo("Colourimetry");
       return true;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
