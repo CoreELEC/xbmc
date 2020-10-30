@@ -26,6 +26,9 @@ public:
   CWinSystemAmlogicGLESContext() = default;
   virtual ~CWinSystemAmlogicGLESContext() = default;
 
+  static void Register();
+  static std::unique_ptr<CWinSystemBase> CreateWinSystem();
+
   // Implementation of CWinSystemBase via CWinSystemAmlogic
   CRenderSystemBase *GetRenderSystem() override { return this; }
   bool InitWindowSystem() override;
