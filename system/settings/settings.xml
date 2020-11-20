@@ -3068,13 +3068,6 @@
           <control type="toggle" />
         </setting>
       </group>
-      <group id="2" label="14086">
-        <setting id="coreelec.amlogic.hevcworkaround" type="boolean" label="14292" help="14293">
-          <requirement>HAVE_AMCODEC</requirement>
-          <default>false</default>
-          <control type="toggle" />
-        </setting>
-      </group>
     </category>
     <category id="cache" label="439" help="36399">
       <visible>false</visible>
