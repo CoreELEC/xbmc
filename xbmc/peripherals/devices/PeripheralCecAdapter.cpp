@@ -165,18 +165,15 @@ void CPeripheralCecAdapter::Announce(ANNOUNCEMENT::AnnouncementFlag flag,
     if (m_bPowerOffScreensaver)
     {
       // Don't put devices to standby if application is currently playing. Check if video is paused.
-      bool bNotPlaying = false;
       if (m_bPowerOffScreensaverPaused)
-        bNotPlaying = (!g_application.GetAppPlayer().IsPlaying() || g_application.GetAppPlayer().IsPausedPlayback());
-      else
-        bNotPlaying = (!g_application.GetAppPlayer().IsPlaying());
-      if (bNotPlaying)
       {
-        // only power off when we're the active source
-        if (m_cecAdapter->IsLibCECActiveSource()) {
-          m_ScreensaverStandbySent = CDateTime::GetCurrentDateTime();
+        if (!g_application.GetAppPlayer().IsPlaying() || g_application.GetAppPlayer().IsPausedPlayback())
           StandbyDevices();
-        }
+      }
+      else
+      {
+        if (!g_application.GetAppPlayer().IsPlaying())
+          StandbyDevices();
       }
     }
   }
@@ -1782,30 +1779,28 @@ void CPeripheralCecAdapter::StandbyDevices(void)
 {
   CSingleLock lock(m_critSection);
   m_bStandbyPending = true;
+  m_ScreensaverStandbySent = CDateTime::GetCurrentDateTime();
 }
 
 void CPeripheralCecAdapter::ProcessStandbyDevices(void)
 {
-  bool bStandby(false);
-
+  CSingleLock lock(m_critSection);
+  if (m_bStandbyPending)
   {
-    CSingleLock lock(m_critSection);
     int iScreensaverDelay = GetSettingInt("screensaver_delay_standby");
-    if ((m_ScreensaverStandbySent.IsValid() &&
-        (CDateTime::GetCurrentDateTime() - m_ScreensaverStandbySent < CDateTimeSpan(0, 0, 0, iScreensaverDelay))))
-      return;
-    bStandby = m_bStandbyPending;
+
+    if ((iScreensaverDelay > 0) && m_ScreensaverStandbySent.IsValid())
+      if (CDateTime::GetCurrentDateTime() - m_ScreensaverStandbySent < CDateTimeSpan(0, 0, iScreensaverDelay, 0))
+          return;
+
     m_bStandbyPending = false;
     m_ScreensaverStandbySent.SetValid(false);
-    if (bStandby)
-      if (m_cecAdapter->IsLibCECActiveSource())
-        m_bGoingToStandby = true;
-      else
-        bStandby = false;
-  }
 
-  if (bStandby)
-  {
+    if (!m_cecAdapter->IsLibCECActiveSource())
+      return;
+
+    m_bGoingToStandby = true;
+
     if (!m_configuration.powerOffDevices.IsEmpty())
     {
       m_standbySent = CDateTime::GetCurrentDateTime();
