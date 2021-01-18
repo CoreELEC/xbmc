@@ -209,12 +209,12 @@ void CPeripheralCecAdapter::OnSystemEvent(const ANNOUNCEMENT::SystemEvent& event
   }
   else if (std::holds_alternative<SYSTEM::Wake>(event))
   {
-    CLog::Log(LOGDEBUG, "{} - reconnecting to the CEC adapter after standby mode", __FUNCTION__);
-    if (ReopenConnection())
+    std::unique_lock lock(m_critSection);
+    if (m_bStarted)
     {
+      CLog::Log(LOGDEBUG, "{} - reuse open CEC adapter connection after standby mode", __FUNCTION__);
       bool bActivate(false);
       {
-        std::unique_lock lock(m_critSection);
         bActivate = m_bActiveSourceBeforeStandby;
         m_bActiveSourceBeforeStandby = false;
       }
