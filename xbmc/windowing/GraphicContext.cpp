@@ -974,6 +974,7 @@ bool CGraphicContext::IsFullScreenRoot () const
 
 void CGraphicContext::ToggleFullScreen()
 {
+  /*
   RESOLUTION uiRes;
 
   if (m_bFullScreenRoot)
@@ -989,6 +990,7 @@ void CGraphicContext::ToggleFullScreen()
   }
 
   CDisplaySettings::GetInstance().SetCurrentResolution(uiRes, true);
+  */
 }
 
 void CGraphicContext::SetMediaDir(const std::string &strMediaDir)
