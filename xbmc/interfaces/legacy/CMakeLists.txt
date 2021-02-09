@@ -36,6 +36,7 @@ set(HEADERS Addon.h
             aojsonrpc.h
             CallbackFunction.h
             CallbackHandler.h
+            configini.h
             Control.h
             Dialog.h
             Dictionary.h
