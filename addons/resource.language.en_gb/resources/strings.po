@@ -18429,6 +18429,11 @@ msgctxt "#36049"
 msgid "Remote button press release time (ms)"
 msgstr ""
 
+#: system/settings.xml
+msgctxt "#36050"
+msgid "On start"
+msgstr ""
+
 #: system/peripherals.xml
 msgctxt "#36051"
 msgid "Minutes standby is delayed after Screensaver is activated"
@@ -18437,11 +18442,6 @@ msgstr ""
 #: system/peripherals.xml
 msgctxt "#36052"
 msgid "Put devices in standby by Screensaver on paused video"
-msgstr ""
-
-#: system/settings.xml
-msgctxt "#36050"
-msgid "On start"
 msgstr ""
 
 #empty strings from id 36053 to 36098
