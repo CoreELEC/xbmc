@@ -18445,7 +18445,27 @@ msgctxt "#36052"
 msgid "Put devices in standby by Screensaver on paused video"
 msgstr ""
 
-#empty strings from id 36053 to 36098
+#: system/peripherals.xml
+msgctxt "#36053"
+msgid "OSD name"
+msgstr ""
+
+#: system/peripherals.xml
+msgctxt "#36054"
+msgid "Wake-Up by auto power on"
+msgstr ""
+
+#: system/peripherals.xml
+msgctxt "#36055"
+msgid "Wake-Up by streaming path/routing change"
+msgstr ""
+
+#: system/peripherals.xml
+msgctxt "#36056"
+msgid "Wake-Up by active route"
+msgstr ""
+
+#empty strings from id 36057 to 36098
 
 #: system/settings/settings.xml
 msgctxt "#36099"
