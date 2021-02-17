@@ -76,6 +76,15 @@ typedef enum
   VOLUME_CHANGE_MUTE
 } CecVolumeChange;
 
+// CEC Wake Up flags from u-boot(bl301)
+typedef enum
+{
+  CEC_FUNC_MASK = 0,
+  AUTO_POWER_ON_MASK = 3,
+  STREAMPATH_POWER_ON_MASK = 4,
+  ACTIVE_SOURCE_MASK = 6
+} CecWakeUpMask;
+
 class CPeripheralCecAdapter : public CPeripheralHID,
                               public ANNOUNCEMENT::IAnnouncer,
                               private CThread
@@ -195,6 +204,7 @@ private:
   bool m_bSendInactiveSource;
   bool m_bPowerOffScreensaver;
   bool m_bShutdownOnStandby;
+  int m_iCec_func_config;
 };
 
 class CPeripheralCecAdapterUpdateThread : public CThread
