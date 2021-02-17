@@ -20483,7 +20483,27 @@ msgctxt "#36059"
 msgid "Step size of the brightness, contrast, hue and saturation sliders in the video settings."
 msgstr ""
 
-#empty strings from id 36060 to 36095
+#: system/peripherals.xml
+msgctxt "#36060"
+msgid "OSD name"
+msgstr ""
+
+#: system/peripherals.xml
+msgctxt "#36061"
+msgid "Wake-Up by auto power on"
+msgstr ""
+
+#: system/peripherals.xml
+msgctxt "#36062"
+msgid "Wake-Up by streaming path/routing change"
+msgstr ""
+
+#: system/peripherals.xml
+msgctxt "#36063"
+msgid "Wake-Up by active route"
+msgstr ""
+
+#empty strings from id 36064 to 36095
 
 #. Label of setting "System / Display / Use system HDR/SDR brightness balance"
 #: system/settings/settings.xml
