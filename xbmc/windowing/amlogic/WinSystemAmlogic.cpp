@@ -200,14 +200,6 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
     m_dispResetTimer.Set(delay * 100);
   }
 
-  {
-    CSingleLock lock(m_resourceSection);
-    for (std::vector<IDispResource *>::iterator i = m_resources.begin(); i != m_resources.end(); ++i)
-    {
-      (*i)->OnLostDisplay();
-    }
-  }
-
   m_stereo_mode = stereo_mode;
   m_bFullScreen = fullScreen;
 
