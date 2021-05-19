@@ -6588,7 +6588,8 @@ void CVideoPlayer::OnLostDisplay()
 {
   CLog::Log(LOGINFO, "VideoPlayer: OnLostDisplay received");
   SuspendPresentation(SuspendReason::DISPLAY_LOST);
-  FlushRenderer();
+  // Causes https://github.com/xbmc/xbmc/issues/15447
+  // FlushRenderer();
 }
 
 void CVideoPlayer::OnResetDisplay()
