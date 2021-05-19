@@ -6599,7 +6599,8 @@ void CVideoPlayer::OnLostDisplay()
     m_clock.Pause(true);
     m_displayLost = true;
   }
-  FlushRenderer();
+  // Causes https://github.com/xbmc/xbmc/issues/15447
+  // FlushRenderer();
 }
 
 void CVideoPlayer::OnResetDisplay()
