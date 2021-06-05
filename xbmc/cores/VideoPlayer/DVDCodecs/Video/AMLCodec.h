@@ -68,6 +68,7 @@ private:
   int           DequeueBuffer();
   float         GetTimeSize();
   unsigned int  GetDecoderVideoRate();
+  std::string   GetHDRStaticMetadata();
 
   DllLibAmCodec   *m_dll;
   bool             m_opened;
