@@ -51,6 +51,10 @@ int CXBApplicationEx::Run(const CAppParamParser &params)
     KODI::MESSAGING::CApplicationMessenger::GetInstance().PostMsg(TMSG_PLAYLISTPLAYER_PLAY, -1);
   }
 
+#ifdef TARGET_RASPBERRY_PI
+  system("/sbin/fbset -g 1 1 1 1 32");
+#endif
+
   // Run xbmc
   while (!m_bStop)
   {
