@@ -2157,8 +2157,7 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
   else if (timesize < 1.0)
     return CDVDVideoCodec::VC_BUFFER;
 
-  SysfsUtils::GetString("/sys/class/deinterlace/di0/frame_format", vfmt);
-  if (vfmt.c_str())
+  if (!SysfsUtils::GetString("/sys/class/deinterlace/di0/frame_format", vfmt) && (vfmt.size() > 4))
     m_processInfo.SetVideoInterlaced(vfmt.compare("progressive"));
 
   return CDVDVideoCodec::VC_NONE;
