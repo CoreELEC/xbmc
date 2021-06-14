@@ -49,7 +49,7 @@ bool CGUIWindowSystemInfo::OnMessage(CGUIMessage& message)
     case GUI_MSG_WINDOW_INIT:
     {
       CGUIWindow::OnMessage(message);
-      SET_CONTROL_LABEL(52, CSysInfo::GetAppName() + " " + CSysInfo::GetVersion());
+      SET_CONTROL_LABEL(52, "AMLogic running " + CSysInfo::GetAppName() + " " + CSysInfo::GetVersion());
       SET_CONTROL_LABEL(53, CSysInfo::GetBuildDate());
       CONTROL_ENABLE_ON_CONDITION(CONTROL_BT_PVR, CServiceBroker::GetPVRManager().IsStarted());
       return true;
@@ -97,6 +97,7 @@ void CGUIWindowSystemInfo::FrameMove()
     SetControlLabel(i++, "{}: {}", 150, NETWORK_IP_ADDRESS);
     SetControlLabel(i++, "{} {}", 13287, SYSTEM_SCREEN_RESOLUTION);
     SetControlLabel(i++, "{} {}", 13283, SYSTEM_OS_VERSION_INFO);
+    SetControlLabel(i++, "{}: {}", 12395, SYSTEM_LINUX_VER);
     SetControlLabel(i++, "{}: {}", 144, SYSTEM_BUILD_VERSION);
     SetControlLabel(i++, "{}: {}", 174, SYSTEM_BUILD_DATE);
     SetControlLabel(i++, "{}: {}", 12390, SYSTEM_UPTIME);
@@ -149,6 +150,10 @@ void CGUIWindowSystemInfo::FrameMove()
       if (!version.empty())
         SET_CONTROL_LABEL(
             i++, StringUtils::Format("{} {}", g_localizeStrings.Get(renderVersionLabel), version));
+
+#if (defined(__arm__) || defined(__aarch64__)) && !defined(HAS_DX)
+      SET_CONTROL_LABEL(i++, StringUtils::Format("{} {}", g_localizeStrings.Get(22010), SYSTEM_GPU_TEMPERATURE));
+#endif
     }
 
     auto windowSystem = CServiceBroker::GetWinSystem();
@@ -174,10 +179,6 @@ void CGUIWindowSystemInfo::FrameMove()
       if (!model.empty())
         SET_CONTROL_LABEL(i++, "CPU: " + model);
 
-      static std::string mips = cpuInfo->GetCPUBogoMips();
-      if (!mips.empty())
-        SET_CONTROL_LABEL(i++, "BogoMips: " + mips);
-
       static std::string soc = cpuInfo->GetCPUSoC();
       if (!soc.empty())
         SET_CONTROL_LABEL(i++, "SoC: " + soc);
@@ -185,10 +186,6 @@ void CGUIWindowSystemInfo::FrameMove()
       static std::string hardware = cpuInfo->GetCPUHardware();
       if (!hardware.empty())
         SET_CONTROL_LABEL(i++, "Hardware: " + hardware);
-
-      static std::string revision = cpuInfo->GetCPURevision();
-      if (!revision.empty())
-        SET_CONTROL_LABEL(i++, "Revision: " + revision);
 
       static std::string serial = cpuInfo->GetCPUSerial();
       if (!serial.empty())
