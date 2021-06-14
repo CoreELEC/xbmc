@@ -23,6 +23,9 @@
 #if defined(HAVE_GBM)
 #include "windowing/gbm/WinSystemGbmGLESContext.h"
 #endif
+#if defined(HAS_LIBAMCODEC)
+#include "windowing/amlogic/WinSystemAmlogicGLESContext.h"
+#endif
 #endif
 
 #if defined(HAS_GL)
@@ -61,6 +64,9 @@ bool CPlatformLinux::InitStageOne()
 #endif
 #if defined(HAVE_GBM)
   KODI::WINDOWING::GBM::CWinSystemGbmGLESContext::Register();
+#endif
+#if defined(HAS_LIBAMCODEC)
+  KODI::WINDOWING::AML::CWinSystemAmlogicGLESContext::Register();
 #endif
 #endif
 
