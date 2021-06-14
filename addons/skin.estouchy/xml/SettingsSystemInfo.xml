@@ -128,7 +128,7 @@
 				<posx>470r</posx>
 				<posy>190r</posy>
 				<control type="label" id="52">
-					<description>Kodi Build Version</description>
+					<description>CoreELEC Build Version</description>
 					<posx>330</posx>
 					<posy>10</posy>
 					<width>740</width>
