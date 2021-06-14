@@ -175,7 +175,7 @@ void CPeripheralCecAdapter::Announce(ANNOUNCEMENT::AnnouncementFlag flag,
       CSingleLock lock(m_critSection);
       m_bGoingToStandby = true;
     }
-    StopThread();
+    UnregisterDevice();
   }
   else if (flag == ANNOUNCEMENT::System && sender == CAnnouncementManager::ANNOUNCEMENT_SENDER &&
            message == "OnWake")
@@ -383,40 +383,7 @@ void CPeripheralCecAdapter::Process(void)
 
   m_queryThread->StopThread(true);
 
-  bool bSendStandbyCommands(false);
-  {
-    CSingleLock lock(m_critSection);
-    bSendStandbyCommands = m_iExitCode != EXITCODE_REBOOT && m_iExitCode != EXITCODE_RESTARTAPP &&
-                           !m_bDeviceRemoved &&
-                           (!m_bGoingToStandby || GetSettingBool("standby_tv_on_pc_standby")) &&
-                           GetSettingBool("enabled");
-
-    if (m_bGoingToStandby)
-      m_bActiveSourceBeforeStandby = m_cecAdapter->IsLibCECActiveSource();
-  }
-
-  if (bSendStandbyCommands)
-  {
-    if (m_cecAdapter->IsLibCECActiveSource())
-    {
-      if (!m_configuration.powerOffDevices.IsEmpty())
-      {
-        CLog::Log(LOGDEBUG, "{} - sending standby commands", __FUNCTION__);
-        m_standbySent = CDateTime::GetCurrentDateTime();
-        m_cecAdapter->StandbyDevices();
-      }
-      else if (m_bSendInactiveSource)
-      {
-        CLog::Log(LOGDEBUG, "{} - sending inactive source commands", __FUNCTION__);
-        m_cecAdapter->SetInactiveView();
-      }
-    }
-    else
-    {
-      CLog::Log(LOGDEBUG, "{} - XBMC is not the active source, not sending any standby commands",
-                __FUNCTION__);
-    }
-  }
+  UnregisterDevice();
 
   m_cecAdapter->Close();
 
@@ -1775,6 +1742,44 @@ void CPeripheralCecAdapter::ProcessActivateSource(void)
 
   if (bActivate)
     m_cecAdapter->SetActiveSource();
+}
+
+void CPeripheralCecAdapter::UnregisterDevice(void)
+{
+  bool bSendStandbyCommands(false);
+  {
+    CSingleLock lock(m_critSection);
+    bSendStandbyCommands = m_iExitCode != EXITCODE_REBOOT && m_iExitCode != EXITCODE_RESTARTAPP &&
+                           !m_bDeviceRemoved &&
+                           (!m_bGoingToStandby || GetSettingBool("standby_tv_on_pc_standby")) &&
+                           GetSettingBool("enabled");
+
+    if (m_bGoingToStandby)
+      m_bActiveSourceBeforeStandby = m_cecAdapter->IsLibCECActiveSource();
+  }
+
+  if (bSendStandbyCommands)
+  {
+    if (m_cecAdapter->IsLibCECActiveSource())
+    {
+      if (!m_configuration.powerOffDevices.IsEmpty())
+      {
+        CLog::Log(LOGDEBUG, "{} - sending standby commands", __FUNCTION__);
+        m_standbySent = CDateTime::GetCurrentDateTime();
+        m_cecAdapter->StandbyDevices();
+      }
+      else if (m_bSendInactiveSource)
+      {
+        CLog::Log(LOGDEBUG, "{} - sending inactive source commands", __FUNCTION__);
+        m_cecAdapter->SetInactiveView();
+      }
+    }
+    else
+    {
+      CLog::Log(LOGDEBUG, "{} - XBMC is not the active source, not sending any standby commands",
+                __FUNCTION__);
+    }
+  }
 }
 
 void CPeripheralCecAdapter::StandbyDevices(void)
