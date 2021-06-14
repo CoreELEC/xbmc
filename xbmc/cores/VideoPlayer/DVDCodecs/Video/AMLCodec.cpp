@@ -1956,8 +1956,6 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
   // We use this to determine the fill state if no PTS is given
   if (m_cur_pts == DVD_NOPTS_VALUE)
   {
-    m_cur_pts = am_private->am_pkt.avdts * 100 / 9;
-
     // No PTS given -> use first DTS for AML ptsserver initialization
     if ((m_state & STATE_HASPTS) == 0)
       am_private->am_pkt.avpts = am_private->am_pkt.avdts;
@@ -1991,17 +1989,14 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
   if (iSize > 50000)
     usleep(2000); // wait 2ms to process larger packets
 
-  m_ttd =  static_cast<double>(m_cur_pts) / DVD_TIME_BASE - static_cast<double>(m_hints.pClock->GetClock()) / DVD_TIME_BASE +
-    am_private->video_rate / UNIT_FREQ;
   m_dll->codec_get_vbuf_state(&am_private->vcodec, &bs);
   if (iSize > 0)
-    CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::AddData: dl:{:d} sum:{:u} sz:{:u} dts_in:{:.3lf} pts_in:{:.3lf} ptsOut:{:.3lf} ttd:{:.0lf}ms overflow:{:llx}",
+    CLog::Log(LOGDEBUG, LOGVIDEO,
+      "CAMLCodec::AddData: dl:{:d} sum:{:u} sz:{:u} dts:{:.3lf} pts:{:.3lf} overflow:{:llx}",
       bs.data_len, m_frameSizeSum,
       static_cast<unsigned int>(iSize),
       dts / DVD_TIME_BASE,
       pts / DVD_TIME_BASE,
-      static_cast<float>(m_cur_pts) / DVD_TIME_BASE,
-      m_ttd * 1000.0,
       m_ptsOverflow
     );
   return true;
@@ -2009,7 +2004,6 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
 
 std::atomic_flag CAMLCodec::m_pollSync = ATOMIC_FLAG_INIT;
 int CAMLCodec::m_pollDevice;
-double CAMLCodec::m_ttd = 0;
 
 int CAMLCodec::PollFrame()
 {
@@ -2100,7 +2094,7 @@ DRAIN:
   m_cur_pts += vbuf.timestamp.tv_usec & 0xFFFFFFFF;
 
   // since ptsOverflow is calculated from decoder input, we have to check at output if the new packets caused overflow increment
-  if ((m_cur_pts - m_hints.pClock->GetClock())  > 1000000000LL)
+  if ((m_cur_pts - m_hints.pClock->GetClock())  > 0x7F000000LL * 100 / 9)
     m_cur_pts -= 0x80000000LL * 100 / 9;
 
   CLog::Log(LOGDEBUG, LOGAVTIMING, "CAMLCodec::DequeueBuffer: pts:{:.3f}  idx:{:d}",

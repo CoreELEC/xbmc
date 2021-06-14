@@ -1637,7 +1637,8 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
           st->bInterlaced = true;
         }
 
-        CLog::Log(LOGDEBUG, "DVDDemuxFFmpeg::{} - fps:{:d}/{:d} i/p:{:d}", __FUNCTION__, st->iFpsRate, st->iFpsScale, st->bInterlaced);
+        CLog::Log(LOGDEBUG, "DVDDemuxFFmpeg::{} - fps:{:d}/{:d}{}", __FUNCTION__, st->iFpsRate, st->iFpsScale,
+          st->bInterlaced ? "i" : "p");
 
         if (pStream->codec_info_nb_frames > 0 &&
             pStream->codec_info_nb_frames <= 2 &&
