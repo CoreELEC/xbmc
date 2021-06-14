@@ -1256,7 +1256,6 @@ void CAESinkALSA::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
             && baseName != "surround41"
             && baseName != "surround50"
             && baseName != "surround51"
-            && baseName != "surround71"
             && baseName != "hw"
             && baseName != "dmix"
             && baseName != "plughw"
@@ -1647,7 +1646,12 @@ void CAESinkALSA::EnumerateDevice(AEDeviceInfoList &list, const std::string &dev
     if (info.m_deviceType == AE_DEVTYPE_IEC958)
       info.m_displayNameExtra = "S/PDIF";
     else if (info.m_deviceType != AE_DEVTYPE_HDMI)
-      info.m_displayNameExtra = "PCM";
+    {
+      if (device.substr(0, 10) == "surround71")
+        info.m_displayNameExtra = "HDMI Multi Ch PCM";
+      else
+        info.m_displayNameExtra = "PCM";
+    }
   }
 
   if (info.m_deviceType == AE_DEVTYPE_HDMI)
