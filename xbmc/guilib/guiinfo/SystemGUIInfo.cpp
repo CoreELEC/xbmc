@@ -657,6 +657,16 @@ bool CSystemGUIInfo::GetBool(bool& value, const CGUIListItem *gitem, int context
       }
       break;
     }
+    case SYSTEM_PATH_EXIST:
+    {
+      struct stat path_info;
+      value = false;
+
+      if (stat(info.GetData3().c_str(), &path_info) == 0)
+        value = (path_info.st_mode & S_IFDIR) != 0;
+
+      return true;
+    }
   }
 
   return false;
