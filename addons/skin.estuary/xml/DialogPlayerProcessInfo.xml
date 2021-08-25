@@ -13,7 +13,7 @@
 				<left>30</left>
 				<top>-220</top>
 				<right>30</right>
-				<height>420</height>
+				<height>380</height>
 				<texture border="40">dialogs/dialog-bg-nobo.png</texture>
 			</control>
 			<control type="grouplist">
