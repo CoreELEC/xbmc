@@ -19,6 +19,8 @@ class CSysfsPath
 public:
   CSysfsPath() = default;
   CSysfsPath(const std::string& path) : m_path(path) {}
+  template<typename T>
+  CSysfsPath(const std::string& path, T value) : m_path(path) { if (Exists()) { Set(value); } }
   ~CSysfsPath() = default;
 
   bool Exists();
@@ -39,6 +41,20 @@ public:
     }
 
     return value;
+  }
+
+  template<typename T>
+  void Set(T value)
+  {
+    std::ofstream file(m_path);
+
+    file << value;
+
+    if (file.bad())
+    {
+      CLog::LogF(LOGERROR, "error write to '{}'", m_path);
+      throw std::runtime_error("error write to " + m_path);
+    }
   }
 
 private:
