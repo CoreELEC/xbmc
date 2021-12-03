@@ -64,8 +64,6 @@ CWinSystemAmlogic::CWinSystemAmlogic() :
   m_stereo_mode = RENDER_STEREO_MODE_OFF;
   m_delayDispReset = false;
 
-  aml_permissions();
-
   // Register sink
   AE::CAESinkFactory::ClearSinks();
   CAESinkALSA::Register();
