@@ -18,9 +18,10 @@
 #include "settings/SettingsComponent.h"
 #include "utils/MathUtils.h"
 #include "utils/log.h"
-#include "utils/SysfsUtils.h"
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
+
+#include "platform/linux/SysfsPath.h"
 
 #include <iomanip>
 #include <iterator>
@@ -630,7 +631,10 @@ void CVideoPlayerVideo::Process()
 
         if (vfmtCheckCount > 0 && --vfmtCheckCount % 5 == 0)
         {
-          if (!SysfsUtils::GetString("/sys/class/deinterlace/di0/frame_format", vfmt) && (vfmt.size() > 4))
+          CSysfsPath frame_format{"/sys/class/deinterlace/di0/frame_format"};
+          if (frame_format.Exists())
+            vfmt = frame_format.Get<std::string>();
+          if (vfmt.size() > 4)
             m_processInfo.SetVideoInterlaced(vfmt.compare("progressive"));
           CLog::Log(LOGDEBUG, "CVideoPlayerVideo - CDVDMsg::DEMUXER_PACKET - checking interlace vfmt: {}", vfmt);
         }
