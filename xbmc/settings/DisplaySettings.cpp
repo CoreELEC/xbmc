@@ -15,6 +15,7 @@
 #include "guilib/LocalizeStrings.h"
 #include "guilib/StereoscopicsManager.h"
 #include "messaging/helpers/DialogHelper.h"
+#include "platform/linux/SysfsPath.h"
 #include "rendering/RenderSystem.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/Settings.h"
@@ -23,7 +24,6 @@
 #include "settings/lib/SettingDefinitions.h"
 #include "storage/MediaManager.h"
 #include "utils/StringUtils.h"
-#include "utils/SysfsUtils.h"
 #include "utils/Variant.h"
 #include "utils/XMLUtils.h"
 #include "utils/log.h"
@@ -97,7 +97,9 @@ static bool write_resolution_ini(RESOLUTION_INFO res)
   if (!result && !res.strId.empty())
   {
     std::string allfmt_names = "";
-    SysfsUtils::GetString("/sys/class/amhdmitx/amhdmitx0/allfmt_names", allfmt_names);
+    CSysfsPath amhdmitx0_allfmt_names{"/sys/class/amhdmitx/amhdmitx0/allfmt_names"};
+    if (amhdmitx0_allfmt_names.Exists())
+      allfmt_names = amhdmitx0_allfmt_names.Get<std::string>();
     std::ofstream ofs(aml_res_path + "/" + aml_res_file, std::ofstream::out);
     ofs << "# WARNING DO NOT MODIFY THIS FILE! ALL CHANGES WILL BE LOST!\n";
     ofs << "kernel_hdmimode=" << res.strId.c_str() << "\n";
