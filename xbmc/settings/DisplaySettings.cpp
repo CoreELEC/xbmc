@@ -35,11 +35,12 @@
 #include "threads/SingleLock.h"
 #include "utils/log.h"
 #include "utils/StringUtils.h"
-#include "utils/SysfsUtils.h"
 #include "utils/Variant.h"
 #include "utils/XMLUtils.h"
 #include "rendering/RenderSystem.h"
 #include "windowing/WinSystem.h"
+
+#include "platform/linux/SysfsPath.h"
 
 #if defined(HAVE_X11)
 #define WIN_SYSTEM_CLASS KODI::WINDOWING::X11::CWinSystemX11
@@ -114,7 +115,9 @@ static bool write_resolution_ini(RESOLUTION_INFO res)
   if (!result && !res.strId.empty())
   {
     std::string allfmt_names = "";
-    SysfsUtils::GetString("/sys/class/amhdmitx/amhdmitx0/allfmt_names", allfmt_names);
+    CSysfsPath amhdmitx0_allfmt_names{"/sys/class/amhdmitx/amhdmitx0/allfmt_names"};
+    if (amhdmitx0_allfmt_names.Exists())
+      allfmt_names = amhdmitx0_allfmt_names.Get<std::string>();
     std::ofstream ofs(aml_res_path + "/" + aml_res_file, std::ofstream::out);
     ofs << "# WARNING DO NOT MODIFY THIS FILE! ALL CHANGES WILL BE LOST!\n";
     ofs << "kernel_hdmimode=" << res.strId.c_str() << "\n";
