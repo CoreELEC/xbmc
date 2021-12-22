@@ -92,8 +92,8 @@ std::string CPlayerGUIInfo::GetAMLConfigInfo(std::string item) const
 
             if (cur_fractional_rate)
             {
-              float refreshrate = static_cast<float>(atof(StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2).c_str())) / 1.001;
-              float refreshrate_rounded = std::round(refreshrate * 1000.0) / 1000.0;
+              float refreshrate = static_cast<float>(atof(StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2).c_str())) / 1.001f;
+              float refreshrate_rounded = std::round(refreshrate * 1000.0f) / 1000.0f;
               item_value += fmt::format("{:.6g}Hz", refreshrate_rounded);
             }
             else
