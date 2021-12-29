@@ -11,6 +11,7 @@
 #include "utils/log.h"
 #include "utils/StringUtils.h"
 
+#include <filesystem>
 #include <fstream>
 #include <string>
 
