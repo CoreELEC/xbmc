@@ -429,7 +429,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   }
 
   // old aml without IEC61937 passes everything via 2 channels
-  if (aml_present() && m_passthrough && m_info.m_wantsIECPassthrough && (CJNIAudioFormat::ENCODING_IEC61937 == -1))
+  if (m_passthrough && m_info.m_wantsIECPassthrough && (CJNIAudioFormat::ENCODING_IEC61937 == -1))
     atChannelMask = CJNIAudioFormat::CHANNEL_OUT_STEREO;
 
   bool retried = false;
@@ -516,7 +516,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
       m_format.m_frameSize = m_format.m_channelLayout.Count() * (CAEUtil::DataFormatToBits(m_format.m_dataFormat) / 8);
 
       // again a workaround for AML old code
-      if (m_passthrough && aml_present() && m_info.m_wantsIECPassthrough && (CJNIAudioFormat::ENCODING_IEC61937 == -1))
+      if (m_passthrough && m_info.m_wantsIECPassthrough && (CJNIAudioFormat::ENCODING_IEC61937 == -1))
         m_sink_frameSize = 2 * CAEUtil::DataFormatToBits(AE_FMT_S16LE) / 8; // sending via 2 channels 2 * 16 / 8 = 4
       else
         m_sink_frameSize = m_format.m_frameSize;
@@ -542,7 +542,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
       if (m_passthrough)
       {
         // AML in old mode needs more buffer or it stutters when faking PT
-        if (aml_present() && m_passthrough && m_info.m_wantsIECPassthrough && (CJNIAudioFormat::ENCODING_IEC61937 == -1))
+        if (m_passthrough && m_info.m_wantsIECPassthrough && (CJNIAudioFormat::ENCODING_IEC61937 == -1))
         {
           if (m_sink_sampleRate > 48000)
             m_min_buffer_size *= (m_sink_sampleRate / 48000); // same amount of buffer in seconds as for 48 khz
@@ -717,7 +717,7 @@ void CAESinkAUDIOTRACK::GetDelay(AEDelayStatus& status)
   uint64_t normHead_pos = m_headPos;
 
   // this makes EAC3 working even when AML is not enabled
-  if (aml_present() && m_info.m_wantsIECPassthrough &&
+  if (m_info.m_wantsIECPassthrough &&
       (m_encoding == CJNIAudioFormat::ENCODING_DTS_HD ||
        m_encoding == CJNIAudioFormat::ENCODING_E_AC3 ||
        m_encoding == CJNIAudioFormat::ENCODING_DOLBY_TRUEHD))
@@ -1170,7 +1170,7 @@ void CAESinkAUDIOTRACK::UpdateAvailablePassthroughCapabilities(bool isRaw)
       }
     }
 
-    if (aml_present() && CJNIAudioManager::GetSDKVersion() < 23)
+    if (CJNIAudioManager::GetSDKVersion() < 23)
     {
       // passthrough
       m_info.m_wantsIECPassthrough = true;
@@ -1289,7 +1289,7 @@ void CAESinkAUDIOTRACK::UpdateAvailablePCMCapabilities()
   // Still AML API 21 and 22 get hardcoded samplerates - we can drop that
   // when we stop supporting API < 23 - let's only add the default
   // music samplerate
-  if (!aml_present() || CJNIAudioManager::GetSDKVersion() >= 23)
+  if (CJNIAudioManager::GetSDKVersion() >= 23)
   {
     int test_sample[] = { 32000, 44100, 48000, 88200, 96000, 176400, 192000 };
     int test_sample_sz = sizeof(test_sample) / sizeof(int);
