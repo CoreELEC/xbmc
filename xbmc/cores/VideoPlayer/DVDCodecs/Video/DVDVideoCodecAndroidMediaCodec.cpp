@@ -503,7 +503,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
       m_formatname = "amc-hevc";
 
       const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-      int convertDovi{0};
+      int convertDovi{2};
       bool removeDovi{false};
       bool removeHdr10Plus{false};
 
