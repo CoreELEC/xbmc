@@ -105,12 +105,16 @@ bool CWinSystemAmlogic::InitWindowSystem()
       settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_USE_PLAYERLED, false);
     }
   }
-  else if (aml_dv_support_ll())
+  else
   {
-    CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem -- display do support Dolby Vision Low Latency");
-    auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_USE_PLAYERLED);
-    if (setting)
-      setting->SetVisible(true);
+    int dv_cap = aml_get_drmProperty("dv_cap", DRM_MODE_OBJECT_CONNECTOR);
+    CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem -- got display dv_cap: {:d}", dv_cap);
+    if (dv_cap != -1 && ((dv_cap & LL_YCbCr_422_12BIT) != 0))
+    {
+      auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_USE_PLAYERLED);
+      if (setting)
+        setting->SetVisible(true);
+    }
   }
 
   if (((LINUX_VERSION_CODE >> 16) & 0xFF) < 5)
