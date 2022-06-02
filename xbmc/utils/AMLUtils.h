@@ -8,6 +8,9 @@
 
 #pragma once
 
+#include <xf86drm.h>
+#include <xf86drmMode.h>
+
 #include "windowing/Resolution.h"
 
 #include <string>
@@ -63,10 +66,7 @@ bool aml_get_native_resolution(RESOLUTION_INFO *res);
 bool aml_set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name, const int stereo_mode);
 bool aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolutions);
 bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name);
-void aml_handle_scale(const RESOLUTION_INFO &res);
 void aml_handle_display_stereo_mode(const int stereo_mode);
-void aml_enable_freeScale(const RESOLUTION_INFO &res);
-void aml_disable_freeScale();
 void aml_set_framebuffer_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name);
 void aml_set_framebuffer_resolution(unsigned int width, unsigned int height, std::string framebuffer_name);
 bool aml_read_reg(const std::string &reg, uint32_t &reg_val);
