@@ -8,6 +8,9 @@
 
 #pragma once
 
+#include <xf86drm.h>
+#include <xf86drmMode.h>
+
 #include "windowing/Resolution.h"
 
 #include <string>
@@ -49,8 +52,8 @@ enum AML_SUPPORT_H264_4K2K
 #define AML_SM1     0x2B
 
 int  aml_get_cpufamily_id();
+std::string aml_get_cpufamily_name(int cpuid = -1);
 bool aml_display_support_dv();
-bool aml_dv_support_ll();
 bool aml_display_support_3d();
 bool aml_support_hevc();
 bool aml_support_hevc_4k2k();
@@ -71,10 +74,7 @@ bool aml_get_native_resolution(RESOLUTION_INFO *res);
 bool aml_set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name, const int stereo_mode, bool force_mode_switch);
 bool aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolutions);
 bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name, bool force_mode_switch);
-void aml_handle_scale(const RESOLUTION_INFO &res);
 void aml_handle_display_stereo_mode(const int stereo_mode);
-void aml_enable_freeScale(const RESOLUTION_INFO &res);
-void aml_disable_freeScale();
 void aml_set_framebuffer_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name);
 void aml_set_framebuffer_resolution(unsigned int width, unsigned int height, std::string framebuffer_name);
 bool aml_has_capability_ignore_alpha();
