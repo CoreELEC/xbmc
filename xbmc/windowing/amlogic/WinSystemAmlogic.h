@@ -16,6 +16,8 @@
 #include "system_egl.h"
 #include <EGL/fbdev_window.h>
 
+#define LL_YCbCr_422_12BIT  (int)(1<<5)
+
 class IDispResource;
 
 class CWinSystemAmlogic : public CWinSystemBase
