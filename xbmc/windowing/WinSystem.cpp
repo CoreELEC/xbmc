@@ -111,17 +111,16 @@ static void AddResolution(std::vector<RESOLUTION_WHR> &resolutions, unsigned int
   int flags  = resInfo.dwFlags & D3DPRESENTFLAG_MODEMASK;
   float refreshrate = resInfo.fRefreshRate;
 
-  // don't touch RES_DESKTOP
-  for (unsigned int idx = 1; idx < resolutions.size(); idx++)
-    if (   resolutions[idx].width == width
-        && resolutions[idx].height == height
-        &&(resolutions[idx].flags & D3DPRESENTFLAG_MODEMASK) == flags)
+  for (auto& res : resolutions)
+    if (   res.width == width
+        && res.height == height
+        &&(res.flags & D3DPRESENTFLAG_MODEMASK) == flags)
     {
       // check if the refresh rate of this resolution is better suited than
       // the refresh rate of the resolution with the same width/height/interlaced
       // property and if so replace it
       if (bestRefreshrate > 0.0f && refreshrate == bestRefreshrate)
-        resolutions[idx].ResInfo_Index = addindex;
+        res.ResInfo_Index = addindex;
 
       // no need to add the resolution again
       return;
