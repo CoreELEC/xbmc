@@ -119,10 +119,6 @@ static bool write_resolution_ini(RESOLUTION_INFO res)
 
   if (!result && !res.strId.empty())
   {
-    std::string allfmt_names = "";
-    CSysfsPath amhdmitx0_allfmt_names{"/sys/class/amhdmitx/amhdmitx0/allfmt_names"};
-    if (amhdmitx0_allfmt_names.Exists())
-      allfmt_names = amhdmitx0_allfmt_names.Get<std::string>().value();
     std::ofstream ofs(aml_res_path + "/" + aml_res_file, std::ofstream::out);
     ofs << "# WARNING DO NOT MODIFY THIS FILE! ALL CHANGES WILL BE LOST!\n";
     ofs << "kernel_hdmimode=" << res.strId.c_str() << "\n";
@@ -135,7 +131,6 @@ static bool write_resolution_ini(RESOLUTION_INFO res)
       fmt_attr += limit_cd[settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_LIMIT_CD) - 1].c_str();
     ofs << fmt_attr.c_str() << "\n";
     CSysfsPath("/sys/class/amhdmitx/amhdmitx0/attr", fmt_attr);
-    ofs << "allfmt_names=" << allfmt_names.c_str() << "\n";
     ofs.close();
     CLog::Log(LOGDEBUG, "CDisplaySettings: Amlogic resolution got saved to {}/{}", aml_res_path.c_str(), aml_res_file.c_str());
   }
@@ -1054,4 +1049,3 @@ void CDisplaySettings::SettingOptionsCmsGammaModesFiller(const SettingConstPtr& 
   list.emplace_back(g_localizeStrings.Get(36584), CMS_TRC_OUTPUT_OFFSET);
   list.emplace_back(g_localizeStrings.Get(36585), CMS_TRC_ABSOLUTE);
 }
-
