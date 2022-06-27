@@ -605,7 +605,8 @@ void CSettings::InitializeISettingCallbacks()
        CSettings::SETTING_VIDEOSCREEN_BLANKDISPLAYS, CSettings::SETTING_VIDEOSCREEN_WHITELIST,
        CSettings::SETTING_VIDEOSCREEN_10BITSURFACES,
        CSettings::SETTING_VIDEOSCREEN_HIGHPERFORMANCEGPU,
-       CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING});
+       CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING,
+       CSettings::SETTING_COREELEC_AMLOGIC_FORCE_CS, CSettings::SETTING_COREELEC_AMLOGIC_LIMIT_CD});
 
   GetSettingsManager()->RegisterCallback(&g_charsetConverter, {CSettings::SETTING_SUBTITLES_CHARSET,
                                                                CSettings::SETTING_LOCALE_CHARSET});
