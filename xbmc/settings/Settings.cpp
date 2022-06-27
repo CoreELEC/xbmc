@@ -595,6 +595,8 @@ void CSettings::InitializeISettingCallbacks()
   settingSet.insert(CSettings::SETTING_VIDEOSCREEN_RESOLUTION);
   settingSet.insert(CSettings::SETTING_VIDEOSCREEN_SCREENMODE);
   settingSet.insert(CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING);
+  settingSet.insert(CSettings::SETTING_COREELEC_AMLOGIC_FORCE_CS);
+  settingSet.insert(CSettings::SETTING_COREELEC_AMLOGIC_LIMIT_CD);
   settingSet.insert(CSettings::SETTING_VIDEOSCREEN_MONITOR);
   settingSet.insert(CSettings::SETTING_VIDEOSCREEN_PREFEREDSTEREOSCOPICMODE);
   settingSet.insert(CSettings::SETTING_VIDEOSCREEN_3DLUT);
