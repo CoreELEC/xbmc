@@ -879,8 +879,9 @@ bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuf
     mode = "custombuilt";
   }
 
-  aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name);
+  aml_set_framebuffer_resolution(res.iScreenWidth, res.iScreenHeight, framebuffer_name);
   aml_set_drmDevice_mode(res.iWidth, res.iHeight, mode, force_mode_switch);
+  aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name);
 
   return true;
 }
