@@ -584,7 +584,7 @@ std::string aml_get_drmDevice_mode(void)
   return mode;
 }
 
-bool aml_set_drmDevice_mode(unsigned int width, unsigned int height, std::string mode)
+bool aml_set_drmDevice_mode(unsigned int width, unsigned int height, std::string mode, bool frac_rate_changed)
 {
   std::string current_mode = aml_get_drmDevice_mode();
   bool ret = false;
@@ -595,7 +595,8 @@ bool aml_set_drmDevice_mode(unsigned int width, unsigned int height, std::string
   drmModeEncoderPtr encoder = NULL;
   drmModeCrtcPtr crtc = NULL;
 
-  CLog::Log(LOGDEBUG, "AMLUtils::{} - current mode: {}, new mode: {}", __FUNCTION__, current_mode, mode);
+  CLog::Log(LOGDEBUG, "AMLUtils::{} - current mode: {}, new mode: {}, frac_rate changed: {:d}", __FUNCTION__,
+    current_mode, mode, frac_rate_changed);
 
   if (fd < 0)
   {
@@ -647,6 +648,10 @@ bool aml_set_drmDevice_mode(unsigned int width, unsigned int height, std::string
     {
       CLog::Log(LOGDEBUG, "AMLUtils::{} - found mode in connector mode list: [{:d}]:{}", __FUNCTION__, i, mode);
       drmModeFBPtr drm_fb = drmModeGetFB(fd, crtc->buffer_id);
+
+      // force mode NULL on frac_rate_policy changed
+      if (frac_rate_changed && StringUtils::EqualsNoCase(current_mode, mode))
+        ret = drmModeSetCrtc(fd, crtc->crtc_id, 0, 0, 0, NULL, 0, NULL);
 
       ret = drmModeSetCrtc(fd, crtc->crtc_id, drm_fb->fb_id, 0, 0,
         resources->connectors, 1, &connector->modes[i]);
@@ -769,6 +774,8 @@ bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuf
   std::string mode = res.strId.c_str();
   std::string cur_mode;
   std::string custom_mode;
+  int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
+  int cur_fractional_rate = fractional_rate;
 
   cur_mode = aml_get_drmDevice_mode();
 
@@ -781,23 +788,18 @@ bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuf
     mode = "custombuilt";
   }
 
+  // check for frac_rate_policy change
   if (aml_has_frac_rate_policy())
   {
-    int cur_fractional_rate;
-    int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
     CSysfsPath amhdmitx0_frac_rate_policy{"/sys/class/amhdmitx/amhdmitx0/frac_rate_policy"};
-    if (amhdmitx0_frac_rate_policy.Exists())
-      cur_fractional_rate = amhdmitx0_frac_rate_policy.Get<int>();
+    cur_fractional_rate = amhdmitx0_frac_rate_policy.Get<int>();
 
     if (cur_fractional_rate != fractional_rate)
-    {
-      if (amhdmitx0_frac_rate_policy.Exists())
-        amhdmitx0_frac_rate_policy.Set(fractional_rate);
-    }
+      amhdmitx0_frac_rate_policy.Set(fractional_rate);
   }
 
   aml_set_framebuffer_resolution(res.iScreenWidth, res.iScreenHeight, framebuffer_name);
-  aml_set_drmDevice_mode(res.iWidth, res.iHeight, mode);
+  aml_set_drmDevice_mode(res.iWidth, res.iHeight, mode, cur_fractional_rate != fractional_rate);
   aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name);
 
   return true;
