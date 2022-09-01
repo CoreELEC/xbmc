@@ -50,6 +50,9 @@ enum AML_SUPPORT_H264_4K2K
 #define AML_G12A    0x28
 #define AML_G12B    0x29
 #define AML_SM1     0x2B
+#define AML_SC2     0x32
+#define AML_T7      0x36
+#define AML_S4      0x37
 
 int  aml_get_cpufamily_id();
 bool aml_support_hevc();
