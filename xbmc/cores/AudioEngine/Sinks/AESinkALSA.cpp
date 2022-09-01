@@ -880,6 +880,11 @@ bool CAESinkALSA::InitializeHW(const ALSAConfig &inconfig, ALSAConfig &outconfig
   snd_pcm_hw_params_set_access(m_pcm, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
 
   unsigned int sampleRate   = inconfig.sampleRate;
+
+  // Amlogic T7 does not like 44100Hz PCM
+  if (aml_get_cpufamily_id() == AML_T7 && sampleRate == 44100)
+    sampleRate = 48000;
+
   snd_pcm_hw_params_set_rate_near    (m_pcm, hw_params, &sampleRate, NULL);
 
   unsigned int channelCount = inconfig.channels;
