@@ -1987,7 +1987,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
   // DEC_CONTROL_FLAG_DISABLE_FAST_POC
   CSysfsPath("/sys/module/amvdec_h264/parameters/dec_control", 4);
 
-  CSysfsPath di_debug_flag{"/sys/module/di/parameters/di_debug_flag"};
+  CSysfsPath di_debug_flag{"/sys/module/aml_media/parameters/di_debug_flag"};
   CSysfsPath di_debug{"/sys/class/deinterlace/di0/debug"};
   if (di_debug_flag.Exists() && di_debug.Exists())
   {
