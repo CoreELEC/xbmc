@@ -74,7 +74,7 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
     return false;
   }
 
-  if (!m_pGLContext.CreateSurface(m_nativeWindow))
+  if (!m_pGLContext.CreateSurface(static_cast<EGLNativeWindowType>(m_nativeWindow)))
   {
     return false;
   }
@@ -159,4 +159,3 @@ std::unique_ptr<CVideoSync> CWinSystemAmlogicGLESContext::GetVideoSync(void *clo
   std::unique_ptr<CVideoSync> pVSync(new CVideoSyncAML(clock));
   return pVSync;
 }
-
