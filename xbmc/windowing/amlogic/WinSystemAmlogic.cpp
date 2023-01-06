@@ -175,6 +175,7 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
 
   m_stereo_mode = stereo_mode;
   m_bFullScreen = fullScreen;
+  m_hdr_caps_initialized = false;
 
 #ifdef _FBDEV_WINDOW_H_
   fbdev_window *nativeWindow = new fbdev_window;
@@ -273,6 +274,46 @@ void CWinSystemAmlogic::UpdateResolutions()
 
     CDisplaySettings::GetInstance().GetResolutionInfo(RES_DESKTOP) = CDisplaySettings::GetInstance().GetResolutionInfo(ResDesktop);
   }
+}
+
+bool CWinSystemAmlogic::IsHDRDisplay()
+{
+  if (!m_hdr_caps_initialized)
+  {
+    CSysfsPath hdr_cap{"/sys/class/amhdmitx/amhdmitx0/hdr_cap"};
+    CSysfsPath dv_cap{"/sys/class/amhdmitx/amhdmitx0/dv_cap"};
+    std::string valstr;
+
+    if (hdr_cap.Exists())
+    {
+      valstr = hdr_cap.Get<std::string>().value();
+      if (valstr.find("Traditional HDR: 1") != std::string::npos ||
+          valstr.find("SMPTE ST 2084: 1") != std::string::npos)
+        m_hdr_caps.SetHDR10();
+
+      if (valstr.find("HDR10Plus Supported: 1") != std::string::npos)
+        m_hdr_caps.SetHDR10Plus();
+
+      if (valstr.find("Hybrid Log-Gamma: 1") != std::string::npos)
+        m_hdr_caps.SetHLG();
+    }
+
+    if (dv_cap.Exists())
+    {
+      valstr = dv_cap.Get<std::string>().value();
+      if (valstr.find("DolbyVision RX support list") != std::string::npos)
+        m_hdr_caps.SetDolbyVision();
+    }
+
+    m_hdr_caps_initialized = true;
+  }
+
+  return (m_hdr_caps.SupportsHDR10() | m_hdr_caps.SupportsHDR10Plus() | m_hdr_caps.SupportsHLG());
+}
+
+CHDRCapabilities CWinSystemAmlogic::GetDisplayHDRCapabilities() const
+{
+  return m_hdr_caps;
 }
 
 bool CWinSystemAmlogic::Hide()
