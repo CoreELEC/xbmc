@@ -71,6 +71,7 @@ public:
   int orientation; // orientation of the video in degrees counter clockwise
   int bitsperpixel;
   int bitdepth;
+  StreamHdrType hdrType;
   AVColorSpace colorSpace;
   AVColorRange colorRange;
   AVColorPrimaries colorPrimaries;
