@@ -2286,6 +2286,7 @@ void CAMLCodec::Reset()
 
   // reset some interal vars
   m_cur_pts = DVD_NOPTS_VALUE;
+  m_last_pts = DVD_NOPTS_VALUE;
   m_state = 0;
   m_frameSizes.clear();
   m_frameSizeSum = 0;
