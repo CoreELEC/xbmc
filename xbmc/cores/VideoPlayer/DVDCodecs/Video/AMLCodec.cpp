@@ -2471,18 +2471,19 @@ DRAIN:
     if (errno != EAGAIN)
       CLog::Log(LOGERROR, "CAMLCodec::DequeueBuffer - VIDIOC_DQBUF failed: {}", strerror(errno));
 
-    std::chrono::milliseconds elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - now).count());
 
-    if (elapsed < std::chrono::milliseconds(waitTime))
-      std::this_thread::sleep_for(std::chrono::milliseconds(waitTime) - elapsed);
+    if (m_drain)
+    {
+      std::chrono::milliseconds elapsed(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - now).count());
 
-    timeout = elapsed >= std::chrono::milliseconds(300);
+      if (elapsed < std::chrono::milliseconds(waitTime))
+        std::this_thread::sleep_for(std::chrono::milliseconds(waitTime) - elapsed);
 
-    if (m_drain && !timeout)
-      goto DRAIN;
-
-    if (m_drain && timeout)
-      CLog::Log(LOGDEBUG, LOGAVTIMING, "CAMLCodec::DequeueBuffer timeout!");
+      if (elapsed < std::chrono::milliseconds(300))
+        goto DRAIN;
+      else
+        CLog::Log(LOGDEBUG, LOGAVTIMING, "CAMLCodec::DequeueBuffer timeout!");
+    }
 
     return -errno;
   }
@@ -2490,7 +2491,7 @@ DRAIN:
   if (m_drain)
   {
     int waited = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - now).count();
-    CLog::Log(LOGDEBUG, LOGAVTIMING, "CAMLCodec::DequeueBuffer waited:{:.3f}ms", waited / 1000.0);
+    CLog::Log(LOGDEBUG, LOGAVTIMING, "CAMLCodec::DequeueBuffer waited:{:.3f}ms", waited);
   }
 
   m_last_pts = m_cur_pts;
@@ -2522,7 +2523,7 @@ float CAMLCodec::GetTimeSize()
   if (bs.free_len < (bs.data_len >> 1))
     return 7.0;
 
-  return (float)(m_frameSizes.size() * am_private->video_rate) / UNIT_FREQ;
+  return static_cast<float>(m_frameSizes.size() * am_private->video_rate) / UNIT_FREQ;
 }
 
 CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
@@ -2533,8 +2534,6 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
     return CDVDVideoCodec::VC_ERROR;
 
   float timesize(GetTimeSize());
-  if(!m_drain && timesize < 0.2f)
-    return CDVDVideoCodec::VC_BUFFER;
 
   if (DequeueBuffer() == 0)
   {
@@ -2561,7 +2560,7 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
   }
   else if (m_drain)
     return CDVDVideoCodec::VC_EOF;
-  else if (timesize < 1.0f)
+  else if (timesize < 7.0f)
     return CDVDVideoCodec::VC_BUFFER;
 
   return CDVDVideoCodec::VC_NONE;
