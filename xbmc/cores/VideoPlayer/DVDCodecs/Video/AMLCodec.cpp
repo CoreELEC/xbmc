@@ -2510,6 +2510,8 @@ float CAMLCodec::GetTimeSize()
   struct buf_status bs;
   m_dll->codec_get_vbuf_state(&am_private->vcodec, &bs);
 
+  bool frameSizesEmpty = m_frameSizes.empty();
+
   CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::GetTimeSize: len:{:d} dl:{:d} fs:{:d} front:{:d}",
     m_frameSizes.size(), bs.data_len, m_frameSizeSum, m_frameSizes.front());
   while (m_frameSizeSum >  (unsigned int)bs.data_len)
@@ -2519,6 +2521,11 @@ float CAMLCodec::GetTimeSize()
     CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::GetTimeSize: len:{:d} dl:{:d} fs:{:d} front:{:d}",
       m_frameSizes.size(), bs.data_len, m_frameSizeSum, m_frameSizes.front());
   }
+
+  // If the queue was emptied, decoder starved
+  if (m_frameSizes.empty() && !frameSizesEmpty)
+    return -1.0f;
+
   if (bs.free_len < (bs.data_len >> 1))
     return 7.0;
 
@@ -2533,6 +2540,11 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
     return CDVDVideoCodec::VC_ERROR;
 
   float timesize(GetTimeSize());
+
+  // If decoder starved, reset to avoid stuttering
+  if (!m_drain && timesize < 0.0f)
+    Reset();
+
   if(!m_drain && timesize < 0.2f)
     return CDVDVideoCodec::VC_BUFFER;
 
