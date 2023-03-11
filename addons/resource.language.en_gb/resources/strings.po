@@ -23613,3 +23613,15 @@ msgstr ""
 msgctxt "#39189"
 msgid "Available only with manual subtitle position"
 msgstr ""
+
+#. Title of Dolby Vision RPU conversion setting
+#: system/settings/settings.xml
+msgctxt "#39300"
+msgid "Convert Dolby Vision for compatibility"
+msgstr ""
+
+#. Help text for setting "Convert Dolby Vision for compatibility" of label #39300
+#: system/settings/settings.xml
+msgctxt "#39301"
+msgid "Converts Dolby Vision profile 7 to profile 8.1, ignores enhancement layer"
+msgstr ""
