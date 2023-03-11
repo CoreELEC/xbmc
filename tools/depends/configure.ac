@@ -133,7 +133,7 @@ AC_ARG_ENABLE([libdovi],
   [AS_HELP_STRING([--enable-libdovi],
   [enable libdovi (optional for android). default is no])],
   [use_libdovi=$enableval],
-  [use_libdovi=no])
+  [use_libdovi=yes])
 
 if test "$use_ccache" = "yes"; then
   AC_CHECK_PROG(HAVE_CCACHE,ccache,"yes","no",)
