@@ -1,0 +1,5 @@
+APPNAME=cargo-c
+BASE_URL=https://github.com/lu-zero/cargo-c/archive
+VERSION=v0.9.17
+ARCHIVE=$(VERSION).tar.gz
+SHA512=529db1de509add6c3ad58932ee16326bf0a2e7d154797adbf2b3755ae98b4f59bf0d01250e75ad4fc63b7ea34579cded7d7c6c3c8b92db6d8e00994062ee136f
