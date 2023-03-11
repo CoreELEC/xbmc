@@ -225,6 +225,10 @@ make -j$(getconf _NPROCESSORS_ONLN)
 ```
   FFmpeg configure options, e.g. --enable-vaapi (target)
 
+```
+--enable-libdovi=<yes:no>
+```
+  enable `libdovi`, for on-the-fly Dolby Vision conversion. Defaults to no.
 
 **Android Specific:**
 

@@ -49,6 +49,12 @@ ifeq ($(OS),linux)
   endif
 endif
 
+ifeq ($(OS),android)
+  ifeq ($(ENABLE_LIBDOVI),yes)
+    NATIVE += rustup cargo-c
+  endif
+endif
+
 .PHONY: $(NATIVE) native download $(DOWNLOAD_TARGETS)
 
 all: native
@@ -65,6 +71,7 @@ download: $(DOWNLOAD_TARGETS)
 autoconf-archive: autoconf
 autoconf: m4
 automake: autoconf
+cargo-c: pkg-config openssl rustup
 dpkg: automake gettext libtool pkg-config tar
 heimdal: libtool
 JsonSchemaBuilder: cmake
