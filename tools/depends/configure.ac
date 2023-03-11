@@ -129,6 +129,11 @@ AC_ARG_WITH([ffmpeg-options],
   [ffmpeg_options=$withval],
   [ffmpeg_options=default])
 
+AC_ARG_ENABLE([libdovi],
+  [AS_HELP_STRING([--enable-libdovi],
+  [enable libdovi (optional for android). default is no])],
+  [use_libdovi=$enableval],
+  [use_libdovi=no])
 
 if test "$use_ccache" = "yes"; then
   AC_CHECK_PROG(HAVE_CCACHE,ccache,"yes","no",)
@@ -717,6 +722,7 @@ AC_SUBST(host_cxxflags)
 AC_SUBST(app_rendersystem)
 AC_SUBST(app_winsystem)
 AC_SUBST(ffmpeg_options)
+AC_SUBST(use_libdovi)
 
 [
 if test "x$CCACHE" = "x"
@@ -853,4 +859,5 @@ echo -e "depends:\t\t $prefix/$deps_dir"
 if test "$platform_os" = "android"; then
   echo -e "ndk-api-level:\t $use_ndk_api"
   echo -e "build-tools:\t $build_tools_path"
+  echo -e "libdovi:\t $use_libdovi"
 fi

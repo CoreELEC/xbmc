@@ -50,6 +50,12 @@ ifeq ($(OS),linux)
   endif
 endif
 
+ifeq ($(OS),android)
+  ifeq ($(ENABLE_LIBDOVI),yes)
+    NATIVE += rustup cargo-c
+  endif
+endif
+
 .PHONY: $(NATIVE) native
 
 all: native
@@ -59,6 +65,7 @@ all: native
 autoconf-archive: autoconf
 autoconf: m4
 automake: autoconf
+cargo-c: pkg-config openssl rustup
 dpkg: automake gettext libtool pkg-config tar
 heimdal: libtool
 JsonSchemaBuilder: automake
@@ -102,4 +109,3 @@ test-dependencies:
 
 distclean::
 	for d in $(NATIVE); do $(MAKE) -C $$d distclean; done
-
