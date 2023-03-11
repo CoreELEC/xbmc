@@ -228,6 +228,15 @@
           <default>true</default>
           <control type="toggle" />
         </setting>
+        <setting id="videoplayer.convertdovi" type="boolean" label="39300" help="39301">
+          <requirement>HAS_MEDIACODEC</requirement>
+          <level>2</level>
+          <default>false</default>
+          <updates>
+            <update type="change" />
+          </updates>
+          <control type="toggle" />
+        </setting>
       </group>
       <group id="4" label="14232">
         <setting id="videoplayer.stereoscopicplaybackmode" type="integer" label="36520" help="36537">

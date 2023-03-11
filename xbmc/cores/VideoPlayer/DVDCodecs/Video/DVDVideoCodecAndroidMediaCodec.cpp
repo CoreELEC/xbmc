@@ -543,7 +543,15 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
         {
           m_bitstream.reset();
         }
+
+        if (m_bitstream)
+        {
+          bool convertDovi = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+              CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
+          m_bitstream->SetConvertDovi(convertDovi);
+        }
       }
+
       break;
     }
     case AV_CODEC_ID_WMV3:
