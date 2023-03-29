@@ -90,6 +90,23 @@ bool CWinSystemAmlogic::InitWindowSystem()
     CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", 1);
   }
 
+  if (!aml_support_dolby_vision())
+  {
+    auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
+    if (setting)
+    {
+      setting->SetVisible(false);
+      settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE, false);
+    }
+
+    setting = settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
+    if (setting)
+    {
+      setting->SetVisible(false);
+      settings->SetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI, true);
+    }
+  }
+
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
 
   CDVDVideoCodecAmlogic::Register();
