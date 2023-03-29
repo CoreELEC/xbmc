@@ -8762,6 +8762,16 @@ msgctxt "#14295"
 msgid "4:4:4"
 msgstr ""
 
+#: system/settings/settings.xml
+msgctxt "#14296"
+msgid "Disable Dolby Vision support"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14297"
+msgid "Use this option to disable Dolby Vision support if available."
+msgstr ""
+
 #empty strings from id 14296 to 14300
 
 #. pvr "channels" settings group label
