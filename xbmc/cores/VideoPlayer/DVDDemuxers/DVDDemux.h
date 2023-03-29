@@ -32,6 +32,7 @@ class IAddonProvider;
 extern "C"
 {
 #include <libavcodec/avcodec.h>
+#include <libavutil/dovi_meta.h>
 #include <libavutil/mastering_display_metadata.h>
 }
 
@@ -166,6 +167,7 @@ public:
 
   std::string stereo_mode; // expected stereo mode
   StreamHdrType hdr_type = StreamHdrType::HDR_TYPE_NONE; // type of HDR for this stream (hdr10, etc)
+  AVDOVIDecoderConfigurationRecord dovi{};
   bool bInterlaced; // progressive/interlaced flag
   bool bUnknownIP; // progressive/interlace unknown
 };
