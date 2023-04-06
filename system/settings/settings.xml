@@ -255,14 +255,19 @@
           <control type="toggle" />
         </setting>
         <setting id="videoplayer.convertdovi" type="boolean" label="39196" help="39197">
-          <requirement>HAS_MEDIACODEC</requirement>
+          <requirement>
+            <or>
+              <condition>HAS_MEDIACODEC</condition>
+              <condition>HAVE_AMCODEC</condition>
+            </or>
+          </requirement>
           <dependencies>
             <dependency type="visible">
               <condition on="property" name="supportsdolbyvision" />
             </dependency>
           </dependencies>
           <level>2</level>
-          <default>false</default>
+          <default>true</default>
           <control type="toggle" />
         </setting>
         <setting id="videoplayer.allowedhdrformats" type="list[integer]" label="39198" help="39199">
