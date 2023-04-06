@@ -104,6 +104,13 @@ bool CWinSystemAmlogic::InitWindowSystem()
       setting->SetVisible(false);
       settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_USE_PLAYERLED, false);
     }
+
+    setting = settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
+    if (setting)
+    {
+      setting->SetVisible(false);
+      settings->SetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI, false);
+    }
   }
   else
   {
