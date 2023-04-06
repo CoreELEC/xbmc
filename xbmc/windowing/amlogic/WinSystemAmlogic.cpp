@@ -29,6 +29,7 @@
 #include "guilib/DispResource.h"
 #include "guilib/LocalizeStrings.h"
 #include "utils/AMLUtils.h"
+#include "utils/BitstreamConverter.h"
 #include "utils/log.h"
 #include "threads/SingleLock.h"
 

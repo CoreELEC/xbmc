@@ -299,11 +299,13 @@
           <default>true</default>
           <control type="toggle" />
         </setting>
-        <setting id="videoplayer.convertdovi" type="boolean" label="39196" help="39197">
-          <requirement><!-- Android and webOS use CBitstreamConverter -->
+        <setting id="videoplayer.convertdovi" type="integer" label="39196" help="39197">
+          <visible>false</visible>
+          <requirement>
             <or>
               <condition>HAS_MEDIACODEC</condition>
               <condition>HAVE_WEBOS</condition>
+              <condition>HAVE_AMCODEC</condition>
             </or>
           </requirement>
           <dependencies>
@@ -315,7 +317,7 @@
             </dependency>
           </dependencies>
           <level>2</level>
-          <default>false</default>
+          <default>2</default>
           <control type="toggle" />
         </setting>
         <setting id="videoplayer.allowedhdrformats" type="list[integer]" label="39198" help="39199">
