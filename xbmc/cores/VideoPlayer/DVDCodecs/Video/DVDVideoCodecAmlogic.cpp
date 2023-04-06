@@ -269,6 +269,24 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       m_pFormatName = "am-h265";
       m_bitstream = new CBitstreamConverter();
       m_bitstream->Open(m_hints.codec, m_hints.extradata.GetData(), m_hints.extradata.GetSize(), true);
+
+      // check for hevc-hvcC and convert to h265-annex-b
+      if (m_hints.extradata && !m_hints.cryptoSession)
+      {
+        if (m_bitstream && aml_support_dolby_vision())
+        {
+          bool convertDovi = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+              CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
+          bool user_dv_disable = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+              CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
+          if (convertDovi && !user_dv_disable)
+          {
+            CLog::Log(LOGDEBUG, "{}::{} - HEVC bitstream profile 7 will be converted to profile 8", __MODULE_NAME__, __FUNCTION__);
+            m_bitstream->SetConvertDovi(convertDovi && !user_dv_disable);
+          }
+        }
+      }
+
       // make sure we do not leak the existing m_hints.extradata
       m_hints.extradata = {};
       m_hints.extradata = FFmpegExtraData(m_bitstream->GetExtraSize());
