@@ -79,10 +79,6 @@ ifeq ($(OS),android)
   DEPENDS += dummy-libxbmc libuuid
   PYMODULE_DEPS = dummy-libxbmc
   LIBUUID = libuuid
-
-  ifeq ($(ENABLE_LIBDOVI),yes)
-    DEPENDS += libdovi
-  endif
 endif
 
 DEPENDS := $(filter-out $(EXCLUDED_DEPENDS),$(DEPENDS))
@@ -124,6 +120,10 @@ ifeq ($(OS),linux)
     DEPENDS += libxkbcommon libinput libudev libevdev mtdev
     DEPENDS += libamcodec
   endif
+endif
+
+ifeq ($(ENABLE_LIBDOVI),yes)
+  DEPENDS += libdovi
 endif
 
 .PHONY: $(DEPENDS)
