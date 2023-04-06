@@ -313,14 +313,28 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       {
         if (m_bitstream && aml_support_dolby_vision())
         {
+          bool convertDovi = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+              CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
           bool user_dv_disable = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
               CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
-          if ((m_hints.dovi.dv_profile == 4 || m_hints.dovi.dv_profile == 7) && m_hints.dovi.bl_present_flag == 0 && !user_dv_disable)
+          if ((m_hints.dovi.dv_profile == 4 || m_hints.dovi.dv_profile == 7) && (convertDovi || m_hints.dovi.bl_present_flag == 0) &&
+              !user_dv_disable)
           {
-            CLog::Log(LOGINFO, "{}::{} - HEVC bitstream will be converted to minimum enhancement layer because of no BL flag is present", __MODULE_NAME__, __FUNCTION__);
-            m_hints.dovi.el_present_flag = false;
-            m_hints.dovi.bl_present_flag = true;
-            m_bitstream->SetConvertDovi(DOVIMode::MODE_TOMEL);
+            if (!convertDovi && m_hints.dovi.bl_present_flag == 0)
+            {
+              CLog::Log(LOGINFO, "{}::{} - HEVC bitstream will be converted to minimum enhancement layer because of no BL flag is present", __MODULE_NAME__, __FUNCTION__);
+              m_hints.dovi.el_present_flag = false;
+              m_hints.dovi.bl_present_flag = true;
+              m_bitstream->SetConvertDovi(DOVIMode::MODE_TOMEL);
+            }
+            else
+            {
+              CLog::Log(LOGINFO, "{}::{} - HEVC bitstream profile {} will be converted to profile 8.1", __MODULE_NAME__, __FUNCTION__,
+                m_hints.dovi.dv_profile);
+              m_hints.dovi.dv_profile = 8;
+              m_hints.dovi.el_present_flag = false;
+              m_bitstream->SetConvertDovi(DOVIMode::MODE_TO81);
+            }
           }
         }
       }

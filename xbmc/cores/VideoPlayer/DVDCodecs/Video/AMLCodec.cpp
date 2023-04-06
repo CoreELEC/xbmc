@@ -2036,7 +2036,8 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type)
     }
 
     am_private->gcodec.dv_enable = 1;
-    if (hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7)
+    if ((hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7) &&
+      !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI))
     {
       if (dovi_el_type != ELType::TYPE_MEL) // use stream path if not MEL
       {
