@@ -499,8 +499,8 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
       m_formatname = "amc-hevc";
 
       const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-      const bool convertDovi =
-          (settings) ? settings->GetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI) : false;
+      const int convertDovi =
+          (settings) ? settings->GetInt(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI) : 2;
 
       bool isDvhe = (m_hints.codec_tag == MKTAG('d', 'v', 'h', 'e'));
       bool isDvh1 = (m_hints.codec_tag == MKTAG('d', 'v', 'h', '1'));
@@ -562,7 +562,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
                 break;
               case 7:
                 // set profile 8 when converting
-                if (convertDovi && CJNIBase::GetSDKVersion() >= 27)
+                if ((convertDovi > 0) && CJNIBase::GetSDKVersion() >= 27)
                   profile = CJNIMediaCodecInfoCodecProfileLevel::DolbyVisionProfileDvheSt;
 
                 // Profile 7 is not commonly supported. Not setting the profile here
