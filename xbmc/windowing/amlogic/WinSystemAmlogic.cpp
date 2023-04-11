@@ -103,7 +103,7 @@ bool CWinSystemAmlogic::InitWindowSystem()
     if (setting)
     {
       setting->SetVisible(false);
-      settings->SetBool(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI, true);
+      settings->SetInt(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI, 2);
     }
   }
 

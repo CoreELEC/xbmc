@@ -275,14 +275,15 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       {
         if (m_bitstream && aml_support_dolby_vision())
         {
-          bool convertDovi = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+          int convertDovi = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
               CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
           bool user_dv_disable = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
               CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
           if (convertDovi && !user_dv_disable)
           {
-            CLog::Log(LOGDEBUG, "{}::{} - HEVC bitstream profile 7 will be converted to profile 8", __MODULE_NAME__, __FUNCTION__);
-            m_bitstream->SetConvertDovi(convertDovi && !user_dv_disable);
+            CLog::Log(LOGDEBUG, "{}::{} - HEVC bitstream profile 7 will be converted by chosen mode {:d}",
+              __MODULE_NAME__, __FUNCTION__, convertDovi);
+            m_bitstream->SetConvertDovi(convertDovi);
           }
         }
       }
