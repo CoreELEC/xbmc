@@ -546,7 +546,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
         // Only set for profile 7, container hint allows to skip parsing unnecessarily
         if (m_bitstream && m_hints.dovi.dv_profile == 7)
         {
-          bool convertDovi = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+          int convertDovi = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
               CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
 
           CLog::Log(LOGDEBUG,
