@@ -2008,8 +2008,8 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
     CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_enable", 1);
 
     am_private->gcodec.dv_enable = 1;
-    if (hints.dovi.dv_profile == 7 && !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
-        CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI))
+    if (hints.dovi.dv_profile == 7 && CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+        CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI) == 0)
     {
       CSysfsPath amdolby_vision_debug{"/sys/class/amdolby_vision/debug"};
       if (amdolby_vision_debug.Exists())
