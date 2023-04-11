@@ -107,7 +107,7 @@ public:
   int               GetExtraSize() const;
   void              ResetStartDecode(void);
   bool              CanStartDecode() const;
-  void SetConvertDovi(bool value) { m_convert_dovi = value; }
+  void SetConvertDovi(int value) { m_convert_dovi = value; }
   void SetRemoveDovi(bool value) { m_removeDovi = value; }
   void SetRemoveHdr10Plus(bool value) { m_removeHdr10Plus = value; }
 
@@ -155,7 +155,7 @@ protected:
   bool              m_convert_bytestream;
   AVCodecID         m_codec;
   bool              m_start_decode;
-  bool m_convert_dovi;
+  int m_convert_dovi;
   bool m_removeDovi;
   bool m_removeHdr10Plus;
 };
