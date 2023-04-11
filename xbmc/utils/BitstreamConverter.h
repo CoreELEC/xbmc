@@ -86,6 +86,17 @@ enum ELType : int
   TYPE_MEL
 };
 
+enum DOVIMode : int
+{
+  MODE_NONE = -1,
+  MODE_LOSSLESS = 0,
+  MODE_TOMEL,
+  MODE_TO81,
+  MODE_PROFILE5TO81,
+  MODE_TO84,
+  MODE_TO81MAPPINGPRESERVED
+};
+
 class CBitstreamParser
 {
 public:
@@ -115,7 +126,7 @@ public:
   int               GetExtraSize() const;
   void              ResetStartDecode(void);
   bool              CanStartDecode() const;
-  void SetConvertDovi(bool value) { m_convert_dovi = value; }
+  void SetConvertDovi(enum DOVIMode value) { m_convert_dovi = value; }
   void SetRemoveDovi(bool value) { m_removeDovi = value; }
   void SetRemoveHdr10Plus(bool value) { m_removeHdr10Plus = value; }
   enum ELType GetDoviElType() const { return m_dovi_el_type; }
@@ -170,7 +181,7 @@ protected:
   bool              m_convert_bytestream;
   AVCodecID         m_codec;
   bool              m_start_decode;
-  bool              m_convert_dovi;
+  enum DOVIMode     m_convert_dovi;
   bool              m_removeDovi;
   bool              m_removeHdr10Plus;
   enum ELType       m_dovi_el_type;
