@@ -24005,7 +24005,38 @@ msgstr ""
 #. Help text for setting "Convert Dolby Vision for compatibility" of label #39196
 #: system/settings/settings.xml
 msgctxt "#39197"
-msgid "If enabled, Dolby Vision profile 7 will be converted to profile 8.1, which is more commonly supported by devices. Enable if your device supports Dolby Vision, but has issues with some videos."
+msgid "Converts Dolby Vision profile 7 by chosen mode"
+msgstr ""
+
+#. Enum value for "Convert Dolby Vision for compatibility" of label #39197
+#: system/settings/settings.xml
+msgctxt "#39300"
+msgid "Lossless"
+msgstr ""
+
+#. Enum value for "Convert Dolby Vision for compatibility" of label #39197
+#: system/settings/settings.xml
+msgctxt "#39301"
+msgid "Minimal EL"
+msgstr ""
+
+#. Enum value for "Convert Dolby Vision for compatibility" of label #39197
+#: system/settings/settings.xml
+msgctxt "#39302"
+msgid "Profile 8.1"
+msgstr ""
+
+#. Enum value for "Convert Dolby Vision for compatibility" of label #39197
+#: system/settings/settings.xml
+msgctxt "#39303"
+msgid "Profile 8.4"
+msgstr ""
+
+
+#. Enum value for "Convert Dolby Vision for compatibility" of label #39197
+#: system/settings/settings.xml
+msgctxt "#39304"
+msgid "Profile 8.1 MP"
 msgstr ""
 
 #. Title of "Allowed HDR dynamic metadata formats" setting

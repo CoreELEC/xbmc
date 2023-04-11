@@ -254,7 +254,7 @@
           <default>true</default>
           <control type="toggle" />
         </setting>
-        <setting id="videoplayer.convertdovi" type="boolean" label="39196" help="39197">
+        <setting id="videoplayer.convertdovi" type="integer" label="39196" help="39197">
           <requirement>
             <or>
               <condition>HAS_MEDIACODEC</condition>
@@ -267,8 +267,18 @@
             </dependency>
           </dependencies>
           <level>2</level>
-          <default>true</default>
-          <control type="toggle" />
+          <default>2</default>
+          <constraints>
+            <options>
+              <option label="39300">0</option>  <!-- Lossless -->
+              <option label="39301">1</option>  <!-- ToMel -->
+              <option label="39302">2</option>  <!-- To81 -->
+              <option label="39303">3</option>  <!-- To84 -->
+              <option label="39304">4</option>  <!-- To81MappingPreserved -->
+            </options>
+          </constraints>
+          <control type="spinner" format="string" />
+          <control type="edit" format="integer" />
         </setting>
         <setting id="videoplayer.allowedhdrformats" type="list[integer]" label="39198" help="39199">
           <requirement><!-- Android and webOS use CBitstreamConverter -->
