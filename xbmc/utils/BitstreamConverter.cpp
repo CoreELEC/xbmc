@@ -280,7 +280,7 @@ static bool has_sei_recovery_point(const uint8_t *p, const uint8_t *end)
 #ifdef HAVE_LIBDOVI
 // The returned data must be freed with `dovi_data_free`
 // May be NULL if no conversion was done
-static const DoviData* convert_dovi_rpu_nal(uint8_t* buf, uint32_t nal_size)
+static const DoviData* convert_dovi_rpu_nal(uint8_t* buf, uint32_t nal_size, int mode)
 {
   DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(buf, nal_size);
   const DoviRpuDataHeader* header = dovi_rpu_get_header(rpu);
@@ -288,7 +288,7 @@ static const DoviData* convert_dovi_rpu_nal(uint8_t* buf, uint32_t nal_size)
 
   if (header && header->guessed_profile == 7)
   {
-    int ret = dovi_convert_rpu_with_mode(rpu, 2);
+    int ret = dovi_convert_rpu_with_mode(rpu, mode);
     if (ret < 0)
       goto done;
 
@@ -391,7 +391,7 @@ CBitstreamConverter::CBitstreamConverter()
   m_convert_bytestream = false;
   m_sps_pps_context.sps_pps_data = NULL;
   m_start_decode = true;
-  m_convert_dovi = false;
+  m_convert_dovi = DOVIMode::MODE_NONE;
   m_removeDovi = false;
   m_removeHdr10Plus = false;
   m_dovi_el_type = ELType::TYPE_NONE;
@@ -759,11 +759,11 @@ bool CBitstreamConverter::Convert(uint8_t *pData_bl, int iSize_bl, uint8_t *pDat
         const DoviData* rpu_data = NULL;
 #endif
 
-        if (m_convert_dovi)
+        if (m_convert_dovi != DOVIMode::MODE_NONE)
         {
 #ifdef HAVE_LIBDOVI
           // Convert the RPU itself
-          rpu_data = convert_dovi_rpu_nal(buf, size);
+          rpu_data = convert_dovi_rpu_nal(buf, size, m_convert_dovi);
           if (rpu_data)
           {
             nalu_62_data = rpu_data->data;
@@ -783,10 +783,10 @@ bool CBitstreamConverter::Convert(uint8_t *pData_bl, int iSize_bl, uint8_t *pDat
       }
       else
       {
-        if (!m_convert_dovi)
+        if (m_convert_dovi == DOVIMode::MODE_NONE)
           BitstreamAllocAndCopy(&m_convertBuffer, &offset, buf, size, HEVC_NAL_UNSPEC63);
       }
-      if (!m_convert_dovi || nal_type == HEVC_NAL_UNSPEC62)
+      if (m_convert_dovi == DOVIMode::MODE_NONE || nal_type == HEVC_NAL_UNSPEC62)
         CLog::Log(LOGDEBUG, LOGVIDEO, "CBitstreamConverter::Convert: EL nal_type: {}, size: {}",
           nal_type, size);
 
@@ -1182,13 +1182,14 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData, int iSize, uint8_t **
         }
       }
 
-      if (write_buf && (m_convert_dovi || m_dovi_el_type == ELType::TYPE_NONE))
+      if (write_buf && (m_convert_dovi != DOVIMode::MODE_NONE || m_dovi_el_type == ELType::TYPE_NONE))
       {
         if (unit_type == HEVC_NAL_UNSPEC62)
         {
 #ifdef HAVE_LIBDOVI
           // Convert the RPU itself
-          rpu_data = convert_dovi_rpu_nal(buf, nal_size);
+          if (m_convert_dovi != DOVIMode::MODE_NONE)
+            rpu_data = convert_dovi_rpu_nal(buf, nal_size, m_convert_dovi);
           m_dovi_el_type = get_dovi_el_type(buf, nal_size);
           if (rpu_data)
           {
@@ -1197,7 +1198,7 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData, int iSize, uint8_t **
           }
 #endif
         }
-        else if (m_convert_dovi && unit_type == HEVC_NAL_UNSPEC63)
+        else if (m_convert_dovi != DOVIMode::MODE_NONE && unit_type == HEVC_NAL_UNSPEC63)
         {
           // Ignore the enhancement layer, may or may not help
           write_buf = false;
