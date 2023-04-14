@@ -3869,6 +3869,12 @@
           <default>false</default>
           <control type="toggle" />
         </setting>
+        <setting id="coreelec.amlogic.useplayerled" type="boolean" label="14298" help="14299">
+          <requirement>HAVE_AMCODEC</requirement>
+          <visible>false</visible>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
       </group>
     </category>
     <category id="cache" label="439" help="36399">
