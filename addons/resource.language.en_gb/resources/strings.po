@@ -8679,7 +8679,17 @@ msgctxt "#14297"
 msgid "Use this option to disable Dolby Vision support if available."
 msgstr ""
 
-#empty strings from id 14296 to 14300
+#: system/settings/settings.xml
+msgctxt "#14298"
+msgid "Use Player Led"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14299"
+msgid "Use Player Led mode (YCbCr 4:2:2) instead Display Led (RGB tunneling) for Dolby Vision."
+msgstr ""
+
+#empty strings from id 14300 to 14300
 
 #. pvr "channels" settings group label
 #: system/settings/settings.xml
