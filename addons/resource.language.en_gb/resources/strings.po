@@ -8992,6 +8992,16 @@ msgctxt "#14423"
 msgid "Use this option to disable Dolby Vision support if available."
 msgstr ""
 
+#: system/settings/settings.xml
+msgctxt "#14424"
+msgid "Use Player Led"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14425"
+msgid "Use Player Led mode (YCbCr 4:2:2) instead Display Led (RGB tunneling) for Dolby Vision."
+msgstr ""
+
 #: xbmc/music/MusicDatabase.cpp
 #: xbmc/video/VideoDatabase.cpp
 msgctxt "#15011"
