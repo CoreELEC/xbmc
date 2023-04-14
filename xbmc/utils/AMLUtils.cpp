@@ -56,6 +56,22 @@ int aml_get_cpufamily_id()
   return aml_cpufamily_id;
 }
 
+bool aml_dv_support_ll()
+{
+  int support_ll = 0;
+  CRegExp regexp;
+  regexp.RegComp("YCbCr_422_12BIT");
+  std::string valstr;
+  CSysfsPath dv_cap{"/sys/devices/virtual/amhdmitx/amhdmitx0/dv_cap"};
+  if (dv_cap.Exists())
+  {
+    valstr = dv_cap.Get<std::string>().value();
+    support_ll = (regexp.RegFind(valstr) >= 0) ? 1 : 0;
+  }
+
+  return support_ll;
+}
+
 static bool aml_support_vcodec_profile(const char *regex)
 {
   int profile = 0;
