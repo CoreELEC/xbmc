@@ -99,12 +99,26 @@ bool CWinSystemAmlogic::InitWindowSystem()
       settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE, false);
     }
 
+    setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_USE_PLAYERLED);
+    if (setting)
+    {
+      setting->SetVisible(false);
+      settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_USE_PLAYERLED, false);
+    }
+
     setting = settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
     if (setting)
     {
       setting->SetVisible(false);
       settings->SetInt(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI, 0);
     }
+  }
+  else if (aml_dv_support_ll())
+  {
+    CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem -- display do support Dolby Vision Low Latency");
+    auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_USE_PLAYERLED);
+    if (setting)
+      setting->SetVisible(true);
   }
 
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
