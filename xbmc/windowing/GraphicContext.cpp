@@ -405,6 +405,9 @@ void CGraphicContext::SetVideoResolution(RESOLUTION res, bool forceUpdate, CEven
 void CGraphicContext::SetVideoResolutionInternal(RESOLUTION res, bool forceUpdate)
 {
   RESOLUTION lastRes = m_Resolution;
+#if defined(HAS_LIBAMCODEC)
+  forceUpdate = true;
+#endif
 
   // If the user asked us to guess, go with desktop
   if (!IsValidResolution(res))
