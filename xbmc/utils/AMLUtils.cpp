@@ -427,12 +427,13 @@ bool aml_get_native_resolution(RESOLUTION_INFO *res)
   return result;
 }
 
-bool aml_set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name, const RenderStereoMode stereo_mode)
+bool aml_set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
+  const RenderStereoMode stereo_mode, bool force_mode_switch)
 {
   bool result = false;
 
   aml_handle_display_stereo_mode(RenderStereoMode::OFF);
-  result = aml_set_display_resolution(res, framebuffer_name);
+  result = aml_set_display_resolution(res, framebuffer_name, force_mode_switch);
 
   aml_handle_scale(res);
   aml_handle_display_stereo_mode(stereo_mode);
@@ -513,7 +514,8 @@ bool aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolutions)
   return resolutions.size() > 0;
 }
 
-bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name)
+bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
+  bool force_mode_switch)
 {
   std::string mode = res.strId.c_str();
   std::string cur_mode;
@@ -540,7 +542,7 @@ bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuf
     if (amhdmitx0_frac_rate_policy.Exists())
       cur_fractional_rate = amhdmitx0_frac_rate_policy.Get<int>().value();
 
-    if (cur_fractional_rate != fractional_rate)
+    if ((cur_fractional_rate != fractional_rate) || force_mode_switch)
     {
       cur_mode = "null";
       if (display_mode.Exists())
