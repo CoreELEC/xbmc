@@ -186,9 +186,7 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
     }
   }
 
-  aml_set_native_resolution(res, m_framebuffer_name, m_stereo_mode, m_force_mode_switch);
-  // reset force mode switch
-  m_force_mode_switch = false;
+  aml_set_native_resolution(res, m_framebuffer_name, m_stereo_mode);
 
   if (!m_delayDispReset)
   {
