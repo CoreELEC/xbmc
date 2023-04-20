@@ -23,7 +23,7 @@ namespace AML
 class CWinSystemAmlogicGLESContext : public CWinSystemAmlogic, public CRenderSystemGLES
 {
 public:
-  CWinSystemAmlogicGLESContext() = default;
+  CWinSystemAmlogicGLESContext();
   virtual ~CWinSystemAmlogicGLESContext() = default;
 
   static void Register();
@@ -53,7 +53,8 @@ protected:
 
 private:
   CEGLContextUtils m_pGLContext;
-
+  int m_cs;
+  int m_cd;
 };
 
 }
