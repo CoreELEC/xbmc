@@ -44,6 +44,7 @@ using namespace KODI;
 CWinSystemAmlogic::CWinSystemAmlogic()
 :  m_nativeWindow(NULL)
 ,  m_libinput(new CLibInputHandler)
+,  m_force_mode_switch(false)
 {
   const char *env_framebuffer = getenv("FRAMEBUFFER");
 
@@ -58,10 +59,6 @@ CWinSystemAmlogic::CWinSystemAmlogic()
   }
 
   m_nativeDisplay = EGL_NO_DISPLAY;
-
-  m_displayWidth = 0;
-  m_displayHeight = 0;
-
   m_stereo_mode = RenderStereoMode::OFF;
   m_delayDispReset = false;
 
@@ -183,32 +180,15 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
                                     bool fullScreen,
                                     RESOLUTION_INFO& res)
 {
-  RESOLUTION_INFO current_resolution;
-  current_resolution.iWidth = current_resolution.iHeight = 0;
-  const RenderStereoMode stereo_mode = CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode();
-
   m_nWidth        = res.iWidth;
   m_nHeight       = res.iHeight;
-  m_displayWidth  = res.iScreenWidth;
-  m_displayHeight = res.iScreenHeight;
   m_fRefreshRate  = res.fRefreshRate;
 
   if (m_nativeWindow == NULL)
     m_nativeWindow = new fbdev_window;
 
-  m_nativeWindow->width = m_nWidth;
-  m_nativeWindow->height = m_nHeight;
-
-  if ((m_bWindowCreated && aml_get_native_resolution(&current_resolution)) &&
-    current_resolution.iWidth == res.iWidth && current_resolution.iHeight == res.iHeight &&
-    current_resolution.iScreenWidth == res.iScreenWidth && current_resolution.iScreenHeight == res.iScreenHeight &&
-    m_bFullScreen == fullScreen && current_resolution.fRefreshRate == res.fRefreshRate &&
-    (current_resolution.dwFlags & D3DPRESENTFLAG_MODEMASK) == (res.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
-    m_stereo_mode == stereo_mode)
-  {
-    CLog::Log(LOGDEBUG, "CWinSystemEGL::CreateNewWindow: No need to create a new window");
-    return true;
-  }
+  m_nativeWindow->width = res.iWidth;
+  m_nativeWindow->height = res.iHeight;
 
   int delay = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt("videoscreen.delayrefreshchange");
   if (delay > 0)
@@ -225,11 +205,9 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
     }
   }
 
-  m_stereo_mode = stereo_mode;
-  m_bFullScreen = fullScreen;
-  m_hdr_caps_initialized = false;
-
-  aml_set_native_resolution(res, m_framebuffer_name, stereo_mode);
+  aml_set_native_resolution(res, m_framebuffer_name, m_stereo_mode, m_force_mode_switch);
+  // reset force mode switch
+  m_force_mode_switch = false;
 
   if (!m_delayDispReset)
   {
@@ -241,6 +219,8 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
     }
   }
 
+  m_hdr_caps_initialized = false;
+  m_bWindowCreated = true;
   return true;
 }
 
@@ -252,6 +232,7 @@ bool CWinSystemAmlogic::DestroyWindow()
     m_nativeWindow = NULL;
   }
 
+  m_bWindowCreated = false;
   return true;
 }
 
