@@ -46,9 +46,6 @@ protected:
   EGLDisplay m_nativeDisplay;
   fbdev_window *m_nativeWindow;
 
-  int m_displayWidth;
-  int m_displayHeight;
-
   RENDER_STEREO_MODE m_stereo_mode;
 
   bool m_delayDispReset;
