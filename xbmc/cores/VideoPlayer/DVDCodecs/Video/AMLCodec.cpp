@@ -2007,7 +2007,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
   if (dv_enable)
   {
     // enable Dolby Vision
-    CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_enable", 1);
+    CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_enable", 'Y');
 
     // force player led mode when enabled
     CSysfsPath dolby_vision_flags{"/sys/module/aml_media/parameters/dolby_vision_flags"};
@@ -2032,9 +2032,6 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
       }
     }
   }
-  else
-    // disable Dolby Vision
-    CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_enable", 0);
 
   // DEC_CONTROL_FLAG_DISABLE_FAST_POC
   CSysfsPath("/sys/module/amvdec_h264/parameters/dec_control", 4);
@@ -2294,8 +2291,19 @@ void CAMLCodec::CloseDecoder()
   // return tsync to default so external apps work
   CSysfsPath("/sys/class/tsync/enable", 1);
   // disable Dolby Vision driver
-  //CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_enable", 0);
-  // don't disable it as it would not switch back to non DV mode anymore
+  CSysfsPath dolby_vision_enable{"/sys/module/aml_media/parameters/dolby_vision_enable"};
+  if (dolby_vision_enable.Exists() && StringUtils::EqualsNoCase(dolby_vision_enable.Get<std::string>().value(), "Y"))
+  {
+    CSysfsPath dv_video_on{"/sys/class/amdolby_vision/dv_video_on"};
+    if (dv_video_on.Exists())
+    {
+      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
+      while(dv_video_on.Get<int>().value() == 1 && (std::chrono::system_clock::now() - now) < std::chrono::seconds(m_decoder_timeout))
+        usleep(10000); // wait 10ms
+    }
+    dolby_vision_enable.Set('N');
+  }
+
   CSysfsPath amdolby_vision_debug{"/sys/class/amdolby_vision/debug"};
   if (amdolby_vision_debug.Exists())
   {
