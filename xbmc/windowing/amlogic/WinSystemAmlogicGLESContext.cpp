@@ -19,8 +19,8 @@ using namespace KODI;
 using namespace KODI::WINDOWING::AML;
 
 CWinSystemAmlogicGLESContext::CWinSystemAmlogicGLESContext()
-:  m_cs(0)
-,  m_cd(0)
+:  m_cs(-1)
+,  m_cd(-1)
 {
 }
 
@@ -136,7 +136,7 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
       m_bFullScreen == fullScreen && current_resolution.fRefreshRate == res.fRefreshRate &&
       (current_resolution.dwFlags & D3DPRESENTFLAG_MODEMASK) == (res.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
       m_stereo_mode == stereo_mode && m_bWindowCreated &&
-      ((m_cs != 0 && m_cd != 0) && (m_cs == cs && m_cd == cd)) &&
+      ((m_cs != -1 && m_cd != -1) && (m_cs == cs && m_cd == cd)) &&
       (fractional_rate == cur_fractional_rate))
   {
     CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: No need to create a new window", __FUNCTION__);
@@ -150,15 +150,11 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
   if ((current_resolution.iWidth == res.iWidth && current_resolution.iHeight == res.iHeight &&
        current_resolution.iScreenWidth == res.iScreenWidth && current_resolution.iScreenHeight == res.iScreenHeight &&
        current_resolution.fRefreshRate == res.fRefreshRate) &&
-       (((m_cs != 0 && m_cd != 0) && (m_cs != cs || m_cd != cd)) ||
+       (((m_cs != -1 && m_cd != -1) && (m_cs != cs || m_cd != cd)) ||
        (fractional_rate != cur_fractional_rate)))
   {
-    CSysfsPath crtc_force_hint{"/sys/module/aml_drm/parameters/crtc_force_hint"};
-    if (crtc_force_hint.Exists())
-    {
-      CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: force mode switch", __FUNCTION__);
-      crtc_force_hint.Set(1);
-    }
+    m_force_mode_switch = true;
+    CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: force mode switch", __FUNCTION__);
   }
 
   if (!CWinSystemAmlogic::CreateNewWindow(name, fullScreen, res))
