@@ -41,6 +41,7 @@ using namespace KODI;
 CWinSystemAmlogic::CWinSystemAmlogic()
 :  m_nativeWindow(NULL)
 ,  m_libinput(new CLibInputHandler)
+,  m_force_mode_switch(false)
 {
   const char *env_framebuffer = getenv("FRAMEBUFFER");
 
@@ -185,7 +186,9 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
     }
   }
 
-  aml_set_native_resolution(res, m_framebuffer_name, m_stereo_mode);
+  aml_set_native_resolution(res, m_framebuffer_name, m_stereo_mode, m_force_mode_switch);
+  // reset force mode switch
+  m_force_mode_switch = false;
 
   if (!m_delayDispReset)
   {
@@ -267,28 +270,28 @@ bool CWinSystemAmlogic::IsHDRDisplay()
   {
     valstr = hdr_cap.Get<std::string>().value();
     if (valstr.find("Traditional HDR: 1") != std::string::npos)
-      hdr_caps.SetHDR10();
+      m_hdr_caps.SetHDR10();
 
     if (valstr.find("HDR10Plus Supported: 1") != std::string::npos)
-      hdr_caps.SetHDR10Plus();
+      m_hdr_caps.SetHDR10Plus();
 
     if (valstr.find("Hybrid Log-Gamma: 1") != std::string::npos)
-      hdr_caps.SetHLG();
+      m_hdr_caps.SetHLG();
   }
 
   if (dv_cap.Exists())
   {
     valstr = dv_cap.Get<std::string>().value();
     if (valstr.find("DolbyVision RX support list") != std::string::npos)
-      hdr_caps.SetDolbyVision();
+      m_hdr_caps.SetDolbyVision();
   }
 
-  return (hdr_caps.SupportsHDR10() | hdr_caps.SupportsHDR10Plus() | hdr_caps.SupportsHLG());
+  return (m_hdr_caps.SupportsHDR10() | m_hdr_caps.SupportsHDR10Plus() | m_hdr_caps.SupportsHLG());
 }
 
 CHDRCapabilities CWinSystemAmlogic::GetDisplayHDRCapabilities() const
 {
-  return hdr_caps;
+  return m_hdr_caps;
 }
 
 bool CWinSystemAmlogic::Hide()

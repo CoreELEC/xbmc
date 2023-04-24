@@ -831,7 +831,8 @@ std::string aml_get_drmDevice_mode(void)
   return mode;
 }
 
-bool aml_set_drmDevice_mode(unsigned int width, unsigned int height, std::string mode)
+bool aml_set_drmDevice_mode(unsigned int width, unsigned int height, std::string mode,
+  bool force_mode_switch)
 {
   std::string current_mode = aml_get_drmDevice_mode();
   bool ret = false;
@@ -896,6 +897,9 @@ bool aml_set_drmDevice_mode(unsigned int width, unsigned int height, std::string
       CLog::Log(LOGDEBUG, "AMLUtils::{} - found mode in connector mode list: [{:d}]:{}", __FUNCTION__, i, mode);
       drmModeFBPtr drm_fb = drmModeGetFB(fd, crtc->buffer_id);
 
+      if (force_mode_switch)
+        drmModeSetCrtc(fd, crtc->crtc_id, 0, 0, 0, NULL, 0, NULL);
+
       ret = drmModeSetCrtc(fd, crtc->crtc_id, drm_fb->fb_id, 0, 0,
         resources->connectors, 1, &connector->modes[i]);
 
@@ -931,12 +935,13 @@ bool aml_get_native_resolution(RESOLUTION_INFO *res)
   return result;
 }
 
-bool aml_set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name, const int stereo_mode)
+bool aml_set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
+  const int stereo_mode, bool force_mode_switch)
 {
   bool result = false;
 
   aml_handle_display_stereo_mode(RENDER_STEREO_MODE_OFF);
-  result = aml_set_display_resolution(res, framebuffer_name);
+  result = aml_set_display_resolution(res, framebuffer_name, force_mode_switch);
 
   aml_handle_display_stereo_mode(stereo_mode);
 
@@ -991,7 +996,8 @@ bool aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolutions)
   return resolutions.size() > 0;
 }
 
-bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name)
+bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
+  bool force_mode_switch)
 {
   std::string mode = res.strId.c_str();
   std::string cur_mode;
@@ -1009,7 +1015,7 @@ bool aml_set_display_resolution(const RESOLUTION_INFO &res, std::string framebuf
   }
 
   aml_set_framebuffer_resolution(res.iScreenWidth, res.iScreenHeight, framebuffer_name);
-  aml_set_drmDevice_mode(res.iWidth, res.iHeight, mode);
+  aml_set_drmDevice_mode(res.iWidth, res.iHeight, mode, force_mode_switch);
   aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name);
 
   return true;
