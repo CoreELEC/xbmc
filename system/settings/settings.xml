@@ -267,7 +267,7 @@
             </dependency>
           </dependencies>
           <level>2</level>
-          <default>2</default>
+          <default>0</default>
           <constraints>
             <options>
               <option label="39300">0</option>  <!-- Lossless -->
