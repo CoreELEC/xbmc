@@ -236,7 +236,7 @@
             </or>
           </requirement>
           <level>2</level>
-          <default>2</default>
+          <default>0</default>
           <updates>
             <update type="change" />
           </updates>
