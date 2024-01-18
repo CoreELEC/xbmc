@@ -66,7 +66,6 @@ bool aml_dolby_vision_enabled();
 bool aml_has_frac_rate_policy();
 bool aml_video_started();
 void aml_video_mute(bool mute);
-void aml_set_audio_passthrough(bool passthrough);
 bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res);
 bool aml_get_native_resolution(RESOLUTION_INFO *res);
 bool aml_set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name, const int stereo_mode, bool force_mode_switch);
