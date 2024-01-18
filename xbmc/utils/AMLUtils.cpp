@@ -271,11 +271,6 @@ void aml_video_mute(bool mute)
   }
 }
 
-void aml_set_audio_passthrough(bool passthrough)
-{
-  CSysfsPath("/sys/class/audiodsp/digital_raw", (passthrough ? 2 : 0));
-}
-
 void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int view_mode)
 {
   int fd;
