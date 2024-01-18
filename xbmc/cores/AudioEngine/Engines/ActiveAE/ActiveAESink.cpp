@@ -779,6 +779,10 @@ std::string CActiveAESink::ValidateOuputDevice(const std::string& device, bool p
         if (!passthrough && d.m_onlyPassthrough)
           continue;
 
+        // filter L-PCM device when passthrough on Amlogic T7
+        if (passthrough && (d.m_deviceName.substr(0, d.m_deviceName.find(':')) == "surround71"))
+          continue;
+
         if (d.m_deviceName == dev.name)
           return d.ToDeviceString(sink.m_sinkName);
       }
@@ -799,6 +803,10 @@ std::string CActiveAESink::ValidateOuputDevice(const std::string& device, bool p
           continue;
 
         if (!passthrough && d.m_onlyPassthrough)
+          continue;
+
+        // filter L-PCM device when passthrough on Amlogic T7
+        if (passthrough && (d.m_deviceName.substr(0, d.m_deviceName.find(':')) == "surround71"))
           continue;
 
         if (d.GetFriendlyName() == dev.friendlyName)
@@ -823,6 +831,10 @@ std::string CActiveAESink::ValidateOuputDevice(const std::string& device, bool p
           continue;
 
         if (!passthrough && d.m_onlyPassthrough)
+          continue;
+
+        // filter L-PCM device when passthrough on Amlogic T7
+        if (passthrough && (d.m_deviceName.substr(0, d.m_deviceName.find(':')) == "surround71"))
           continue;
 
         if (firstDevice.empty())
@@ -852,6 +864,10 @@ std::string CActiveAESink::ValidateOuputDevice(const std::string& device, bool p
         continue;
 
       if (!passthrough && d.m_onlyPassthrough)
+        continue;
+
+      // filter L-PCM device when passthrough on Amlogic T7
+      if (passthrough && (d.m_deviceName.substr(0, d.m_deviceName.find(':')) == "surround71"))
         continue;
 
       if (firstDevice.empty())
