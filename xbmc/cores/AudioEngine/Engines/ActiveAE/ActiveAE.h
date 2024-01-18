@@ -316,7 +316,7 @@ protected:
   void DrainSink();
   void UnconfigureSink();
   void Dispose();
-  void LoadSettings();
+  void LoadSettings(AEAudioFormat *format = NULL);
   void ValidateOutputDevices(bool saveChanges);
   void HandleDeviceCountChange(const std::string& driver, bool defaultDeviceChanged);
   bool NeedReconfigureBuffers();
