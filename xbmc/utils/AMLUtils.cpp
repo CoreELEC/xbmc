@@ -56,6 +56,30 @@ int aml_get_cpufamily_id()
   return aml_cpufamily_id;
 }
 
+std::string aml_get_cpufamily_name(int cpuid)
+{
+  switch(cpuid)
+  {
+    case AML_G12A:
+      return "G12A";
+    case AML_G12B:
+      return "G12B";
+    case AML_SM1:
+      return "SM1";
+    case AML_SC2:
+      return "SC2";
+    case AML_S4:
+      return "S4";
+    case AML_S5:
+      return "S5";
+    case AML_T7:
+      return "T7";
+    default:
+      return aml_get_cpufamily_name(aml_get_cpufamily_id());
+  }
+  return "Unknown";
+}
+
 static bool aml_support_vcodec_profile(const char *regex)
 {
   int profile = 0;

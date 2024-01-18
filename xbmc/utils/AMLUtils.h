@@ -56,6 +56,7 @@ enum AML_SUPPORT_H264_4K2K
 #define AML_S5      0x3E
 
 int  aml_get_cpufamily_id();
+std::string aml_get_cpufamily_name(int cpuid = -1);
 bool aml_support_hevc();
 bool aml_support_hevc_4k2k();
 bool aml_support_hevc_8k4k();
