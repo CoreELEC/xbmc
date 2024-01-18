@@ -252,11 +252,6 @@ void aml_video_mute(bool mute)
   }
 }
 
-void aml_set_audio_passthrough(bool passthrough)
-{
-  CSysfsPath("/sys/class/audiodsp/digital_raw", (passthrough ? 2 : 0));
-}
-
 void aml_probe_hdmi_audio()
 {
   // Audio {format, channel, freq, cce}
