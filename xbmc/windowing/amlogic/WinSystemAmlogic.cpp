@@ -20,6 +20,7 @@
 #include "windowing/GraphicContext.h"
 #include "windowing/Resolution.h"
 #include "platform/linux/powermanagement/LinuxPowerSyscall.h"
+#include "platform/linux/FDEventMonitor.h"
 #include "platform/linux/ScreenshotSurfaceAML.h"
 #include "settings/DisplaySettings.h"
 #include "settings/Settings.h"
@@ -34,6 +35,8 @@
 
 #include <linux/fb.h>
 #include <linux/version.h>
+#include <poll.h>
+#include <unistd.h>
 
 #include "system_egl.h"
 
@@ -43,6 +46,9 @@ CWinSystemAmlogic::CWinSystemAmlogic()
 :  m_nativeWindow(NULL)
 ,  m_libinput(new CLibInputHandler)
 ,  m_force_mode_switch(false)
+,  m_fdMonitorId(0)
+,  m_udev(NULL)
+,  m_udevMonitor(NULL)
 {
   const char *env_framebuffer = getenv("FRAMEBUFFER");
 
@@ -61,6 +67,110 @@ CWinSystemAmlogic::CWinSystemAmlogic()
   m_delayDispReset = false;
 
   m_libinput->Start();
+}
+
+CWinSystemAmlogic::~CWinSystemAmlogic()
+{
+  MonitorStop();
+}
+
+void CWinSystemAmlogic::MonitorStart()
+{
+  int err;
+
+  if (!m_udev)
+  {
+    m_udev = udev_new();
+    if (!m_udev)
+    {
+      CLog::Log(LOGWARNING, "CWinSystemAmlogic::Start - Unable to open udev handle");
+      return;
+    }
+
+    m_udevMonitor = udev_monitor_new_from_netlink(m_udev, "udev");
+    if (!m_udevMonitor)
+    {
+      CLog::Log(LOGERROR, "CWinSystemAmlogic::Start - udev_monitor_new_from_netlink() failed");
+      goto err_unref_udev;
+    }
+
+    err = udev_monitor_filter_add_match_subsystem_devtype(m_udevMonitor, "drm", NULL);
+    if (err)
+    {
+      CLog::Log(LOGERROR, "CWinSystemAmlogic::Start - udev_monitor_filter_add_match_subsystem_devtype() failed");
+      goto err_unref_monitor;
+    }
+
+    err = udev_monitor_enable_receiving(m_udevMonitor);
+    if (err)
+    {
+      CLog::Log(LOGERROR, "CWinSystemAmlogic::Start - udev_monitor_enable_receiving() failed");
+      goto err_unref_monitor;
+    }
+
+    const auto eventMonitor = CServiceBroker::GetPlatform().GetService<CFDEventMonitor>();
+    eventMonitor->AddFD(
+        CFDEventMonitor::MonitoredFD(udev_monitor_get_fd(m_udevMonitor),
+                                     POLLIN, FDEventCallback, m_udevMonitor),
+        m_fdMonitorId);
+  }
+
+  return;
+
+err_unref_monitor:
+  udev_monitor_unref(m_udevMonitor);
+  m_udevMonitor = NULL;
+err_unref_udev:
+  udev_unref(m_udev);
+  m_udev = NULL;
+}
+
+void CWinSystemAmlogic::MonitorStop()
+{
+  if (m_udev)
+  {
+    const auto eventMonitor = CServiceBroker::GetPlatform().GetService<CFDEventMonitor>();
+    eventMonitor->RemoveFD(m_fdMonitorId);
+
+    udev_monitor_unref(m_udevMonitor);
+    m_udevMonitor = NULL;
+    udev_unref(m_udev);
+    m_udev = NULL;
+  }
+}
+
+
+void CWinSystemAmlogic::HotplugEvent()
+{
+  std::string preferred_mode = aml_get_preferred_mode();
+  CLog::Log(LOGDEBUG, "CWinSystemAmlogic - HotplugEvent, preferred mode: {}", preferred_mode);
+
+  if (!preferred_mode.empty())
+  {
+    aml_set_hotplug_mode(preferred_mode);
+
+    // clear screen by fb blank
+    usleep(500 * 1000);
+    CSysfsPath("/sys/class/graphics/fb0/blank", 1);
+    usleep(500 * 1000);
+    CSysfsPath("/sys/class/graphics/fb0/blank", 0);
+  }
+}
+
+void CWinSystemAmlogic::FDEventCallback(int id, int fd, short revents, void *data)
+{
+  struct udev_monitor *udevMonitor = (struct udev_monitor *)data;
+  struct udev_device *device;
+
+  while ((device = udev_monitor_receive_device(udevMonitor)) != NULL)
+  {
+    const char* action = udev_device_get_action(device);
+    CLog::Log(LOGDEBUG, "CWinSystemAmlogic - FDEventCallback (\"{}\", \"{}\"), action: {}",
+      udev_device_get_syspath(device), udev_device_get_devpath(device), action);
+
+    if (StringUtils::EqualsNoCase(action, "change"))
+      HotplugEvent();
+  }
 }
 
 bool CWinSystemAmlogic::InitWindowSystem()
@@ -155,6 +265,23 @@ bool CWinSystemAmlogic::InitWindowSystem()
 
   // Close the OpenVFD splash and switch the display into time mode.
   CSysfsPath("/tmp/openvfd_service", 0);
+
+  drmModeConnection connection;
+  int mode_count = aml_get_drmDevice_modes_count(&connection);
+
+  if (connection == DRM_MODE_DISCONNECTED)
+  {
+    if (mode_count > 1)
+    {
+      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem Looks like display was hotplugged before Kodi start");
+      HotplugEvent();
+    }
+    else if (mode_count == 1)
+    {
+      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem Looks like no display is connected, wait for hotplug");
+      MonitorStart();
+    }
+  }
 
   // kill a running animation
   CLog::Log(LOGDEBUG,"CWinSystemAmlogic: Sending SIGUSR1 to 'splash-image'");
