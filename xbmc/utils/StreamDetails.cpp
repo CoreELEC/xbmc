@@ -673,3 +673,9 @@ std::string CStreamDetails::HdrTypeToString(StreamHdrType hdrType)
       return "";
   }
 }
+
+std::string CStreamDetails::DynamicRangeToString(StreamHdrType hdrType)
+{
+  std::string hdrStr = HdrTypeToString(hdrType);
+  return (hdrStr.empty() ? "sdr" : hdrStr);
+}
