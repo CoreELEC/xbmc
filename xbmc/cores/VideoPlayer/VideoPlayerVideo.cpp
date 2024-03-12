@@ -935,6 +935,7 @@ CVideoPlayerVideo::EOutputState CVideoPlayerVideo::OutputPicture(const VideoPict
   if (!m_renderManager.Configure(*pPicture,
                                 static_cast<float>(config_framerate),
                                 orientation,
+                                m_hints.hdrType,
                                 m_pVideoCodec->GetAllowedReferences()))
   {
     CLog::Log(LOGERROR, "{} - failed to configure renderer", __FUNCTION__);
