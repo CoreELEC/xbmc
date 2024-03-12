@@ -13,6 +13,7 @@
 #include "threads/CriticalSection.h"
 #include "utils/ColorUtils.h"
 #include "utils/Geometry.h" // for CRect/CPoint
+#include "utils/StreamDetails.h"
 #include "utils/TransformMatrix.h" // for the members m_guiTransform etc.
 
 #include <map>
@@ -163,6 +164,8 @@ public:
   RENDER_STEREO_VIEW GetStereoView()  { return m_stereoView; }
   void SetStereoMode(RENDER_STEREO_MODE mode) { m_nextStereoMode = mode; }
   RENDER_STEREO_MODE GetStereoMode()  { return m_stereoMode; }
+  void SetHDRType(StreamHdrType hdrType)  { m_hdrType = hdrType; }
+  StreamHdrType GetHDRType()  { return m_hdrType; }
   void RestoreCameraPosition();
   void SetStereoFactor(float factor);
   void RestoreStereoFactor();
@@ -274,6 +277,7 @@ protected:
   RENDER_STEREO_VIEW m_stereoView = RENDER_STEREO_VIEW_OFF;
   RENDER_STEREO_MODE m_stereoMode = RENDER_STEREO_MODE_OFF;
   RENDER_STEREO_MODE m_nextStereoMode = RENDER_STEREO_MODE_OFF;
+  StreamHdrType m_hdrType;
 
   bool m_isTransferPQ{false};
   RENDER_ORDER m_renderOrder{RENDER_ORDER_ALL_BACK_TO_FRONT};
