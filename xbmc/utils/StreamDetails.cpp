@@ -669,6 +669,6 @@ std::string CStreamDetails::HdrTypeToString(StreamHdrType hdrType)
       return "hlg";
     case StreamHdrType::HDR_TYPE_NONE:
     default:
-      return "";
+      return "sdr";
   }
 }
