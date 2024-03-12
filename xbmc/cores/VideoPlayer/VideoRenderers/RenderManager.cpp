@@ -23,6 +23,7 @@
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "threads/SingleLock.h"
+#include "utils/StreamDetails.h"
 #include "utils/StringUtils.h"
 #include "utils/log.h"
 #include "windowing/GraphicContext.h"
@@ -115,10 +116,12 @@ bool CRenderManager::Configure(const VideoPicture& picture, float fps, unsigned 
     }
   }
 
+  const std::string hdrStr = CStreamDetails::HdrTypeToString(picture.hdrType);
   CLog::Log(LOGDEBUG,
             "CRenderManager::Configure - change configuration. {}x{}. display: {}x{}. framerate: "
-            "{:4.2f}.",
-            picture.iWidth, picture.iHeight, picture.iDisplayWidth, picture.iDisplayHeight, fps);
+            "{:4.2f}. hdrType: {}.",
+            picture.iWidth, picture.iHeight, picture.iDisplayWidth, picture.iDisplayHeight, fps,
+            hdrStr.empty() ? "none" : hdrStr);
 
   // make sure any queued frame was fully presented
   {
@@ -416,6 +419,7 @@ void CRenderManager::UnInit()
   m_renderState = STATE_UNCONFIGURED;
   m_picture.Reset();
   m_bRenderGUI = false;
+  CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_picture.hdrType);
 
   m_initEvent.Set();
 }
@@ -799,6 +803,7 @@ void CRenderManager::UpdateResolution()
       {
         RESOLUTION res = CResolutionUtils::ChooseBestResolution(
             m_fps, m_picture.iWidth, m_picture.iHeight, !m_picture.stereoMode.empty());
+        CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_picture.hdrType);
         CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(res, false);
         UpdateLatencyTweak();
         if (m_pRenderer)
