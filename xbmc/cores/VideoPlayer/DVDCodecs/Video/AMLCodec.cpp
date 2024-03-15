@@ -2028,7 +2028,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
     }
 
     am_private->gcodec.dv_enable = 1;
-    if (!m_is_dv_p7_mel && hints.dovi.dv_profile == 7 && CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+    if (!m_is_dv_p7_mel && (hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7) && CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
         CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI) == 0)
     {
       CSysfsPath amdolby_vision_debug{"/sys/class/amdolby_vision/debug"};
@@ -2040,7 +2040,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints)
       if (dolby_vision_wait_delay.Exists())
       {
         m_dolby_vision_wait_delay = dolby_vision_wait_delay.Get<unsigned int>().value();
-        CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder DoVi P7 MEL detection frame delay got set to {:d} frames", m_dolby_vision_wait_delay);
+        CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder DoVi P{:d} MEL detection frame delay got set to {:d} frames", hints.dovi.dv_profile, m_dolby_vision_wait_delay);
       }
     }
   }
@@ -2664,7 +2664,8 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
       {
         if (is_mel.Get<char>().value() == 'Y')
         {
-          CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::GetPicture: DoVi P7 MEL content detected, request to reopen decoder");
+          CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::GetPicture: DoVi P{:d} MEL content detected, request to reopen decoder",
+            m_hints.dovi.dv_profile);
           m_is_dv_p7_mel = true;
           return CDVDVideoCodec::VC_REOPEN;
         }
