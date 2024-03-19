@@ -15,6 +15,7 @@
 #endif
 
 #include "BitstreamConverter.h"
+#include "utils/StringUtils.h"
 #include "HevcSei.h"
 
 #include <algorithm>
@@ -300,6 +301,29 @@ done:
 
   return rpu_data;
 }
+
+static enum ELType get_dovi_el_type(uint8_t* buf, uint32_t nal_size)
+{
+  DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(buf, nal_size);
+  const DoviRpuDataHeader* header = dovi_rpu_get_header(rpu);
+  enum ELType el_type = ELType::TYPE_NONE;
+
+  if (header && (header->guessed_profile == 4 || header->guessed_profile == 7))
+  {
+    if (header->el_type)
+    {
+      if (StringUtils::EqualsNoCase(header->el_type, "FEL"))
+        el_type = ELType::TYPE_FEL;
+      else if (StringUtils::EqualsNoCase(header->el_type, "MEL"))
+        el_type = ELType::TYPE_MEL;
+    }
+  }
+
+  dovi_rpu_free_header(header);
+  dovi_rpu_free(rpu);
+
+  return el_type;
+}
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -370,6 +394,7 @@ CBitstreamConverter::CBitstreamConverter()
   m_convert_dovi = false;
   m_removeDovi = false;
   m_removeHdr10Plus = false;
+  m_dovi_el_type = ELType::TYPE_NONE;
 }
 
 CBitstreamConverter::~CBitstreamConverter()
@@ -1017,13 +1042,14 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData, int iSize, uint8_t **
         }
       }
 
-      if (write_buf && m_convert_dovi)
+      if (write_buf && (m_convert_dovi || m_dovi_el_type == ELType::TYPE_NONE))
       {
         if (unit_type == HEVC_NAL_UNSPEC62)
         {
 #ifdef HAVE_LIBDOVI
           // Convert the RPU itself
           rpu_data = convert_dovi_rpu_nal(buf, nal_size);
+          m_dovi_el_type = get_dovi_el_type(buf, nal_size);
           if (rpu_data)
           {
             buf_to_write = rpu_data->data;
@@ -1031,7 +1057,7 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData, int iSize, uint8_t **
           }
 #endif
         }
-        else if (unit_type == HEVC_NAL_UNSPEC63)
+        else if (m_convert_dovi && unit_type == HEVC_NAL_UNSPEC63)
         {
           // Ignore the enhancement layer, may or may not help
           write_buf = false;
