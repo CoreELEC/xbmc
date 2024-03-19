@@ -15,7 +15,6 @@
 #include "AMLCodec.h"
 #include "ServiceBroker.h"
 #include "utils/AMLUtils.h"
-#include "utils/BitstreamConverter.h"
 #include "utils/log.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/Settings.h"
@@ -358,6 +357,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
 
   uint8_t *pData(packet.pData);
   int iSize(packet.iSize);
+  enum ELType dovi_el_type = ELType::TYPE_NONE;
 
   if (pData)
   {
@@ -373,6 +373,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       }
       pData = m_bitstream->GetConvertBuffer();
       iSize = m_bitstream->GetConvertSize();
+      dovi_el_type = m_bitstream->GetDoviElType();
     }
     else if (!m_has_keyframe && m_bitparser)
     {
@@ -391,7 +392,8 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       if (packet.pts == DVD_NOPTS_VALUE)
         m_hints.ptsinvalid = true;
 
-      if (m_Codec && !m_Codec->OpenDecoder(m_hints))
+      CLog::Log(LOGINFO, "{}::{} Open decoder: fps:{:d}/{:d}", __MODULE_NAME__, __FUNCTION__, m_hints.fpsrate, m_hints.fpsscale);
+      if (m_Codec && !m_Codec->OpenDecoder(m_hints, dovi_el_type))
         CLog::Log(LOGERROR, "{}: Failed to open Amlogic Codec", __MODULE_NAME__);
 
       m_videoBufferPool = std::shared_ptr<CAMLVideoBufferPool>(new CAMLVideoBufferPool());
@@ -412,12 +414,6 @@ void CDVDVideoCodecAmlogic::Reset(void)
     m_bitstream->ResetStartDecode();
 }
 
-void CDVDVideoCodecAmlogic::Reopen(void)
-{
-  if (m_Codec && !m_Codec->OpenDecoder(m_hints))
-    CLog::Log(LOGERROR, "{}: Failed to reopen Amlogic Codec", __MODULE_NAME__);
-}
-
 CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoPicture)
 {
   if (!m_Codec)
@@ -425,11 +421,7 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoP
 
   VCReturn retVal = m_Codec->GetPicture(&m_videobuffer);
 
-  if (retVal == VC_REOPEN)
-  {
-    m_Codec->CloseDecoder();
-  }
-  else if (retVal == VC_PICTURE)
+  if (retVal == VC_PICTURE)
   {
     pVideoPicture->SetParams(m_videobuffer);
 
