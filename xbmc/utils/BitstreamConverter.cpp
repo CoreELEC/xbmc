@@ -10,6 +10,7 @@
 
 #include "HevcSei.h"
 #include "utils/BitReader.h"
+#include "utils/StringUtils.h"
 #include "utils/log.h"
 
 #include <algorithm>
@@ -260,6 +261,7 @@ CBitstreamConverter::CBitstreamConverter()
   m_removeDovi = false;
   m_removeHdr10Plus = false;
   m_setDoviZeroLevel5 = false;
+  m_dovi_el_type = ELType::TYPE_NONE;
 }
 
 CBitstreamConverter::~CBitstreamConverter()
@@ -1174,6 +1176,7 @@ bool CBitstreamConverter::h264_sequence_header(const uint8_t *data, const uint32
 
 #ifdef HAVE_LIBDOVI
 // Processes Dolby Vision RPU
+//   - Updates `m_dovi_el_type` according to the current header
 //   - Converts to profile 8.1 if `m_convert_dovi` is enabled
 //   - Sets level 5 metadata to 0 offsets if `m_setDoviZeroLevel5` is enabled
 //
@@ -1196,6 +1199,15 @@ const DoviData* CBitstreamConverter::processDoviRpu(uint8_t* buf, uint32_t nalSi
   {
     dovi_rpu_free(rpu);
     return rpuData;
+  }
+
+  if (m_dovi_el_type == ELType::TYPE_NONE && header->el_type &&
+      (header->guessed_profile == 4 || header->guessed_profile == 7))
+  {
+    if (StringUtils::EqualsNoCase(header->el_type, "FEL"))
+      m_dovi_el_type = ELType::TYPE_FEL;
+    else if (StringUtils::EqualsNoCase(header->el_type, "MEL"))
+      m_dovi_el_type = ELType::TYPE_MEL;
   }
 
   if (m_convert_dovi && header->guessed_profile == 7)
