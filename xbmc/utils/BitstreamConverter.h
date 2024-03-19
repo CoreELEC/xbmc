@@ -77,6 +77,13 @@ typedef struct
   int frame_crop_bottom_offset;
 } sps_info_struct;
 
+enum ELType : int
+{
+  TYPE_NONE = 0,
+  TYPE_FEL,
+  TYPE_MEL
+};
+
 class CBitstreamParser
 {
 public:
@@ -105,6 +112,7 @@ public:
   void              ResetStartDecode(void);
   bool              CanStartDecode() const;
   void SetConvertDovi(int value) { m_convert_dovi = value; }
+  enum ELType GetDoviElType() const { return m_dovi_el_type; }
 
   static bool       mpeg2_sequence_header(const uint8_t *data, const uint32_t size, mpeg2_sequence *sequence);
   static bool       h264_sequence_header(const uint8_t *data, const uint32_t size, h264_sequence *sequence);
@@ -152,4 +160,5 @@ protected:
   AVCodecID         m_codec;
   bool              m_start_decode;
   int               m_convert_dovi;
+  enum ELType       m_dovi_el_type;
 };
