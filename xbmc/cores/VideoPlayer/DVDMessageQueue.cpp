@@ -318,7 +318,7 @@ int CDVDMessageQueue::GetLevel(bool dataLevel) const
 
   if (IsDataBased() || dataLevel)
   {
-    return std::min(100, 100 * m_iDataSize / m_iMaxDataSize);
+    return std::min((uint64_t)100, 100 * m_iDataSize / m_iMaxDataSize);
   }
 
   int level = std::min(100.0, ceil(100.0 * m_TimeSize * (m_TimeFront - m_TimeBack) / DVD_TIME_BASE ));
