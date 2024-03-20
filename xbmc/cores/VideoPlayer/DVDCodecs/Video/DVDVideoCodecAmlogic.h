@@ -12,6 +12,7 @@
 #include "DVDStreamInfo.h"
 #include "threads/CriticalSection.h"
 #include "cores/VideoPlayer/Buffers/VideoBuffer.h"
+#include "utils/BitstreamConverter.h"
 
 #include <set>
 #include <atomic>
@@ -96,6 +97,7 @@ protected:
   h264_sequence  *m_h264_sequence;
   double          m_h264_sequence_pts;
   bool            m_has_keyframe;
+  DoviElType      m_dovi_el_type;
 
   CBitstreamParser *m_bitparser;
   CBitstreamConverter *m_bitstream;

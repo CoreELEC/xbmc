@@ -14,6 +14,7 @@
 #include "windowing/Resolution.h"
 #include "rendering/RenderSystem.h"
 #include "utils/Geometry.h"
+#include "utils/BitstreamConverter.h"
 
 #include <deque>
 #include <atomic>
@@ -62,7 +63,7 @@ public:
   CAMLCodec(CProcessInfo &processInfo);
   virtual ~CAMLCodec();
 
-  bool          OpenDecoder(CDVDStreamInfo &hints);
+  bool          OpenDecoder(CDVDStreamInfo &hints, DoviElType dovi_el_type);
   bool          Enable_vadj1();
   void          CloseDecoder();
   void          Reset();
@@ -109,8 +110,6 @@ private:
   uint64_t         m_cur_pts;
   uint64_t         m_last_pts;
   uint32_t         m_bufferIndex;
-  bool             m_is_dv_p7_mel;
-  uint32_t         m_dolby_vision_wait_delay;
 
   CRect            m_dst_rect;
   CRect            m_display_rect;

@@ -549,6 +549,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
           int convertDovi = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
               CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);
           m_bitstream->SetConvertDovi(convertDovi);
+          m_bitstream->SetEvaluateDoviEl(hints.dovi.dv_profile == 7);
         }
       }
 

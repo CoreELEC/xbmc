@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "utils/StringUtils.h"
+
 #include <stdint.h>
 
 extern "C" {
@@ -16,6 +18,13 @@ extern "C" {
 #include <libavfilter/avfilter.h>
 #include <libavcodec/avcodec.h>
 }
+
+enum DoviElType
+{
+  DOVI_EL_NONE = 0,
+  DOVI_EL_FEL,
+  DOVI_EL_MEL
+};
 
 typedef struct
 {
@@ -102,9 +111,11 @@ public:
   int               GetConvertSize() const;
   uint8_t*          GetExtraData(void) const;
   int               GetExtraSize() const;
+  DoviElType        GetDoviElType() const;  
   void              ResetStartDecode(void);
   bool              CanStartDecode() const;
   void SetConvertDovi(int value) { m_convert_dovi = value; }
+  void SetEvaluateDoviEl(bool value) { m_evaluate_dovi_el = value; }
 
   static bool       mpeg2_sequence_header(const uint8_t *data, const uint32_t size, mpeg2_sequence *sequence);
   static bool       h264_sequence_header(const uint8_t *data, const uint32_t size, h264_sequence *sequence);
@@ -152,4 +163,6 @@ protected:
   AVCodecID         m_codec;
   bool              m_start_decode;
   int               m_convert_dovi;
+  bool              m_evaluate_dovi_el;
+  DoviElType        m_dovi_el_type;
 };

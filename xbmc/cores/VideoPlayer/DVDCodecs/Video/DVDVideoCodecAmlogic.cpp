@@ -73,6 +73,7 @@ CDVDVideoCodecAmlogic::CDVDVideoCodecAmlogic(CProcessInfo &processInfo)
   , m_has_keyframe(false)
   , m_bitparser(NULL)
   , m_bitstream(NULL)
+  , m_dovi_el_type(DOVI_EL_NONE)
 {
 }
 
@@ -105,6 +106,7 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
 
   m_hints = hints;
   m_hints.pClock = hints.pClock;
+  m_dovi_el_type = DOVI_EL_NONE;
 
   CLog::Log(LOGDEBUG, "{}::{} - codec {:d} profile:{:d} extra_size:{:d} fps:{:d}/{:d}",
     __MODULE_NAME__, __FUNCTION__, m_hints.codec, m_hints.profile, m_hints.extrasize, m_hints.fpsrate, m_hints.fpsscale);
@@ -293,6 +295,8 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
               __MODULE_NAME__, __FUNCTION__, convertDovi);
             m_bitstream->SetConvertDovi(convertDovi);
           }
+          
+          m_bitstream->SetEvaluateDoviEl(hints.dovi.dv_profile == 7);
         }
       }
 
@@ -396,6 +400,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       }
       pData = m_bitstream->GetConvertBuffer();
       iSize = m_bitstream->GetConvertSize();
+      m_dovi_el_type = m_bitstream->GetDoviElType();
     }
     else if (!m_has_keyframe && m_bitparser)
     {
@@ -414,8 +419,8 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       if (packet.pts == DVD_NOPTS_VALUE)
         m_hints.ptsinvalid = true;
 
-      CLog::Log(LOGINFO, "{}::{} Open decoder: fps:{:d}/{:d}", __MODULE_NAME__, __FUNCTION__, m_hints.fpsrate, m_hints.fpsscale);
-      if (m_Codec && !m_Codec->OpenDecoder(m_hints))
+      CLog::Log(LOGINFO, "{}::{} Open decoder: fps:{:d}/{:d} dovi el:{}", __MODULE_NAME__, __FUNCTION__, m_hints.fpsrate, m_hints.fpsscale, m_dovi_el_type);
+      if (m_Codec && !m_Codec->OpenDecoder(m_hints, m_dovi_el_type))
         CLog::Log(LOGERROR, "{}: Failed to open Amlogic Codec", __MODULE_NAME__);
 
       m_videoBufferPool = std::shared_ptr<CAMLVideoBufferPool>(new CAMLVideoBufferPool());
@@ -438,7 +443,7 @@ void CDVDVideoCodecAmlogic::Reset(void)
 
 void CDVDVideoCodecAmlogic::Reopen(void)
 {
-  if (m_Codec && !m_Codec->OpenDecoder(m_hints))
+  if (m_Codec && !m_Codec->OpenDecoder(m_hints, m_dovi_el_type))
     CLog::Log(LOGERROR, "{}: Failed to reopen Amlogic Codec", __MODULE_NAME__);
 }
 

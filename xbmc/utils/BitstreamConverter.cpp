@@ -300,6 +300,26 @@ done:
 
   return rpu_data;
 }
+
+static const DoviElType get_dovi_el_type(uint8_t* buf, uint32_t nal_size)
+{
+  DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(buf, nal_size);
+  const DoviRpuDataHeader* header = dovi_rpu_get_header(rpu);
+
+  DoviElType dovi_el_type = DOVI_EL_NONE;
+
+  if (header && header->el_type) {
+    if (StringUtils::EqualsNoCase(header->el_type, "FEL"))
+      dovi_el_type = DOVI_EL_FEL;
+    else if (StringUtils::EqualsNoCase(header->el_type, "MEL"))
+      dovi_el_type = DOVI_EL_MEL;
+  }
+
+  dovi_rpu_free_header(header);
+  dovi_rpu_free(rpu);
+
+  return dovi_el_type;
+}
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -370,6 +390,7 @@ CBitstreamConverter::CBitstreamConverter()
   m_sps_pps_context.sps_pps_data = NULL;
   m_start_decode = true;
   m_convert_dovi = 0;
+  m_dovi_el_type = DOVI_EL_NONE;
 }
 
 CBitstreamConverter::~CBitstreamConverter()
@@ -708,6 +729,11 @@ bool CBitstreamConverter::CanStartDecode() const
   return m_start_decode;
 }
 
+DoviElType CBitstreamConverter::GetDoviElType() const
+{
+  return m_dovi_el_type;
+}
+
 bool CBitstreamConverter::BitstreamConvertInitAVC(void *in_extradata, int in_extrasize)
 {
   // based on h264_mp4toannexb_bsf.c (ffmpeg)
@@ -985,6 +1011,16 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData, int iSize, uint8_t **
     }
     else
     {
+      if (m_evaluate_dovi_el && unit_type == HEVC_NAL_UNSPEC62)
+      {
+#ifdef HAVE_LIBDOVI
+        // Get the RPU to get the EL type (MEL [Minumum Enhancement Layer] / FEL [Full Enhancement Layer])
+        m_dovi_el_type = get_dovi_el_type(buf, nal_size);
+#endif
+        // Evaluation is done - no further evaluation will be performed unless evaluation is requested again.
+        m_evaluate_dovi_el = false;
+      }
+
       bool write_buf = true;
       const uint8_t* buf_to_write = buf;
       int32_t final_nal_size = nal_size;
@@ -1015,7 +1051,6 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData, int iSize, uint8_t **
           write_buf = false;
         }
       }
-
       if (write_buf)
         BitstreamAllocAndCopy(poutbuf, poutbuf_size, NULL, 0, buf_to_write, final_nal_size,
                               unit_type);
