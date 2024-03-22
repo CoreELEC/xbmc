@@ -75,6 +75,10 @@ public:
   void SetSpeed(int iSpeed) override;
   bool SupportsExtention() const override { return m_pVideoCodec && m_pVideoCodec->SupportsExtention(); }
 
+  int  GetDataLevel() const { return m_messageQueue.GetLevel(true); }
+  void SetMaxDataSize(int iMaxDataSize) { m_messageQueue.SetMaxDataSize(iMaxDataSize); }
+  int GetMaxDataSize() const { return m_messageQueue.GetMaxDataSize(); }
+
   // classes
   CDVDOverlayContainer* m_pOverlayContainer;
   CDVDClock* m_pClock;
