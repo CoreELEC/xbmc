@@ -218,6 +218,7 @@ bool CRenderManager::Configure()
     m_queued.clear();
     m_discard.clear();
     m_free.clear();
+    m_BufferLevel = 0;
     m_presentsource = 0;
     m_presentsourcePast = -1;
     for (int i=1; i < m_QueueSize; i++)
@@ -1128,7 +1129,7 @@ int CRenderManager::WaitForBuffer(volatile std::atomic_bool& bStop,
     sleeptime = std::min(sleeptime, 20ms);
     m_presentevent.wait(lock, sleeptime);
     DiscardBuffer();
-    return 0;
+    return m_BufferLevel;
   }
 
   XbmcThreads::EndTime<> endtime{timeout};
@@ -1137,7 +1138,7 @@ int CRenderManager::WaitForBuffer(volatile std::atomic_bool& bStop,
     m_presentevent.wait(lock, std::min(50ms, timeout));
     if (endtime.IsTimePast() || bStop)
     {
-      return -1;
+      return (m_BufferLevel = -1);
     }
   }
 
@@ -1145,7 +1146,7 @@ int CRenderManager::WaitForBuffer(volatile std::atomic_bool& bStop,
   m_overlays.Release(m_free.front());
 
   // return buffer level
-  return m_queued.size() + m_discard.size();
+  return (m_BufferLevel = m_queued.size() + m_discard.size());
 }
 
 void CRenderManager::PrepareNextRender()
@@ -1289,9 +1290,16 @@ void CRenderManager::DiscardBuffer()
     m_queued.pop_front();
   }
 
+  m_BufferLevel = 0;
+
   if(m_presentstep == PRESENT_READY)
     m_presentstep = PRESENT_IDLE;
   m_presentevent.notifyAll();
+}
+
+bool CRenderManager::BufferEmpty()
+{
+  return bool(m_BufferLevel < 0);
 }
 
 bool CRenderManager::GetStats(int &lateframes, double &pts, int &queued, int &discard)
