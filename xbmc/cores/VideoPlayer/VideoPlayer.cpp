@@ -1633,6 +1633,15 @@ void CVideoPlayer::Process()
         continue;
       }
 
+      // while players are still playing, keep going to allow seekbacks
+      if ((m_VideoPlayerAudio->HasData() ||
+           m_VideoPlayerVideo->HasData()) &&
+          !m_renderManager.BufferEmpty())
+      {
+        CThread::Sleep(100ms);
+        continue;
+      }
+
       if (m_CurrentVideo.inited)
       {
         m_VideoPlayerVideo->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::VIDEO_DRAIN));
@@ -1647,14 +1656,6 @@ void CVideoPlayer::Process()
 
       // if we are caching, start playing it again
       SetCaching(CACHESTATE_DONE);
-
-      // while players are still playing, keep going to allow seekbacks
-      if (m_VideoPlayerAudio->HasData() ||
-          m_VideoPlayerVideo->HasData())
-      {
-        CThread::Sleep(100ms);
-        continue;
-      }
 
       if (!m_pInputStream->IsEOF())
         CLog::Log(LOGINFO, "{} - eof reading from demuxer", __FUNCTION__);
