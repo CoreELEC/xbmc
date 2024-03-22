@@ -21,6 +21,15 @@
 #define VideoPlayer_RDS      5
 #define VideoPlayer_ID3 6
 
+#define SIZE_1K              (int)1024
+#define SIZE_1M              (int)(SIZE_1K * 1024)
+
+#define LvLVideoMAX          (int)(256 * SIZE_1M)
+#define LvLVideoMIN          (int)(32 * SIZE_1M)
+
+#define LvLAudioMAX          (int)(32 * SIZE_1M)
+#define LvLAudioMIN          (int)(4 * SIZE_1M)
+
 class CDVDMsg;
 class CDVDStreamInfo;
 class CProcessInfo;
@@ -97,6 +106,9 @@ public:
   virtual void SetSpeed(int iSpeed) = 0;
   virtual bool IsEOS() { return false; };
   virtual bool SupportsExtention() const = 0;
+  virtual int  GetDataLevel() const = 0;
+  virtual void SetMaxDataSize(int iMaxDataSize) {}
+  virtual int GetMaxDataSize() const = 0;
 };
 
 class CDVDAudioCodec;
@@ -124,4 +136,8 @@ public:
   virtual bool IsPassthrough() const = 0;
   virtual float GetDynamicRangeAmplification() const = 0;
   virtual bool IsEOS() { return false; }
+
+  virtual int  GetDataLevel() const = 0;
+  virtual void SetMaxDataSize(int iMaxDataSize) {}
+  virtual int GetMaxDataSize() const = 0;
 };

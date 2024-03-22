@@ -57,6 +57,7 @@
 #include "utils/StreamDetails.h"
 #include "utils/StreamUtils.h"
 #include "utils/StringUtils.h"
+#include "utils/TimeUtils.h"
 #include "utils/URIUtils.h"
 #include "utils/Variant.h"
 #include "utils/log.h"
@@ -1317,6 +1318,129 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
   return false;
 }
 
+void CVideoPlayer::HandleDynamicBufferLevel()
+{
+  // Run adjustment only every 250ms to avoid overreacting
+  constexpr int64_t INTERVAL_NS = 250'000'000; // 250ms
+  static int64_t lastAdjust = 0;
+  const int64_t now = CurrentHostCounter();
+
+  if (now - lastAdjust < INTERVAL_NS)
+    return;
+
+  lastAdjust = now;
+
+  // Current buffer fill levels (0–100%)
+  const int lvlv = m_VideoPlayerVideo->GetDataLevel();
+  const int lvla = m_VideoPlayerAudio->GetDataLevel();
+
+  // Current max buffer sizes
+  const int vcOld = m_VideoPlayerVideo->GetMaxDataSize();
+  const int acOld = m_VideoPlayerAudio->GetMaxDataSize();
+
+  int vcNew = vcOld;
+  int acNew = acOld;
+
+  // Absolute difference between audio and video levels
+  const int diff = std::abs(lvlv - lvla);
+
+  // Fixed step sizes
+  constexpr int vcStep = 4 * SIZE_1M;      // 4 MB
+  constexpr int acStep = 512 * SIZE_1K;    // 0.5 MB
+
+  auto inc = [](int cur, int step, int max) {
+    const int v = cur + step;
+    return (v <= max) ? v : cur;
+  };
+
+  auto dec = [](int cur, int step, int min) {
+    const int v = cur - step;
+    return (v >= min) ? v : cur;
+  };
+
+  // ---------------------------------------------------------
+  // AUDIO BURST DETECTION (TrueHD, DTS-HD, EAC3 JOC)
+  // ---------------------------------------------------------
+  static int lastLvla = 0;
+  const int deltaA = lvla - lastLvla;
+  lastLvla = lvla;
+
+  const bool audioBurst =
+  (
+      lvla > 85 &&          // audio buffer very full
+      lvlv < 50 &&          // video buffer relatively low
+      (lvla - lvlv) > 25 && // audio significantly fuller than video
+      deltaA > 10           // rapid increase → real burst
+  );
+
+  // ---------------------------------------------------------
+  // VIDEO BURST DETECTION (I-frames, HEVC/H.266 peaks)
+  // ---------------------------------------------------------
+  static int lastLvlv = 0;
+  const int deltaV = lvlv - lastLvlv;
+  lastLvlv = lvlv;
+
+  const bool videoBurst =
+  (
+      lvlv > 85 &&          // video buffer very full
+      lvla < 50 &&          // audio buffer relatively low
+      (lvlv - lvla) > 25 && // video significantly fuller than audio
+      deltaV > 10           // rapid increase → real burst
+  );
+
+  // -------------------------------------------------
+  // INCREASE LOGIC
+  // -------------------------------------------------
+  if (!audioBurst && !videoBurst && diff > 20)
+  {
+    if (lvlv > lvla)
+      vcNew = inc(vcOld, vcStep, LvLVideoMAX);
+    else
+      acNew = inc(acOld, acStep, LvLAudioMAX);
+  }
+
+  // -------------------------------------------------
+  // DECREASE LOGIC
+  //
+  // Only decrease when:
+  // - both buffers are reasonably filled (>20%)
+  // - difference is small (<15)
+  // -------------------------------------------------
+  if (!audioBurst && !videoBurst &&
+      diff < 15 &&
+      lvlv > 20 &&
+      lvla > 20)
+  {
+    if (lvlv < lvla)
+      vcNew = dec(vcOld, vcStep, LvLVideoMIN);
+    else
+      acNew = dec(acOld, acStep, LvLAudioMIN);
+  }
+
+  // ---------------------------------------------------------
+  // APPLY CHANGES
+  // ---------------------------------------------------------
+  if (vcNew != vcOld)
+  {
+    CLog::Log(LOGDEBUG, LOGAVTIMING,
+      "CVideoPlayer::{} {} video buffer to: {:d}MB, level video/audio: {:d}%/{:d}%",
+      __FUNCTION__, (vcNew > vcOld) ? "increased" : "decreased",
+      vcNew / SIZE_1M, lvlv, lvla);
+
+    m_VideoPlayerVideo->SetMaxDataSize(vcNew);
+  }
+
+  if (acNew != acOld)
+  {
+    CLog::Log(LOGDEBUG, LOGAVTIMING,
+      "CVideoPlayer::{} {} audio buffer to: {:.01f}MB, level video/audio: {:d}%/{:d}%",
+      __FUNCTION__, (acNew > acOld) ? "increased" : "decreased",
+      static_cast<double>(acNew) / SIZE_1M, lvlv, lvla);
+
+    m_VideoPlayerAudio->SetMaxDataSize(acNew);
+  }
+}
+
 bool CVideoPlayer::IsValidStream(const CCurrentStream& stream)
 {
   if(stream.id<0)
@@ -1665,6 +1789,8 @@ void CVideoPlayer::Process()
 
     // update player state
     UpdatePlayState(200);
+
+    HandleDynamicBufferLevel();
 
     // make sure we run subtitle process here
     m_VideoPlayerSubtitle->Process(m_clock.GetClock() + m_State.time_offset - m_VideoPlayerVideo->GetSubtitleDelay(), m_State.time_offset);

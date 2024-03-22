@@ -64,8 +64,8 @@ CVideoPlayerAudio::CVideoPlayerAudio(CDVDClock* pClock,
   m_prevskipped = false;
   m_maxspeedadjust = 0.0;
 
-  // allows max bitrate of 18 Mbit/s (TrueHD max peak) during m_messageQueueTimeSize seconds
-  m_messageQueue.SetMaxDataSize(32 * messageQueueTimeSize / 8 * 1024 * 1024);
+  // queue data size is dynamical changed by stream
+  m_messageQueue.SetMaxDataSize(LvLAudioMIN);
   m_messageQueue.SetMaxTimeSize(messageQueueTimeSize);
 
   m_disconAdjustTimeMs = processInfo.GetMaxPassthroughOffSyncDuration();
@@ -206,7 +206,9 @@ void CVideoPlayerAudio::OnStartup()
 void CVideoPlayerAudio::UpdatePlayerInfo()
 {
   std::ostringstream s;
-  s << "aq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% (" << std::setw(2) << std::min(99,m_messageQueue.GetLevel(true)) << "%)";
+  s << "aq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% ("
+    << std::setw(2) << std::min(99,m_messageQueue.GetLevel(true)) << "%, "
+    << std::fixed << std::setprecision(1) << static_cast<double>(m_messageQueue.GetMaxDataSize()) / SIZE_1M << "MB)";
   s << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
   s << "s, Kb/s:" << std::fixed << std::setprecision(2) << m_audioStats.GetBitrate() / 1024.0;
   s << ", ac:"   << m_processInfo.GetAudioDecoderName().c_str();
