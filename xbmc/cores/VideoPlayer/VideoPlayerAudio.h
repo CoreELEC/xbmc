@@ -68,6 +68,10 @@ public:
   bool IsStalled() const override { return m_stalled;  }
   bool IsPassthrough() const override;
 
+  int  GetDataLevel() const { return m_messageQueue.GetLevel(true); }
+  void SetMaxDataSize(int iMaxDataSize) { m_messageQueue.SetMaxDataSize(iMaxDataSize); }
+  int GetMaxDataSize() const { return m_messageQueue.GetMaxDataSize(); }
+
 protected:
 
   void OnStartup() override;

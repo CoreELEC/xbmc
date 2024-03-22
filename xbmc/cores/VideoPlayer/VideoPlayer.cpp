@@ -1109,6 +1109,109 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
   return false;
 }
 
+void CVideoPlayer::HandleDynamicBufferLevel()
+{
+  int lvlv = m_VideoPlayerVideo->GetDataLevel();
+  int lvla = m_VideoPlayerAudio->GetDataLevel();
+  int lvlvcmax = m_VideoPlayerVideo->GetMaxDataSize();
+  int lvlacmax = m_VideoPlayerAudio->GetMaxDataSize();
+  int lvlvcnew = lvlvcmax;
+  int lvlacnew = lvlacmax;
+
+  int lvldif = std::abs(lvlv - lvla);
+  bool lvlfull(std::max(lvlv, lvla) > 99);
+
+  int lvstep = 4 * SIZE_1M;
+  int lastep = 512 * SIZE_1K;
+
+  // one buffer is > 99% and difference between them is > 15%
+  // increase the full buffer to lift up the other
+  if (lvlfull && lvldif > 15 && lvlv > 0 && lvla > 0)
+  {
+    // video buffer is > 99%
+    if (lvlv > 99)
+    {
+      // video buffer still can be increased?
+      if (lvlvcmax + lvstep <= LvLVideoMAX)
+        lvlvcnew = lvlvcmax + lvstep;
+    }
+    // audio buffer is > 99%
+    else if (lvla > 99)
+    {
+      // audio buffer still can be increased?
+      if (lvlacmax + lastep <= LvLAudioMAX)
+        lvlacnew = lvlacmax + lastep;
+    }
+  }
+  // both buffer are > 99%
+  // increase both buffer
+  else if ((lvlv > 99) && (lvla > 99))
+  {
+    // video buffer still can be increased?
+    if (lvlvcmax + lvstep <= LvLVideoMAX)
+      lvlvcnew = lvlvcmax + lvstep;
+
+    // audio buffer still can be increased?
+    if (lvlacmax + lastep <= LvLAudioMAX)
+      lvlacnew = lvlacmax + lastep;
+  }
+  // both buffer are < 99% and difference is < 2%
+  // both buffer are < 99% and the level of both is < 85%
+  else if (!lvlfull && (lvldif < 2 || (100 - lvlv > 15 && 100 - lvla > 15)))
+  {
+    // left free level of video buffer > one level video step in %
+    if ((100 - lvlv) > (100 / lvlvcmax * lvstep))
+    {
+      // video buffer still can be decreased?
+      if (lvlvcmax - lvstep >= LvLVideoMIN)
+        lvlvcnew = lvlvcmax - lvstep;
+    }
+
+    // left free level of audio buffer > one level audio step in %
+    if ((100 - lvla) > (100 / lvlacmax * lastep))
+    {
+      // audio buffer still can be decreased?
+      if (lvlacmax - lastep >= LvLAudioMIN)
+        lvlacnew = lvlacmax - lastep;
+    }
+  }
+
+  // video buffer level is < 5% and current video buffer limit is > minimal video buffer level
+  if (lvlv < 5 && lvlvcmax > LvLVideoMIN)
+  {
+    if ((100 - lvlv) > (100 / lvlvcmax * lvstep))
+    {
+      if (lvlvcmax - lvstep >= LvLVideoMIN)
+        lvlvcnew = lvlvcmax - lvstep;
+    }
+  }
+
+  // audio buffer level is < 5% and current audio buffer limit is > minimal audio buffer level
+  if (lvla < 5 && lvlacmax > LvLAudioMIN)
+  {
+    if ((100 - lvla) > (100 / lvlacmax * lastep))
+    {
+      if (lvlacmax - lastep >= LvLAudioMIN)
+        lvlacnew = lvlacmax - lastep;
+    }
+  }
+
+  // apply new buffer level limits to message queues
+  if (lvlvcnew != lvlvcmax)
+  {
+    CLog::Log(LOGDEBUG, LOGAVTIMING, "CVideoPlayer::{} {} video buffer to: {:d}MB, level video/audio: {:d}%/{:d}%", __FUNCTION__,
+      (lvlvcnew > lvlvcmax) ? "increased" : "decreased", lvlvcnew / SIZE_1M, lvlv, lvla);
+    m_VideoPlayerVideo->SetMaxDataSize(lvlvcnew);
+  }
+
+  if (lvlacnew != lvlacmax)
+  {
+    CLog::Log(LOGDEBUG, LOGAVTIMING, "CVideoPlayer::{} {} audio buffer to: {:.01f}MB, level video/audio: {:d}%/{:d}%", __FUNCTION__,
+      (lvlacnew > lvlacmax) ? "increased" : "decreased", static_cast<double>(lvlacnew) / SIZE_1M, lvlv, lvla);
+    m_VideoPlayerAudio->SetMaxDataSize(lvlacnew);
+  }
+}
+
 bool CVideoPlayer::IsValidStream(const CCurrentStream& stream)
 {
   if(stream.id<0)
@@ -1436,6 +1539,8 @@ void CVideoPlayer::Process()
 
     // update player state
     UpdatePlayState(200);
+
+    HandleDynamicBufferLevel();
 
     // make sure we run subtitle process here
     m_VideoPlayerSubtitle->Process(m_clock.GetClock() + m_State.time_offset - m_VideoPlayerVideo->GetSubtitleDelay(), m_State.time_offset);
