@@ -70,6 +70,10 @@ public:
   bool IsPassthrough() const override;
   void OnPlaybackStart() override { m_playbackStart = true; }
 
+  int  GetDataLevel() const { return m_messageQueue.GetLevel(true); }
+  void SetMaxDataSize(int iMaxDataSize) { m_messageQueue.SetMaxDataSize(iMaxDataSize); }
+  int GetMaxDataSize() const { return m_messageQueue.GetMaxDataSize(); }
+
 protected:
 
   void OnStartup() override;
