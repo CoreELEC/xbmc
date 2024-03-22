@@ -454,6 +454,7 @@ protected:
   void SendPlayerMessage(std::shared_ptr<CDVDMsg> pMsg, unsigned int target);
 
   bool ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream);
+  void HandleDynamicBufferLevel();
   bool IsValidStream(const CCurrentStream& stream);
   bool IsBetterStream(const CCurrentStream& current, CDemuxStream* stream);
   void CheckBetterStream(CCurrentStream& current, CDemuxStream* stream);
