@@ -350,6 +350,7 @@ void CVideoPlayerVideo::Process()
 
   std::string vfmt;
   int vfmtCheckCount = 0;
+  int timeoutCount = 0;
 
   m_videoStats.Start();
   m_droppingStats.Reset();
@@ -360,7 +361,7 @@ void CVideoPlayerVideo::Process()
   while (!m_bStop)
   {
     auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::duration<double, std::micro>(m_stalled ? frametime : frametime * 10));
+        std::chrono::duration<double, std::micro>(frametime));
     int iPriority = 0;
 
     if (m_syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
@@ -389,6 +390,9 @@ void CVideoPlayerVideo::Process()
     }
     else if (ret == MSGQ_TIMEOUT)
     {
+      // increase timeout count
+      timeoutCount++;
+
       if (m_outputSate == OUTPUT_AGAIN &&
           m_picture.videoBuffer)
       {
@@ -412,12 +416,13 @@ void CVideoPlayerVideo::Process()
         if (ProcessDecoderOutput(frametime, pts))
         {
           onlyPrioMsgs = true;
+          timeoutCount = 0;
           continue;
         }
       }
 
       // if we only wanted priority messages, this isn't a stall
-      if (iPriority)
+      if (iPriority || timeoutCount < 10)
         continue;
 
       //Okey, start rendering at stream fps now instead, we are likely in a stillframe
