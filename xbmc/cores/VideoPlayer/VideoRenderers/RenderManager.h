@@ -109,6 +109,7 @@ public:
    */
   int WaitForBuffer(volatile std::atomic_bool& bStop,
                     std::chrono::milliseconds timeout = std::chrono::milliseconds(100));
+  bool BufferEmpty();
 
   /**
    * Can be called by player for lateness detection. This is done best by
@@ -214,6 +215,7 @@ protected:
   StreamHdrType m_hdrType = StreamHdrType::HDR_TYPE_NONE;
   int m_NumberBuffers = 0;
   std::string m_stereomode;
+  int m_BufferLevel;
 
   int m_lateframes = -1;
   double m_presentpts = 0.0;
