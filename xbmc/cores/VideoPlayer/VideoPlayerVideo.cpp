@@ -71,10 +71,8 @@ CVideoPlayerVideo::CVideoPlayerVideo(CDVDClock* pClock,
   m_iDroppedRequest = 0;
   m_fForcedAspectRatio = 0;
 
-  const int sizeMB = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-      CSettings::SETTING_VIDEOPLAYER_QUEUEDATASIZE);
-
-  m_messageQueue.SetMaxDataSize(sizeMB * 1024 * 1024);
+  // queue data size is dynamical changed by stream
+  m_messageQueue.SetMaxDataSize(LvLVideoMIN);
   m_messageQueue.SetMaxTimeSize(messageQueueTimeSize);
 
   m_iDroppedFrames = 0;
@@ -1103,7 +1101,8 @@ std::string CVideoPlayerVideo::GetPlayerInfo()
   s << "vq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% (" << std::setw(2) << std::min(99, m_messageQueue.GetLevel(true));
   if (m_pVideoCodec && m_processInfo.IsVideoHwDecoder())
     s << "%/" << std::setw(2) << std::min(99, m_pVideoCodec->GetDataLevel());
-  s << "%)" << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
+  s << "%, " << std::setw(3) << m_messageQueue.GetMaxDataSize() / SIZE_1M << "MB)";
+  s << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
   s << "s, Mb/s:" << std::fixed << std::setprecision(2)
     << static_cast<double>(GetVideoBitrate()) / (1024.0 * 1024.0);
   s << ", dc:"   << m_processInfo.GetVideoDecoderName().c_str();
