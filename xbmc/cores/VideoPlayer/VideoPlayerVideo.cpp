@@ -342,16 +342,18 @@ void CVideoPlayerVideo::Process()
 
   std::string vfmt;
   int vfmtCheckCount = 0;
+  int timeoutCount = 0;
 
   m_videoStats.Start();
   m_droppingStats.Reset();
   m_iDroppedFrames = 0;
   m_rewindStalled = false;
   m_outputSate = OUTPUT_NORMAL;
+  m_last_pts = DVD_NOPTS_VALUE;
 
   while (!m_bStop)
   {
-    int iQueueTimeOut = (int)(m_stalled ? frametime : frametime * 10) / 1000;
+    int iQueueTimeOut = (int)(frametime) / 1000;
     int iPriority = 0;
 
     if (m_syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
@@ -380,6 +382,9 @@ void CVideoPlayerVideo::Process()
     }
     else if (ret == MSGQ_TIMEOUT)
     {
+      // increase timeout count
+      timeoutCount++;
+
       if (m_outputSate == OUTPUT_AGAIN &&
           m_picture.videoBuffer)
       {
@@ -402,13 +407,13 @@ void CVideoPlayerVideo::Process()
       {
         if (ProcessDecoderOutput(frametime, pts))
         {
-          onlyPrioMsgs = true;
+          timeoutCount = 0;
           continue;
         }
       }
 
       // if we only wanted priority messages, this isn't a stall
-      if (iPriority)
+      if (iPriority || timeoutCount < 10)
         continue;
 
       //Okey, start rendering at stream fps now instead, we are likely in a stillframe
@@ -429,6 +434,7 @@ void CVideoPlayerVideo::Process()
       }
 
       // Waiting timed out, output last picture
+      CLog::Log(LOGDEBUG, "CVideoPlayerVideo({:d}) - MSGQ_TIMEOUT", __LINE__);
       if (m_picture.videoBuffer)
       {
         m_picture.pts = pts;
@@ -986,6 +992,10 @@ CVideoPlayerVideo::EOutputState CVideoPlayerVideo::OutputPicture(const VideoPict
   int buffer = m_renderManager.WaitForBuffer(m_bAbortOutput, maxWaitTime);
   CLog::Log(LOGDEBUG,"CVideoPlayerVideo::{} - ttd:{:d}ms pts:{:.3f} Clock:{:.3f} Level:{:d}",
         __FUNCTION__, timeToDisplay.count(), pPicture->pts / DVD_TIME_BASE, static_cast<double>(iPlayingClock) / DVD_TIME_BASE, buffer);
+
+  // backup last output frame pts
+  m_last_pts = pPicture->pts;
+
   if (buffer < 0)
   {
     if (m_speed != DVD_PLAYSPEED_PAUSE)

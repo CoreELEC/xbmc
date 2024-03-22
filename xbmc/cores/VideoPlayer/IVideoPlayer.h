@@ -9,6 +9,7 @@
 #pragma once
 
 #include "DVDClock.h"
+#include "cores/VideoPlayer/Interface/TimingConstants.h"
 
 #include <string>
 #include <utility>
@@ -109,6 +110,7 @@ public:
   virtual int  GetDataLevel() const = 0;
   virtual void SetMaxDataSize(int iMaxDataSize) {}
   virtual int GetMaxDataSize() const = 0;
+  virtual double GetLastPTS() const { return DVD_NOPTS_VALUE; }
 };
 
 class CDVDAudioCodec;

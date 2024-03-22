@@ -1336,6 +1336,7 @@ void CVideoPlayer::Prepare()
   m_offset_pts = 0;
   m_CurrentAudio.lastdts = DVD_NOPTS_VALUE;
   m_CurrentVideo.lastdts = DVD_NOPTS_VALUE;
+  m_CurrentVideo.lastpts = DVD_NOPTS_VALUE;
 
   IPlayerCallback *cb = &m_callback;
   CFileItem fileItem = m_item;
@@ -1640,6 +1641,17 @@ void CVideoPlayer::Process()
         continue;
       }
 
+      // while players are still playing, keep going to allow seekbacks
+      double frame_last_pts = m_VideoPlayerVideo->GetLastPTS();
+      if (m_VideoPlayerAudio->HasData() ||
+          m_VideoPlayerVideo->HasData() ||
+          (frame_last_pts != DVD_NOPTS_VALUE && m_CurrentVideo.lastpts != DVD_NOPTS_VALUE &&
+           frame_last_pts < m_CurrentVideo.lastpts))
+      {
+        CThread::Sleep(100ms);
+        continue;
+      }
+
       if (m_CurrentVideo.inited)
       {
         m_VideoPlayerVideo->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::VIDEO_DRAIN));
@@ -1654,14 +1666,6 @@ void CVideoPlayer::Process()
 
       // if we are caching, start playing it again
       SetCaching(CACHESTATE_DONE);
-
-      // while players are still playing, keep going to allow seekbacks
-      if (m_VideoPlayerAudio->HasData() ||
-          m_VideoPlayerVideo->HasData())
-      {
-        CThread::Sleep(100ms);
-        continue;
-      }
 
       if (!m_pInputStream->IsEOF())
         CLog::Log(LOGINFO, "{} - eof reading from demuxer", __FUNCTION__);
@@ -1843,6 +1847,7 @@ void CVideoPlayer::ProcessVideoData(CDemuxStream* pStream, DemuxPacket* pPacket)
     m_clock.Discontinuity(pPacket->pts - DVD_TIME_BASE/2);
 
   m_CurrentVideo.lastdts = pPacket->dts;
+  m_CurrentVideo.lastpts = pPacket->pts;
   CLog::Log(LOGDEBUG, "CVideoPlayer::ProcessVideoData size:{:d} dts:{:.3f} pts:{:.3f} dur:{:.3f}ms, clock:{:.3f} level:{:d}",
     pPacket->iSize, pPacket->dts/1000000, pPacket->pts/1000000, pPacket->duration/1000.0,
     m_clock.GetClock()/1000000.0,m_processInfo->GetLevelVQ());
@@ -4137,6 +4142,7 @@ void CVideoPlayer::FlushBuffers(double pts, bool accurate, bool sync)
   }
 
   m_CurrentVideo.lastdts = DVD_NOPTS_VALUE;
+  m_CurrentVideo.lastpts = DVD_NOPTS_VALUE;
   UpdatePlayState(0);
 
   m_demuxerSpeed = DVD_PLAYSPEED_NORMAL;

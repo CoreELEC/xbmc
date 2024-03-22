@@ -126,6 +126,7 @@ public:
   const int player;
   // stuff to handle starting after seek
   double startpts;
+  double lastpts;
   double lastdts;
 
   enum
