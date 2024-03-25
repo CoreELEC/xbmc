@@ -129,7 +129,6 @@
           <constraints>
             <options>
               <option label="20420">9999</option>   <!-- Never -->
-              <option label="20423">9998</option>   <!-- Exclude 24p -->
               <option label="39000">800</option>  <!-- HD -->
               <option label="20422">0</option>  <!-- Always -->
             </options>
@@ -196,7 +195,7 @@
           <constraints>
             <options>
               <option label="20420">9999</option>   <!-- Never -->
-              <option label="39037">9998</option>  <!-- Interlaced Only -->
+              <option label="39037">9998</option>  <!-- Exclude 24p -->
               <option label="39000">800</option>  <!-- HD -->
               <option label="20422">0</option>  <!-- Always -->
             </options>
