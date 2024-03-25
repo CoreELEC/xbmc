@@ -22961,6 +22961,11 @@ msgctxt "#39003"
 msgid "Accelerate h264"
 msgstr ""
 
+#: system/settings/settings.xml
+msgctxt "#39004"
+msgid "Accelerate VC1"
+msgstr ""
+
 #. Description of category "Library" with label #14202
 #: system/settings/settings.xml
 msgctxt "#39004"
