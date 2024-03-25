@@ -22948,7 +22948,7 @@ msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#39037"
-msgid "Interlaced only"
+msgid "Exclude 24p"
 msgstr ""
 
 #: system/settings/settings.xml
