@@ -233,7 +233,7 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
         if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECVC1)!=9998) {
           CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::vc1 size check failed {:d}",CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECVC1));
           goto FAIL;
-        } else if (m_hints.fpsrate!=29.97) {
+        } else if (m_hints.fpsrate!=(60000/1001)) {
             CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::vc1 size check failed {:d}",CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECVC1));
             goto FAIL;
         }
