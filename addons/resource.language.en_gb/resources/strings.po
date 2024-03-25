@@ -22947,6 +22947,11 @@ msgid "HD and up"
 msgstr ""
 
 #: system/settings/settings.xml
+msgctxt "#39037"
+msgid "Interlaced only"
+msgstr ""
+
+#: system/settings/settings.xml
 msgctxt "#39001"
 msgid "Accelerate MPEG2"
 msgstr ""
@@ -22962,7 +22967,7 @@ msgid "Accelerate h264"
 msgstr ""
 
 #: system/settings/settings.xml
-msgctxt "#39004"
+msgctxt "#39036"
 msgid "Accelerate VC1"
 msgstr ""
 
