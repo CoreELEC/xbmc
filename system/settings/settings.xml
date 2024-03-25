@@ -129,6 +129,7 @@
           <constraints>
             <options>
               <option label="20420">9999</option>   <!-- Never -->
+              <option label="20423">9998</option>   <!-- Interlaced -->
               <option label="39000">800</option>  <!-- HD -->
               <option label="20422">0</option>  <!-- Always -->
             </options>
