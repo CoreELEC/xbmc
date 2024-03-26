@@ -144,6 +144,7 @@ constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODEC;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODECMPEG2;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODECMPEG4;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODECH264;
+constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEAMCODECVC1;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEMEDIACODEC;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEMEDIACODECSURFACE;
 constexpr const char* CSettings::SETTING_VIDEOPLAYER_USEVDPAU;
