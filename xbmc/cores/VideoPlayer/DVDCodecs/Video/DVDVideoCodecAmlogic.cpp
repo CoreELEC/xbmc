@@ -227,6 +227,18 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       CLog::Log(LOGDEBUG, "{}::{} - amcodec does not support RMVB", __MODULE_NAME__, __FUNCTION__);
       goto FAIL;
     case AV_CODEC_ID_VC1:
+      if (m_hints.width <= CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECVC1)) 
+      {
+        if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECVC1) != 9998) 
+        {
+          CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::vc1 size check failed {:d}",CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECVC1));
+          goto FAIL;
+        } else if (m_hints.fpsrate <= 24000) 
+        {
+            CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::vc1 size check failed {:d}",CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECVC1));
+            goto FAIL;
+        }
+      }	
       m_pFormatName = "am-vc1";
       break;
     case AV_CODEC_ID_WMV3:

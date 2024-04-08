@@ -23243,6 +23243,11 @@ msgid "HD and up"
 msgstr ""
 
 #: system/settings/settings.xml
+msgctxt "#39037"
+msgid "Exclude 24p"
+msgstr ""
+
+#: system/settings/settings.xml
 msgctxt "#39001"
 msgid "Accelerate MPEG2"
 msgstr ""
@@ -23255,6 +23260,11 @@ msgstr ""
 #: system/settings/settings.xml
 msgctxt "#39003"
 msgid "Accelerate h264"
+msgstr ""
+ 
+#: system/settings/settings.xml
+msgctxt "#39036"
+msgid "Accelerate VC1"
 msgstr ""
 
 #. Description of category "Library" with label #14202
