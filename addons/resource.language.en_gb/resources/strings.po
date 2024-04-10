@@ -23261,7 +23261,7 @@ msgstr ""
 msgctxt "#39003"
 msgid "Accelerate h264"
 msgstr ""
- 
+
 #: system/settings/settings.xml
 msgctxt "#39036"
 msgid "Accelerate VC1"
