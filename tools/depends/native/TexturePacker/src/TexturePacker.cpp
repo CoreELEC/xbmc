@@ -53,6 +53,9 @@
 
 #define DIR_SEPARATOR '/'
 
+#define verbose_print(fmt, ...) \
+            do { if (verbose) printf(fmt, ##__VA_ARGS__); } while (0)
+
 namespace
 {
 
@@ -85,6 +88,7 @@ void Usage()
   puts("  -input <dir>     Input directory. Default: current dir");
   puts("  -output <dir>    Output directory/filename. Default: Textures.xbt");
   puts("  -dupecheck       Enable duplicate file detection. Reduces output file size. Default: off");
+  puts("  -verbose         Verbose");
 }
 
 } // namespace
@@ -97,7 +101,7 @@ public:
 
   void EnableDupeCheck() { m_dupecheck = true; }
 
-  void EnableVerboseOutput() { decoderManager.EnableVerboseOutput(); }
+  void EnableVerboseOutput() { decoderManager.EnableVerboseOutput(); verbose = true; }
 
   int createBundle(const std::string& InputDir, const std::string& OutputFile);
 
@@ -123,6 +127,7 @@ private:
 
   bool m_dupecheck{false};
   unsigned int m_flags{0};
+  bool verbose{false};
 };
 
 void TexturePacker::CreateSkeletonHeader(CXBTFWriter& xbtfWriter,
@@ -415,7 +420,7 @@ int TexturePacker::createBundle(const std::string& InputDir, const std::string& 
     for (unsigned int j = 0; j < frames.frameList.size(); j++)
       ReduceChannels(frames.frameList[j].rgbaImage);
 
-    printf("%s\n", output.c_str());
+    verbose_print("%s\n", output.c_str());
     bool skip=false;
     if (m_dupecheck)
     {
@@ -425,7 +430,7 @@ int TexturePacker::createBundle(const std::string& InputDir, const std::string& 
 
       if (CheckDupe(&ctx, i))
       {
-        printf("****  duplicate of %s\n", files[m_dupes[i]].GetPath().c_str());
+        verbose_print("****  duplicate of %s\n", files[m_dupes[i]].GetPath().c_str());
         file.GetFrames().insert(file.GetFrames().end(),
                                 files[m_dupes[i]].GetFrames().begin(),
                                 files[m_dupes[i]].GetFrames().end());
@@ -443,11 +448,11 @@ int TexturePacker::createBundle(const std::string& InputDir, const std::string& 
       {
         CXBTFFrame frame = CreateXBTFFrame(frames.frameList[j], writer);
         file.GetFrames().push_back(frame);
-        printf("    frame %4i (delay:%4i)                         %s%c (%d,%d @ %" PRIu64
-               " bytes)\n",
-               j, frame.GetDuration(), GetFormatString(frame.GetKDFormat()),
-               frame.HasAlpha() ? ' ' : '*', frame.GetWidth(), frame.GetHeight(),
-               frame.GetUnpackedSize());
+        verbose_print("    frame %4i (delay:%4i)                         %s%c (%d,%d @ %" PRIu64
+                      " bytes)\n",
+                      j, frame.GetDuration(), GetFormatString(frame.GetKDFormat()),
+                      frame.HasAlpha() ? ' ' : '*', frame.GetWidth(), frame.GetHeight(),
+                      frame.GetUnpackedSize());
       }
     }
     file.SetLoop(0);
