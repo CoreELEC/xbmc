@@ -252,4 +252,6 @@ protected:
     bool m_enabled;
   };
   CClockSync m_clockSync;
+
+  std::chrono::time_point<std::chrono::system_clock> m_videostarted;
 };
