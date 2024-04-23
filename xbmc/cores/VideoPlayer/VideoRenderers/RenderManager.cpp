@@ -22,6 +22,7 @@
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "threads/SingleLock.h"
+#include "utils/AMLUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/XTimeUtils.h"
 #include "utils/log.h"
@@ -221,6 +222,7 @@ bool CRenderManager::Configure()
       m_free.push_back(i);
 
     m_bRenderGUI = true;
+    m_videostarted = std::chrono::system_clock::now();
     m_bTriggerUpdateResolution = true;
     m_presentstep = PRESENT_IDLE;
     m_presentpts = DVD_NOPTS_VALUE;
@@ -899,17 +901,21 @@ void CRenderManager::UpdateResolution()
   {
     if (CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenVideo() && CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenRoot())
     {
-      if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) != ADJUST_REFRESHRATE_OFF && m_fps > 0.0f)
+      auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - m_videostarted);
+      if (aml_video_started() || elapsed > 1000ms)
       {
-        RESOLUTION res = CResolutionUtils::ChooseBestResolution(m_fps, m_width, m_height, !m_stereomode.empty());
-        CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_hdrType);
-        CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(res, false);
-        UpdateLatencyTweak();
-        if (m_pRenderer)
-          m_pRenderer->Update();
+        if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) != ADJUST_REFRESHRATE_OFF && m_fps > 0.0f)
+        {
+          RESOLUTION res = CResolutionUtils::ChooseBestResolution(m_fps, m_width, m_height, !m_stereomode.empty());
+          CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_hdrType);
+          CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(res, false);
+          UpdateLatencyTweak();
+          if (m_pRenderer)
+            m_pRenderer->Update();
+        }
+        m_bTriggerUpdateResolution = false;
+        m_playerPort->VideoParamsChange();
       }
-      m_bTriggerUpdateResolution = false;
-      m_playerPort->VideoParamsChange();
     }
   }
 }
@@ -923,6 +929,7 @@ void CRenderManager::TriggerUpdateResolution(float fps, int width, int height, s
     m_height = height;
     m_stereomode = stereomode;
   }
+  m_videostarted = std::chrono::system_clock::now();
   m_bTriggerUpdateResolution = true;
 }
 
@@ -1193,6 +1200,9 @@ void CRenderManager::PrepareNextRender()
     m_presentsourcePast = -1;
     combined = true;
   }
+
+  //if (renderPts >= nextFramePts && !m_forceNext)
+  //  aml_video_mute(false);
 
   if (renderPts >= nextFramePts || m_forceNext)
   {
