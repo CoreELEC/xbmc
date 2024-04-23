@@ -2186,6 +2186,9 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type)
 
   CSysfsPath("/sys/class/video/freerun_mode", 1);
 
+  // set video mute to hide waste frames
+  //aml_video_mute(true);
+
   m_opened = true;
   // vcodec is open, update speed if it was
   // changed before VideoPlayer called OpenDecoder.
