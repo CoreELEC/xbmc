@@ -107,6 +107,7 @@ public:
   void              Close(void);
   bool NeedConvert(void) const { return m_convert_bitstream; }
   bool              Convert(uint8_t *pData, int iSize);
+  bool              Convert(uint8_t *pData_bl, int iSize_bl, uint8_t *pData_el, int iSize_el);
   uint8_t*          GetConvertBuffer(void) const;
   int               GetConvertSize() const;
   uint8_t* GetExtraData();
@@ -157,6 +158,7 @@ protected:
   omx_bitstream_ctx m_sps_pps_context;
   bool              m_convert_bitstream;
   bool              m_to_annexb;
+  bool              m_combine;
 
   FFmpegExtraData m_extraData;
   bool              m_convert_3byteTo4byteNALSize;
