@@ -386,6 +386,103 @@ bool CBitstreamConverter::Convert(uint8_t* pData, int iSize)
   return m_convert_bitstream && BitstreamConvert(pData, iSize);
 }
 
+bool CBitstreamConverter::Convert(uint8_t* pData_bl,
+                                  int iSize_bl,
+                                  uint8_t* pData_el,
+                                  int iSize_el)
+{
+  if (m_convertBuffer)
+  {
+    av_free(m_convertBuffer);
+    m_convertBuffer = NULL;
+  }
+  m_convertSize = 0;
+  m_inputBuffer = nullptr;
+  m_inputSize = 0;
+
+  if (!pData_bl || !pData_el)
+    return true;
+
+  const auto forEachNal = [this](const uint8_t* data, int size, const auto& func)
+  {
+    const uint8_t* const end = data + size;
+    if (m_convert_bitstream)
+    {
+      while (end - data > m_nalLengthSize)
+      {
+        uint32_t nalSize = 0;
+        for (uint8_t i = 0; i < m_nalLengthSize; ++i)
+          nalSize = (nalSize << 8) | *data++;
+        nalSize = std::min<uint32_t>(nalSize, static_cast<uint32_t>(end - data));
+        if (nalSize)
+          func(data, nalSize);
+        data += nalSize;
+      }
+      return;
+    }
+
+    const uint8_t* nal = avc_find_startcode(data, end);
+    while (nal < end)
+    {
+      while (nal < end && !*nal)
+        ++nal;
+      if (nal >= end || *nal++ != 1 || nal >= end)
+        break;
+      const uint8_t* next = avc_find_startcode(nal, end);
+      func(nal, static_cast<uint32_t>(next - nal));
+      nal = next;
+    }
+  };
+
+  std::vector<uint8_t> output;
+  const auto append = [&output](const uint8_t* nal, uint32_t size,
+                                std::initializer_list<uint8_t> startCode)
+  {
+    output.insert(output.end(), startCode);
+    output.insert(output.end(), nal, nal + size);
+  };
+
+  forEachNal(pData_bl, iSize_bl,
+             [&](const uint8_t* nal, uint32_t size)
+             {
+               if (output.empty())
+                 append(nal, size, {0, 0, 0, 1});
+               else
+                 append(nal, size, {0, 0, 1});
+             });
+
+  // the enhancement layer goes into the base layer package as NAL type 63
+  forEachNal(pData_el, iSize_el,
+             [&](const uint8_t* nal, uint32_t size)
+             {
+               if (((*nal >> 1) & 0x3f) == HEVC_NAL_UNSPEC62)
+               {
+#ifdef HAVE_LIBDOVI
+                 const DoviData* rpuData = processDoviRpu(const_cast<uint8_t*>(nal), size);
+                 if (rpuData)
+                 {
+                   append(rpuData->data, static_cast<uint32_t>(rpuData->len), {0, 0, 0, 1});
+                   dovi_data_free(rpuData);
+                   return;
+                 }
+#endif
+                 append(nal, size, {0, 0, 0, 1});
+               }
+               else if (!m_convert_dovi)
+                 append(nal, size, {0, 0, 1, HEVC_NAL_UNSPEC63 << 1, 1});
+             });
+
+  if (output.empty())
+    return true;
+
+  m_convertBuffer = static_cast<uint8_t*>(av_memdup(output.data(), output.size()));
+  if (!m_convertBuffer)
+    return false;
+
+  m_convertSize = static_cast<int>(output.size());
+  return true;
+}
+
 uint8_t* CBitstreamConverter::GetConvertBuffer() const
 {
   return m_inputBuffer ? m_inputBuffer : m_convertBuffer;
