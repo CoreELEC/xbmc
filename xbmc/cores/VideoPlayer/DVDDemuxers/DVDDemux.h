@@ -121,6 +121,8 @@ public:
 
   int uniqueId{0}; // unique stream id
   int dvdNavId{0};
+  bool isDualStream{false};
+  bool isELPackage{false};
   int64_t demuxerId{-1}; // id of the associated demuxer
   AVCodecID codec{AV_CODEC_ID_NONE};
   unsigned int codec_fourcc{0}; // if available
@@ -179,6 +181,8 @@ public:
   std::string stereo_mode; // expected stereo mode
   StreamHdrType hdr_type = StreamHdrType::HDR_TYPE_NONE; // type of HDR for this stream (hdr10, etc)
   AVDOVIDecoderConfigurationRecord dovi{};
+  bool isDualStream{false};
+  bool isELStream{false};
 };
 
 class CDemuxStreamAudio : public CDemuxStream
