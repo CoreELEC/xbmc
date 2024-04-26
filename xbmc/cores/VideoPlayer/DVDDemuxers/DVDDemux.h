@@ -96,6 +96,8 @@ public:
 
   int uniqueId; // unique stream id
   int dvdNavId;
+  bool isDualStream;
+  bool isELPackage;
   int64_t demuxerId; // id of the associated demuxer
   AVCodecID codec = AV_CODEC_ID_NONE;
   unsigned int codec_fourcc; // if available
