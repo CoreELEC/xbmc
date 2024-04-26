@@ -181,7 +181,7 @@ std::unique_ptr<CTexture> CDVDFileInfo::ExtractThumbToTexture(const CFileItem& f
           if (!pPacket)
             break;
 
-          if (pPacket->iStreamId != nVideoStream)
+          if (pPacket->iStreamId != nVideoStream || pPacket->iId == 0x1015)
           {
             CDVDDemuxUtils::FreeDemuxPacket(pPacket);
             continue;

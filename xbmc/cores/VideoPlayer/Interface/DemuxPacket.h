@@ -26,6 +26,7 @@ extern "C"
       pData = nullptr;
       iSize = 0;
       iStreamId = -1;
+      iId = -1;
       demuxerId = -1;
       iGroupId = -1;
 

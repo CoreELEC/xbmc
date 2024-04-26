@@ -57,6 +57,9 @@ extern "C"
     /// @brief Identification of the stream.
     int iStreamId;
 
+    /// @brief Identification of the stream PID.
+    int iId;
+
     /// @brief Identification of the associated demuxer, this can be identical
     /// on several streams.
     int64_t demuxerId;

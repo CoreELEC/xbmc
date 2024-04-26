@@ -27,6 +27,7 @@
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "threads/SystemClock.h"
+#include "utils/AMLUtils.h"
 #include "utils/FontUtils.h"
 #include "utils/LangCodeExpander.h"
 #include "utils/StringUtils.h"
@@ -1724,13 +1725,43 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         size_t size = 0;
         uint8_t* side_data = nullptr;
 
-        if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION)
+        if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION && aml_dolby_vision_enabled())
         {
-          side_data = av_stream_get_side_data(pStream, AV_PKT_DATA_DOVI_CONF, &size);
-          if (side_data && size)
+          // force dovi configuration for m2ts
+          if (pStream->id != 0x1015)
           {
-            st->dovi = *reinterpret_cast<AVDOVIDecoderConfigurationRecord*>(side_data);
+            side_data = av_stream_get_side_data(pStream, AV_PKT_DATA_DOVI_CONF, &size);
+            if (side_data && size)
+              st->dovi = *reinterpret_cast<AVDOVIDecoderConfigurationRecord*>(side_data);
           }
+          else
+          {
+            for (auto& iter : m_streams)
+            {
+              CDemuxStream* bl_stream = iter.second;
+              if (bl_stream->iId == 0x1011)
+              {
+                CDemuxStreamVideo *bl_video_stream = static_cast<CDemuxStreamVideo*>(bl_stream);
+                bl_video_stream->dovi.dv_version_major = 1;
+                bl_video_stream->dovi.dv_version_minor = 0;
+                bl_video_stream->dovi.dv_profile = 7;
+                bl_video_stream->dovi.dv_level = 6;
+                bl_video_stream->dovi.rpu_present_flag = 1;
+                bl_video_stream->dovi.el_present_flag = 1;
+                bl_video_stream->dovi.bl_present_flag = 1;
+                bl_video_stream->dovi.dv_bl_signal_compatibility_id = 6;
+                bl_video_stream->hdr_type = StreamHdrType::HDR_TYPE_DOLBYVISION;
+                break;
+              }
+            }
+          }
+        }
+        else if (pStream->id == 0x1015)
+        {
+          CLog::Log(LOGDEBUG, "DVDDemuxFFmpeg::AddStream - discarding Dolby Vision stream from M2TS stream");
+          pStream->discard = AVDISCARD_ALL;
+          delete stream;
+          return nullptr;
         }
 
         side_data = av_stream_get_side_data(pStream, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, &size);
@@ -1933,7 +1964,7 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
     {
       // UHD BD have a secondary video stream called by Dolby as enhancement layer.
       // This is not used by streaming services and devices (ATV, Nvidia Shield, XONE).
-      if (pStream->id == 0x1015)
+      if (pStream->id == 0x1015 && !aml_dolby_vision_enabled())
       {
         CLog::Log(LOGDEBUG, "CDVDDemuxFFmpeg::AddStream - discarding Dolby Vision stream");
         pStream->discard = AVDISCARD_ALL;
@@ -1991,6 +2022,7 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
 
     stream->uniqueId = pStream->index;
     stream->demuxerId = m_demuxerId;
+    stream->iId = pStream->id;
 
     AddStream(stream->uniqueId, stream);
     return stream;
@@ -2577,8 +2609,9 @@ void CDVDDemuxFFmpeg::GetL16Parameters(int &channels, int &samplerate)
 StreamHdrType CDVDDemuxFFmpeg::DetermineHdrType(AVStream* pStream)
 {
   StreamHdrType hdrType = StreamHdrType::HDR_TYPE_NONE;
+  bool convert_m2ts(pStream->id == 0x1015 && aml_dolby_vision_enabled());
 
-  if (av_stream_get_side_data(pStream, AV_PKT_DATA_DOVI_CONF, nullptr)) // DoVi
+  if (av_stream_get_side_data(pStream, AV_PKT_DATA_DOVI_CONF, nullptr) || convert_m2ts) // DoVi
     hdrType = StreamHdrType::HDR_TYPE_DOLBYVISION;
   else if (pStream->codecpar->color_trc == AVCOL_TRC_SMPTE2084) // HDR10
     hdrType = StreamHdrType::HDR_TYPE_HDR10;
