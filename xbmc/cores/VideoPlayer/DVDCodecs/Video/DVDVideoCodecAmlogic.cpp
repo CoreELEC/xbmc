@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include "DVDCodecs/DVDFactoryCodec.h"
+#include "utils/MemUtils.h"
 #include "DVDVideoCodecAmlogic.h"
 #include "cores/VideoPlayer/Interface/TimingConstants.h"
 #include "DVDStreamInfo.h"
@@ -396,19 +397,61 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
   // it will be discarded as VideoPlayerVideo has no concept of "try again".
 
   uint8_t *pData(packet.pData);
-  int iSize(packet.iSize);
+  uint32_t iSize(packet.iSize);
   enum ELType dovi_el_type = ELType::TYPE_NONE;
+  int data_added = false;
+  auto package = m_packages.find(packet.dts);
+  bool is_m2ts((packet.iId == 0x1011 || packet.iId == 0x1015) && m_hints.dovi.dv_profile == 7);
 
   if (pData)
   {
     if (m_bitstream)
     {
-      if (!m_bitstream->Convert(pData, iSize))
-        return true;
+      if (is_m2ts && aml_dolby_vision_enabled())
+      {
+        CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: package with iId 0x{:x}, size {}, dts: {:3.f}, pts: {:3.f} arrived, map {} empty", __FUNCTION__,
+          packet.iId, iSize, packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, m_packages.empty() ? "is" : "is not");
+
+        if (package != m_packages.end())
+        {
+          // convert bl and el package to single package
+          uint8_t *pDataBackup = package->second.first;
+          uint32_t iSizeBackup = package->second.second;
+
+          if (packet.iId == 0x1011)
+          {
+            CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: found EL package with dts: {:3.f}, pts: {:3.f} and size {} in map", __FUNCTION__,
+              packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, iSizeBackup);
+            m_bitstream->Convert(pData, iSize, pDataBackup, iSizeBackup);
+          }
+          else
+          {
+            CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: found BL package with dts: {:3.f}, pts: {:3.f} and size {} in map", __FUNCTION__,
+              packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, iSizeBackup);
+            m_bitstream->Convert(pDataBackup, iSizeBackup, pData, iSize);
+          }
+        }
+        else
+        {
+          // backup package and don't send to decoder yet
+          uint8_t *pDataBackup = static_cast<uint8_t*>(KODI::MEMORY::AlignedMalloc(packet.iSize + AV_INPUT_BUFFER_PADDING_SIZE, 16));
+          memcpy(pDataBackup, packet.pData, packet.iSize);
+          m_packages.insert(std::make_pair(packet.dts, std::make_pair(pDataBackup, iSize)));
+          CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: did add package with dts: {:3.f}, pts: {:3.f} and size {} in map", __FUNCTION__,
+            packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, packet.iSize);
+
+          return true;
+        }
+      }
+      else
+      {
+        if (!m_bitstream->Convert(pData, iSize))
+          return true;
+      }
 
       if (!m_bitstream->CanStartDecode())
       {
-        CLog::Log(LOGDEBUG, "{}::Decode waiting for keyframe (bitstream)", __MODULE_NAME__);
+        CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::{}: waiting for keyframe (bitstream)", __FUNCTION__);
         return true;
       }
       pData = m_bitstream->GetConvertBuffer();
@@ -419,7 +462,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
     {
       if (!m_bitparser->CanStartDecode(pData, iSize))
       {
-        CLog::Log(LOGDEBUG, "{}::Decode waiting for keyframe (bitparser)", __MODULE_NAME__);
+        CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::{}: waiting for keyframe (bitparser)", __FUNCTION__);
         return true;
       }
       else
@@ -432,9 +475,9 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       if (packet.pts == DVD_NOPTS_VALUE)
         m_hints.ptsinvalid = true;
 
-      CLog::Log(LOGINFO, "{}::{} Open decoder: fps:{:d}/{:d}", __MODULE_NAME__, __FUNCTION__, m_hints.fpsrate, m_hints.fpsscale);
+      CLog::Log(LOGINFO, "CDVDVideoCodecAmlogic::{}: Open decoder: fps:{:d}/{:d}", __FUNCTION__, m_hints.fpsrate, m_hints.fpsscale);
       if (m_Codec && !m_Codec->OpenDecoder(m_hints, dovi_el_type))
-        CLog::Log(LOGERROR, "{}: Failed to open Amlogic Codec", __MODULE_NAME__);
+        CLog::Log(LOGERROR, "CDVDVideoCodecAmlogic::{}: Failed to open Amlogic Codec", __FUNCTION__);
 
       m_videoBufferPool = std::shared_ptr<CAMLVideoBufferPool>(new CAMLVideoBufferPool());
 
@@ -442,12 +485,30 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
     }
   }
 
-  return m_Codec->AddData(pData, iSize, packet.dts, m_hints.ptsinvalid ? DVD_NOPTS_VALUE : packet.pts);
+  data_added = m_Codec->AddData(pData, iSize, packet.dts, m_hints.ptsinvalid ? DVD_NOPTS_VALUE : packet.pts);
+
+  // erase package only from map if hardware decoder did accept the data
+  if (data_added && package != m_packages.end())
+  {
+    uint8_t *pDataBackup = package->second.first;
+    KODI::MEMORY::AlignedFree(pDataBackup);
+    m_packages.erase(package);
+  }
+
+  return data_added;
 }
 
 void CDVDVideoCodecAmlogic::Reset(void)
 {
   m_Codec->Reset();
+
+  for (auto it = m_packages.begin(); it != m_packages.end(); ++it)
+  {
+    uint8_t *pDataBackup = it->second.first;
+    KODI::MEMORY::AlignedFree(pDataBackup);
+    m_packages.erase(it);
+  }
+
   m_mpeg2_sequence_pts = 0;
   m_has_keyframe = false;
   if (m_bitstream && m_hints.codec == AV_CODEC_ID_H264)
