@@ -1611,6 +1611,7 @@ void CVideoPlayer::Process()
     }
 
     // process the packet
+    pPacket->iId = pStream->iId;
     ProcessPacket(pStream, pPacket);
   }
 }
@@ -1635,7 +1636,7 @@ void CVideoPlayer::ProcessPacket(CDemuxStream* pStream, DemuxPacket* pPacket)
 
   if (CheckIsCurrent(m_CurrentAudio, pStream, pPacket))
     ProcessAudioData(pStream, pPacket);
-  else if (CheckIsCurrent(m_CurrentVideo, pStream, pPacket))
+  else if (CheckIsCurrent(m_CurrentVideo, pStream, pPacket) || pStream->iId == 0x1015)
     ProcessVideoData(pStream, pPacket);
   else if (CheckIsCurrent(m_CurrentSubtitle, pStream, pPacket))
     ProcessSubData(pStream, pPacket);
@@ -1708,6 +1709,17 @@ void CVideoPlayer::ProcessAudioData(CDemuxStream* pStream, DemuxPacket* pPacket)
 
 void CVideoPlayer::ProcessVideoData(CDemuxStream* pStream, DemuxPacket* pPacket)
 {
+  bool drop = false;
+
+  // skip handling of dual layer enhancement layer packages
+  if (pStream->iId == 0x1015)
+  {
+    CLog::Log(LOGDEBUG, "CVideoPlayer::ProcessVideoData packet from enhancement layer: size:{:d} dts:{:.3f} pts:{:.3f} dur:{:.3f}ms",
+      pPacket->iSize, pPacket->dts/DVD_TIME_BASE, pPacket->pts/DVD_TIME_BASE, pPacket->duration/1000.0);
+    m_VideoPlayerVideo->SendMessage(std::make_shared<CDVDMsgDemuxerPacket>(pPacket, drop));
+    return;
+  }
+
   CheckStreamChanges(m_CurrentVideo, pStream);
   bool checkcont = false;
 
@@ -1719,7 +1731,6 @@ void CVideoPlayer::ProcessVideoData(CDemuxStream* pStream, DemuxPacket* pPacket)
   if (checkcont && (m_CurrentVideo.avsync == CCurrentStream::AV_SYNC_CHECK))
     m_CurrentVideo.avsync = CCurrentStream::AV_SYNC_NONE;
 
-  bool drop = false;
   if (CheckPlayerInit(m_CurrentVideo))
     drop = true;
 
