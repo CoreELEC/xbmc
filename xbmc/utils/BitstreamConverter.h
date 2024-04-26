@@ -68,6 +68,7 @@ public:
   void Close();
   bool NeedConvert() const { return m_convert_bitstream; }
   bool Convert(uint8_t* pData, int iSize);
+  bool Convert(uint8_t* pData_bl, int iSize_bl, uint8_t* pData_el, int iSize_el);
   uint8_t* GetConvertBuffer() const;
   int GetConvertSize() const;
   uint8_t* GetExtraData();
