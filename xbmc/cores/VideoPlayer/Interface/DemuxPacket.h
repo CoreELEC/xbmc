@@ -26,6 +26,8 @@ extern "C"
       pData = nullptr;
       iSize = 0;
       iStreamId = -1;
+      isDualStream = false;
+      isELPackage = false;
       demuxerId = -1;
       iGroupId = -1;
 
@@ -46,6 +48,10 @@ extern "C"
 
     //! @brief Empty packet replacing input the demuxer read and dropped.
     bool m_inputDropped{false};
+    //! @brief Indicate package is from a Dolby Vision dual stream source.
+    bool isDualStream;
+    //! @brief Indicate package is from a Dolby Vision enhancement layer.
+    bool isELPackage;
   };
 
 #ifdef __cplusplus
