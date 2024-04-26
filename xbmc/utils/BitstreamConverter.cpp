@@ -396,6 +396,7 @@ CBitstreamConverter::CBitstreamConverter()
   m_removeDovi = false;
   m_removeHdr10Plus = false;
   m_dovi_el_type = ELType::TYPE_NONE;
+  m_combine = false;
 }
 
 CBitstreamConverter::~CBitstreamConverter()
@@ -569,6 +570,7 @@ void CBitstreamConverter::Close(void)
   m_convert_bitstream = false;
   m_convert_bytestream = false;
   m_convert_3byteTo4byteNALSize = false;
+  m_combine = false;
 }
 
 bool CBitstreamConverter::Convert(uint8_t *pData, int iSize)
@@ -680,10 +682,207 @@ bool CBitstreamConverter::Convert(uint8_t *pData, int iSize)
   return false;
 }
 
+bool CBitstreamConverter::Convert(uint8_t *pData_bl, int iSize_bl, uint8_t *pData_el, int iSize_el)
+{
+  if (m_convertBuffer)
+  {
+    av_free(m_convertBuffer);
+    m_convertBuffer = NULL;
+  }
+  m_inputSize = 0;
+  m_convertSize = 0;
+  m_inputBuffer = NULL;
+
+  if (pData_bl && pData_el)
+  {
+    uint32_t offset = 0, size_eos;
+    uint8_t *buf=NULL, *end, *start, *buf_eos=NULL;
+    int nal_header_length;
+    AVIOContext *pb;
+
+    if (avio_open_dyn_buf(&pb) < 0)
+      return false;
+
+    uint32_t bl_frame_nal_buf_size = avc_parse_nal_units(pb, pData_bl, iSize_bl);
+    uint32_t el_frame_nal_buf_size = avc_parse_nal_units(pb, pData_el, iSize_el);
+    avio_close_dyn_buf(pb, &buf);
+
+    m_dovi_el_type = ELType::TYPE_NONE;
+
+    // process bl frame data
+    start = buf;
+    end = buf + bl_frame_nal_buf_size;
+    while (end - buf > 4)
+    {
+      uint32_t size;
+      uint8_t  nal_type;
+      void *tmp = NULL;
+      size = std::min<uint32_t>(BS_RB32(buf), end - buf - 4);
+      buf += 4;
+      nal_type = (buf[0] >> 1) & 0x3f;
+
+      if (offset == 0 || nal_type == HEVC_NAL_UNSPEC62)
+      {
+        nal_header_length = 4;
+
+        tmp = av_realloc(m_convertBuffer, offset + nal_header_length + size);
+        if (!tmp)
+          return false;
+        m_convertBuffer = (uint8_t*)tmp;
+
+        memcpy(m_convertBuffer + offset + nal_header_length, buf, size);
+        (m_convertBuffer + offset)[0] = 0;
+        (m_convertBuffer + offset)[1] = 0;
+        (m_convertBuffer + offset)[2] = 0;
+        (m_convertBuffer + offset)[3] = 1;
+      }
+      else
+      {
+        nal_header_length = 3;
+
+        if (nal_type != AVC_NAL_END_SEQUENCE)
+        {
+          tmp = av_realloc(m_convertBuffer, offset + nal_header_length + size);
+          if (!tmp)
+            return false;
+          m_convertBuffer = (uint8_t*)tmp;
+
+          memcpy(m_convertBuffer + offset + nal_header_length, buf, size);
+          (m_convertBuffer + offset)[0] = 0;
+          (m_convertBuffer + offset)[1] = 0;
+          (m_convertBuffer + offset)[2] = 1;
+        }
+        else
+        {
+          buf_eos = buf;
+          size_eos = size;
+          offset -= nal_header_length;
+          offset -= size;
+        }
+      }
+      CLog::Log(LOGDEBUG, LOGVIDEO, "CBitstreamConverter::Convert: BL nal_type: {} written to offset: {}: size: {}",
+        nal_type, offset, size);
+
+      offset += nal_header_length;
+      offset += size;
+      buf += size;
+    }
+
+    // process el frame data
+    end = buf + el_frame_nal_buf_size;
+    while (end - buf > 4)
+    {
+      uint32_t size;
+      uint8_t  nal_type;
+      void *tmp = NULL;
+      size = std::min<uint32_t>(BS_RB32(buf), end - buf - 4);
+      buf += 4;
+      nal_type = (buf[0] >> 1) & 0x3f;
+
+      if (nal_type == HEVC_NAL_UNSPEC62)
+      {
+        nal_header_length = 4;
+        const uint8_t *nalu_62_data;
+#ifdef HAVE_LIBDOVI
+        const DoviData* rpu_data = NULL;
+#endif
+
+        if (m_convert_dovi)
+        {
+#ifdef HAVE_LIBDOVI
+          // Convert the RPU itself
+          rpu_data = convert_dovi_rpu_nal(buf, size, m_convert_dovi);
+          if (rpu_data)
+          {
+            nalu_62_data = rpu_data->data;
+            size = rpu_data->len;
+          }
+#endif
+        }
+        else
+        {
+          nalu_62_data = buf;
+        }
+
+        tmp = av_realloc(m_convertBuffer, offset + nal_header_length + size);
+        if (!tmp)
+          return false;
+        m_convertBuffer = (uint8_t*)tmp;
+
+        memcpy(m_convertBuffer + offset + nal_header_length, nalu_62_data, size);
+        (m_convertBuffer + offset)[0] = 0;
+        (m_convertBuffer + offset)[1] = 0;
+        (m_convertBuffer + offset)[2] = 0;
+        (m_convertBuffer + offset)[3] = 1;
+
+#ifdef HAVE_LIBDOVI
+        if (rpu_data)
+          dovi_data_free(rpu_data);
+
+        m_dovi_el_type = get_dovi_el_type((uint8_t *)nalu_62_data, size);
+#endif
+      }
+      else
+      {
+        nal_header_length = 5;
+
+        if (!m_convert_dovi)
+        {
+          tmp = av_realloc(m_convertBuffer, offset + nal_header_length + size);
+          if (!tmp)
+            return false;
+          m_convertBuffer = (uint8_t*)tmp;
+
+          memcpy(m_convertBuffer + offset + nal_header_length, buf, size);
+          (m_convertBuffer + offset)[0] = 0;
+          (m_convertBuffer + offset)[1] = 0;
+          (m_convertBuffer + offset)[2] = 1;
+          (m_convertBuffer + offset)[3] = HEVC_NAL_UNSPEC63 << 1;
+          (m_convertBuffer + offset)[4] = 1;
+        }
+        else
+        {
+          offset -= nal_header_length;
+          offset -= size;
+        }
+      }
+      if (!m_convert_dovi || nal_type == HEVC_NAL_UNSPEC62)
+        CLog::Log(LOGDEBUG, LOGVIDEO, "CBitstreamConverter::Convert: EL nal_type: {} written to offset: {}: size: {}",
+          nal_type, offset, size);
+
+      offset += nal_header_length;
+      offset += size;
+      buf += size;
+    }
+
+    // append end of sequence if exist
+    if (buf_eos)
+    {
+      nal_header_length = 3;
+
+      void *tmp = av_realloc(m_convertBuffer, offset + nal_header_length + size_eos);
+      if (!tmp)
+        return false;
+      m_convertBuffer = (uint8_t*)tmp;
+
+      memcpy(m_convertBuffer + offset + nal_header_length, buf_eos, size_eos);
+      (m_convertBuffer + offset)[0] = 0;
+      (m_convertBuffer + offset)[1] = 0;
+      (m_convertBuffer + offset)[2] = 1;
+    }
+
+    av_free(start);
+
+    m_convertSize = offset;
+    m_combine = true;
+  }
+
+  return true;
+}
 
 uint8_t *CBitstreamConverter::GetConvertBuffer() const
 {
-  if((m_convert_bitstream || m_convert_bytestream || m_convert_3byteTo4byteNALSize) && m_convertBuffer != NULL)
+  if((m_convert_bitstream || m_convert_bytestream || m_convert_3byteTo4byteNALSize || m_combine) && m_convertBuffer != NULL)
     return m_convertBuffer;
   else
     return m_inputBuffer;
@@ -691,7 +890,7 @@ uint8_t *CBitstreamConverter::GetConvertBuffer() const
 
 int CBitstreamConverter::GetConvertSize() const
 {
-  if((m_convert_bitstream || m_convert_bytestream || m_convert_3byteTo4byteNALSize) && m_convertBuffer != NULL)
+  if((m_convert_bitstream || m_convert_bytestream || m_convert_3byteTo4byteNALSize || m_combine) && m_convertBuffer != NULL)
     return m_convertSize;
   else
     return m_inputSize;
