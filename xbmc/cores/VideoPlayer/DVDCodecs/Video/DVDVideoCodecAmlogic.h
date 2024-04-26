@@ -102,4 +102,6 @@ protected:
 private:
   std::shared_ptr<CAMLVideoBufferPool> m_videoBufferPool;
   static std::atomic<bool> m_InstanceGuard;
+
+  std::map<double, std::pair<uint8_t*, uint32_t>> m_packages;
 };
