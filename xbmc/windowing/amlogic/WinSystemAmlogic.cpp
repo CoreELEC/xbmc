@@ -33,6 +33,7 @@
 #include "platform/linux/SysfsPath.h"
 
 #include <linux/fb.h>
+#include <linux/version.h>
 
 #include "system_egl.h"
 
@@ -110,6 +111,16 @@ bool CWinSystemAmlogic::InitWindowSystem()
     auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_USE_PLAYERLED);
     if (setting)
       setting->SetVisible(true);
+  }
+
+  if (((LINUX_VERSION_CODE >> 16) & 0xFF) < 5)
+  {
+    auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING);
+    if (setting)
+    {
+      setting->SetVisible(false);
+      settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING, false);
+    }
   }
 
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
