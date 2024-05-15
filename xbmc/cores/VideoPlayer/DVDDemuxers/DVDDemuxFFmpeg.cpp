@@ -2161,7 +2161,8 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         }
         else
         {
-          if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION)
+          const bool dv_by_vs_engine = aml_convert_to_dv_by_vs_engine(st->hdr_type);
+          if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION || dv_by_vs_engine)
           {
             sideData =
                 av_packet_side_data_get(pStream->codecpar->coded_side_data,
@@ -2169,6 +2170,17 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
 
             if (sideData && sideData->size)
               st->dovi = *reinterpret_cast<const AVDOVIDecoderConfigurationRecord*>(sideData->data);
+
+            if (dv_by_vs_engine)
+            {
+              if (st->hdr_type == StreamHdrType::HDR_TYPE_NONE)
+              {
+                st->colorPrimaries = AVCOL_PRI_BT2020;
+                st->colorSpace = AVCOL_SPC_BT2020_NCL;
+                st->colorTransferCharacteristic = AVCOL_TRC_SMPTE2084;
+                st->colorRange = AVCOL_RANGE_JPEG;
+              }
+            }
           }
         }
 
