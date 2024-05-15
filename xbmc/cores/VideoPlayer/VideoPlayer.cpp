@@ -50,6 +50,7 @@
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "threads/SingleLock.h"
+#include "utils/AMLUtils.h"
 #include "utils/FontUtils.h"
 #include "utils/JobManager.h"
 #include "utils/LangCodeExpander.h"
@@ -3771,6 +3772,9 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
       res = OpenAudioStream(hint, reset);
       break;
     case STREAM_VIDEO:
+      // fake Dolby Vision type when using Dolby Vision VS-Engine
+      if (aml_convert_to_dv_by_vs_engine(hint.hdrType))
+        hint.hdrType = StreamHdrType::HDR_TYPE_DOLBYVISION;
       res = OpenVideoStream(hint, reset);
       break;
     case STREAM_SUBTITLE:
