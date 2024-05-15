@@ -1735,14 +1735,14 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         if (streamIdx > 0 && st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION)
           m_dv_dual_stream = true;
 
-        if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION && aml_dolby_vision_enabled())
+        if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION)
         {
           side_data = av_stream_get_side_data(pStream, AV_PKT_DATA_DOVI_CONF, &size);
 
           if (!m_dv_dual_stream && side_data && size)
             st->dovi = *reinterpret_cast<AVDOVIDecoderConfigurationRecord*>(side_data);
           // force dovi configuration for DV dual stream
-          else
+          else if (aml_dolby_vision_enabled())
           {
             // force dovi side data to bl stream
             CDemuxStream* bl_stream = GetStream(0);
