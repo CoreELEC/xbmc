@@ -127,6 +127,7 @@ protected:
   void CreateStreams(unsigned int program = UINT_MAX);
   void DisposeStreams();
   void RemoveStream(CDemuxStream *stream);
+  bool ProcessH264MVCExtradata(uint8_t *data, int data_size);
   void ParsePacket(AVPacket* pkt);
   TRANSPORT_STREAM_STATE TransportStreamAudioState();
   TRANSPORT_STREAM_STATE TransportStreamVideoState();
