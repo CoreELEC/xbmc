@@ -86,15 +86,46 @@ RESOLUTION CResolutionUtils::ChooseBestResolution(float fps, int width, int heig
 
 void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int height, bool is3D, RESOLUTION &resolution)
 {
-  RESOLUTION_INFO curr = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(resolution);
-  const RESOLUTION_INFO desktop_info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(CDisplaySettings::GetInstance().GetCurrentResolution());
-  CLog::Log(LOGINFO,
-            "[WHITELIST] Searching the whitelist for: width: {}, height: {}, fps: {:0.3f}, 3D: {}",
-            width, height, fps, is3D ? "true" : "false");
+  constexpr uint32_t STEREO_FLAGS = D3DPRESENTFLAG_MODEMASK & ~D3DPRESENTFLAG_INTERLACED;
+  auto ModeFlagsMatch = [&](uint32_t modeFlags, uint32_t wantedFlags) -> bool
+  {
+    if ((modeFlags & wantedFlags) != wantedFlags)
+      return false;
 
+    return (wantedFlags & STEREO_FLAGS) != 0 || (modeFlags & STEREO_FLAGS) == 0;
+  };
+
+  RESOLUTION_INFO curr = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(resolution);
+  const RenderStereoMode stereo_mode = CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode();
+  uint32_t dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
+  const RESOLUTION_INFO desktop_info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(CDisplaySettings::GetInstance().GetCurrentResolution());
   std::vector<CVariant> indexList = CServiceBroker::GetSettingsComponent()->GetSettings()->GetList(CSettings::SETTING_VIDEOSCREEN_WHITELIST);
 
   bool noWhiteList = indexList.empty();
+
+  CLog::Log(LOGINFO,
+            "[WHITELIST] Searching the whitelist for: width: {}, height: {}, fps: {:0.3f}, 3D: {}:(0x{:x}), stereo mode: {:d}",
+            width, height, fps, is3D ? "true" : "false", dwFlags, stereo_mode);
+
+  switch (stereo_mode) {
+    case RenderStereoMode::SPLIT_VERTICAL:
+      CLog::Log(LOGDEBUG, "[WHITELIST] Search for 3D SidebySide mode with {:d}x{:d}{} @ {:.3f} Hz",
+        curr.iScreenWidth, curr.iScreenHeight, dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "", fps);
+      dwFlags |= D3DPRESENTFLAG_MODE3DSBS;
+      break;
+    case RenderStereoMode::SPLIT_HORIZONTAL:
+      CLog::Log(LOGDEBUG, "[WHITELIST] Search for 3D TopBottom mode with {:d}x{:d}{} @ {:.3f} Hz",
+        curr.iScreenWidth, curr.iScreenHeight, dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "", fps);
+      dwFlags |= D3DPRESENTFLAG_MODE3DTB;
+      break;
+    case RenderStereoMode::HARDWAREBASED:
+      CLog::Log(LOGDEBUG, "[WHITELIST] Search for 3D Frame Packaging mode with {:d}x{:d}{} @ {:.3f} Hz",
+        curr.iScreenWidth, curr.iScreenHeight, dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "", fps);
+      dwFlags |= D3DPRESENTFLAG_MODE3DFP;
+      break;
+    default:
+      break;
+  }
 
   if (noWhiteList)
   {
@@ -108,7 +139,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
       info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(c);
       if (((info.iScreenWidth >= desktop_info.iScreenWidth) ||
            (info.iScreenHeight >= curr.iScreenHeight && info.iScreenWidth >= curr.iScreenWidth)) &&
-           (info.dwFlags & D3DPRESENTFLAG_MODEMASK) == (curr.dwFlags & D3DPRESENTFLAG_MODEMASK))
+          ModeFlagsMatch(info.dwFlags, dwFlags))
       {
         // do not add half refreshrates (25, 29.97 by default) as kodi cannot cope with
         // them on playback start. Especially interlaced content is not properly detected
@@ -131,13 +162,15 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
     const RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(i);
 
     // allow resolutions that are exact and have the correct refresh rate
+    // allow hardware decoder surface padding due to codec block alignment and GPU requirements
+    // note: height has greater tolerance due to 32/64px boundaries e.g. 1080→1088 or 2160→2176
     if (MatchesMode(width, height, info) &&
-        (info.dwFlags & D3DPRESENTFLAG_MODEMASK) == (curr.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+        ModeFlagsMatch(info.dwFlags, dwFlags) &&
         MathUtils::FloatEquals(info.fRefreshRate, fps, 0.01f))
     {
       CLog::Log(LOGDEBUG,
-                "[WHITELIST] Matched an exact resolution with an exact refresh rate {} ({})",
-                info.strMode, i);
+                "[WHITELIST] Matched an exact resolution with an exact refresh rate {}, 0x{:x} ({})",
+                info.strMode, info.dwFlags, i);
       unsigned int pen = abs(info.iScreenHeight - height) + abs(info.iScreenWidth - width);
       if (pen < penalty)
       {
@@ -163,8 +196,10 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
       const RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(i);
 
       // allow resolutions that are exact and have double the refresh rate
+      // allow hardware decoder surface padding due to codec block alignment and GPU requirements
+      // note: height has greater tolerance due to 32/64px boundaries e.g. 1080→1088 or 2160→2176
       if (MatchesMode(width, height, info) &&
-          (info.dwFlags & D3DPRESENTFLAG_MODEMASK) == (curr.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+          ModeFlagsMatch(info.dwFlags, dwFlags) &&
           MathUtils::FloatEquals(info.fRefreshRate, fps * 2, 0.01f))
       {
         CLog::Log(LOGDEBUG,
@@ -200,8 +235,10 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
       const RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(i);
 
       // allow resolutions that are exact and have 2.5 times the refresh rate
+      // allow hardware decoder surface padding due to codec block alignment and GPU requirements
+      // note: height has greater tolerance due to 32/64px boundaries e.g. 1080→1088 or 2160→2176
       if (MatchesMode(width, height, info) &&
-          (info.dwFlags & D3DPRESENTFLAG_MODEMASK) == (curr.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+          ModeFlagsMatch(info.dwFlags, dwFlags) &&
           MathUtils::FloatEquals(info.fRefreshRate, fps * 2.5f, 0.01f))
       {
         CLog::Log(
@@ -231,7 +268,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
     const RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(i);
 
     // allow resolutions that are closest resolutions but have the correct refresh rate
-    if ((info.dwFlags & D3DPRESENTFLAG_MODEMASK) == (desktop_info.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+    if (ModeFlagsMatch(info.dwFlags, dwFlags) &&
         MathUtils::FloatEquals(info.fRefreshRate, fps, 0.01f))
     {
       unsigned int pen = abs(info.iScreenHeight - height) + abs(info.iScreenWidth - width);
@@ -260,7 +297,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
       const RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(i);
 
       // allow resolutions that are closest resolutions but have double refresh rate
-      if ((info.dwFlags & D3DPRESENTFLAG_MODEMASK) == (desktop_info.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+      if (ModeFlagsMatch(info.dwFlags, dwFlags) &&
           MathUtils::FloatEquals(info.fRefreshRate, fps * 2, 0.01f))
       {
         unsigned int pen = abs(info.iScreenHeight - height) + abs(info.iScreenWidth - width);
@@ -291,8 +328,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
     const RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(i);
 
     // allow resolutions that are desktop resolution but have the correct refresh rate
-    if (info.iScreenWidth == desktop_info.iScreenWidth &&
-        (info.dwFlags & D3DPRESENTFLAG_MODEMASK) == (desktop_info.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+    if (info.iScreenWidth == desktop_info.iScreenWidth && ModeFlagsMatch(info.dwFlags, dwFlags) &&
         MathUtils::FloatEquals(info.fRefreshRate, fps, 0.01f))
     {
       CLog::Log(LOGDEBUG,
@@ -317,9 +353,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
       const RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(i);
 
       // allow resolutions that are desktop resolution but have double the refresh rate
-      if (info.iScreenWidth == desktop_info.iScreenWidth &&
-          (info.dwFlags & D3DPRESENTFLAG_MODEMASK) ==
-              (desktop_info.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+      if (info.iScreenWidth == desktop_info.iScreenWidth && ModeFlagsMatch(info.dwFlags, dwFlags) &&
           MathUtils::FloatEquals(info.fRefreshRate, fps * 2, 0.01f))
       {
         CLog::Log(LOGDEBUG,
@@ -346,9 +380,7 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
       const RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo(i);
 
       // allow resolutions that are desktop resolution but have 2.5 times the refresh rate
-      if (info.iScreenWidth == desktop_info.iScreenWidth &&
-          (info.dwFlags & D3DPRESENTFLAG_MODEMASK) ==
-              (desktop_info.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+      if (info.iScreenWidth == desktop_info.iScreenWidth && ModeFlagsMatch(info.dwFlags, dwFlags) &&
           MathUtils::FloatEquals(info.fRefreshRate, fps * 2.5f, 0.01f))
       {
         CLog::Log(
