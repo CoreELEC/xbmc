@@ -249,7 +249,7 @@ void CRenderer::Render(COverlay* o)
     }
   }
 
-  state.x += GetStereoscopicDepth();
+  state.x += GetStereoscopicDepth(o->m_pgsSubtitle, o->m_3dSubtitleDepth);
 
   o->Render(state);
 }
@@ -483,20 +483,6 @@ void CRenderer::PrepareOverlays(int idx)
     rOpts.frameWidth = m_rv.Width();
     rOpts.frameHeight = m_rv.Height();
 
-    // Render subtitle of half-sbs and half-ou video in full screen, not in half screen
-    if (m_stereomode == "left_right" || m_stereomode == "right_left")
-    {
-      // only half-sbs video, sbs video don't need to change source size
-      if (rOpts.sourceWidth / rOpts.sourceHeight < 1.2f)
-        rOpts.sourceWidth = m_rs.Width() * 2;
-    }
-    else if (m_stereomode == "top_bottom" || m_stereomode == "bottom_top")
-    {
-      // only half-ou video, ou video don't need to change source size
-      if (rOpts.sourceWidth / rOpts.sourceHeight > 2.5f)
-        rOpts.sourceHeight = m_rs.Height() * 2;
-    }
-
     // Set position of subtitles based on video calibration settings
     RESOLUTION_INFO resInfo = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo();
     // Keep track of subtitle position value change,
@@ -538,13 +524,20 @@ void CRenderer::PrepareOverlays(int idx)
       // default position of the text, different from the other alignment positions
       double posPx = static_cast<double>(m_subtitlePosition - resInfo.Overscan.top);
 
+      double frameHeight = static_cast<double>(rOpts.frameHeight);
+
+      if (m_stereomode == "top_bottom" || m_stereomode == "bottom_top")
+      {
+        // only half-ou video, ou video don't need to correct frame height
+        if (rOpts.sourceWidth / rOpts.sourceHeight > 1.2f)
+          frameHeight *= 2.0;
+      }
+
       int assPlayResY = ovAss.GetLibassHandler()->GetPlayResY();
       double assVertMargin = static_cast<double>(m_overlayStyle->marginVertical) *
                              (static_cast<double>(assPlayResY) / 720);
-      double vertMarginScaled =
-          assVertMargin / assPlayResY * static_cast<double>(rOpts.frameHeight);
-
-      double pos = posPx / (static_cast<double>(rOpts.frameHeight) - vertMarginScaled);
+      double vertMarginScaled = assVertMargin / assPlayResY * frameHeight;
+      double pos = posPx / (frameHeight - vertMarginScaled);
       rOpts.position = 100 - pos * 100;
     }
     else if (m_subtitleAlign == SUBTITLES::Align::BOTTOM_OUTSIDE)
