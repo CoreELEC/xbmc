@@ -294,7 +294,7 @@ void CRenderer::Render(COverlay* o)
     }
   }
 
-  state.x += GetStereoscopicDepth();
+  state.x += GetStereoscopicDepth(o->m_pgsSubtitle, o->m_3dSubtitleDepth);
 
   o->Render(state);
 }
@@ -658,20 +658,6 @@ SUBTITLES::STYLE::renderOpts CRenderer::GetRenderOptions(const CDVDOverlayLibass
   rOpts.frameWidth = m_rv.Width();
   rOpts.frameHeight = m_rv.Height();
 
-  // Render subtitle of half-sbs and half-ou video in full screen, not in half screen
-  if (m_stereomode == "left_right" || m_stereomode == "right_left")
-  {
-    // only half-sbs video, sbs video don't need to change source size
-    if (rOpts.sourceWidth / rOpts.sourceHeight < 1.2f)
-      rOpts.sourceWidth = m_rs.Width() * 2;
-  }
-  else if (m_stereomode == "top_bottom" || m_stereomode == "bottom_top")
-  {
-    // only half-ou video, ou video don't need to change source size
-    if (rOpts.sourceWidth / rOpts.sourceHeight > 2.5f)
-      rOpts.sourceHeight = m_rs.Height() * 2;
-  }
-
   rOpts.m_par = resolution.pixelRatio;
 
   // rOpts.position and margins (set to style) can invalidate the text
@@ -692,6 +678,15 @@ SUBTITLES::STYLE::renderOpts CRenderer::GetRenderOptions(const CDVDOverlayLibass
     // Note also that the displacement compensation will cause a different
     // default position of the text, different from the other alignment positions
     double posPx = static_cast<double>(m_subtitlePosition - resolution.overscanTop);
+
+    double frameHeight = static_cast<double>(rOpts.frameHeight);
+
+    if (m_stereomode == "top_bottom" || m_stereomode == "bottom_top")
+    {
+      // only half-ou video, ou video don't need to correct frame height
+      if (rOpts.sourceWidth / rOpts.sourceHeight > 1.2f)
+        frameHeight *= 2.0;
+    }
 
     int assPlayResY = overlay.GetLibassHandler()->GetPlayResY();
     double assVertMargin =
