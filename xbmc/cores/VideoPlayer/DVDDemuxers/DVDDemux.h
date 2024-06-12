@@ -209,6 +209,8 @@ public:
   CDemuxStreamSubtitle() : CDemuxStream(StreamType::SUBTITLE) {}
 
   std::string GetStreamType() const;
+
+  int m_3dSubtitlePlane = 0;
 };
 
 class CDemuxStreamTeletext : public CDemuxStream
