@@ -92,6 +92,9 @@ namespace OVERLAY {
     // pixels are already HDR, matching video's colorimetry
     bool m_isHDROverlay{false};
 
+    int m_3dSubtitleDepth{0};
+    bool m_pgsSubtitle{false};
+
   protected:
     /*!
      * \brief Given the resolution ratio determines if it is a 4/3 resolution
