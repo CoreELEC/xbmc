@@ -209,7 +209,10 @@ public:
     : CDemuxStream()
   {
     type = STREAM_SUBTITLE;
+    m_3dSubtitlePlane = 0;
   }
+
+  int m_3dSubtitlePlane;
 };
 
 class CDemuxStreamTeletext : public CDemuxStream
