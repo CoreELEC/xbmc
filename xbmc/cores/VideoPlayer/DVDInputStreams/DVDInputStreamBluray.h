@@ -136,6 +136,8 @@ public:
 
   void GetStreamInfo(int pid, std::string &language);
 
+  int Get3dSubtitlePlane(uint16_t pid);
+
   /*!
    * \brief Check whether a stream is the default of the playlist being played, ie. audio stream
    *        number 1 or presentation graphic stream number 1 of the current clip.
