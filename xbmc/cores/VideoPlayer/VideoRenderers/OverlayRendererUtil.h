@@ -64,6 +64,6 @@ void convert_rgba(const CDVDOverlaySpu& o,
 bool convert_quad(ASS_Image* images, SQuads& quads, int max_x);
 // GPU-bounded atlas pages in libass drawing order.
 bool convert_quad_pages(ASS_Image* images, std::vector<SQuads>& pages, int maxTextureSize);
-int GetStereoscopicDepth();
+int GetStereoscopicDepth(bool isPgs, int subtitleDepth);
 
 } // namespace OVERLAY
