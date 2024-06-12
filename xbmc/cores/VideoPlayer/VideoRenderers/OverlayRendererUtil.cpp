@@ -271,18 +271,27 @@ bool convert_quad(ASS_Image* images, SQuads& quads, int max_x)
   return true;
 }
 
-int GetStereoscopicDepth()
+int GetStereoscopicDepth(bool isPgs, int subtitleDepth)
 {
-  int depth = 0;
+  RENDER_STEREO_MODE stereoMode = CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode();
 
-  if(CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode() != RENDER_STEREO_MODE_MONO
-  && CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode() != RENDER_STEREO_MODE_OFF)
+  if (stereoMode == RENDER_STEREO_MODE_MONO || stereoMode == RENDER_STEREO_MODE_OFF)
   {
-    depth  = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_SUBTITLES_STEREOSCOPICDEPTH);
-    depth *= (CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoView() == RENDER_STEREO_VIEW_LEFT ? 1 : -1);
+    // 2D display, so there's no subtitle depth
+    return 0;
   }
 
-  return depth;
+  // get configured depth
+  int depth = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_SUBTITLES_STEREOSCOPICDEPTH);
+
+  // in case of MVC playback and PGS subtitles, use the subtitle depth info additionally to the configured one
+  if(stereoMode == RENDER_STEREO_MODE_HARDWAREBASED && isPgs)
+  {
+    depth += subtitleDepth;
+  }
+
+  // correct depth according to the current left/right eye view
+  return depth * (CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoView() == RENDER_STEREO_VIEW_LEFT ? 1 : -1);
 }
 
 }
