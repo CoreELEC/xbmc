@@ -164,7 +164,7 @@ public:
   void SetCameraPosition(const CPoint &camera);
   void SetStereoView(RENDER_STEREO_VIEW view);
   RENDER_STEREO_VIEW GetStereoView()  { return m_stereoView; }
-  void SetStereoMode(RENDER_STEREO_MODE mode) { m_nextStereoMode = mode; }
+  void SetStereoMode(RENDER_STEREO_MODE mode) { m_stereoMode = mode; }
   RENDER_STEREO_MODE GetStereoMode()  { return m_stereoMode; }
   void SetHDRType(StreamHdrType hdrType)  { m_hdrType = hdrType; }
   StreamHdrType GetHDRType()  { return m_hdrType; }
@@ -278,7 +278,6 @@ protected:
   std::stack<UITransform> m_transforms;
   RENDER_STEREO_VIEW m_stereoView = RENDER_STEREO_VIEW_OFF;
   RENDER_STEREO_MODE m_stereoMode = RENDER_STEREO_MODE_OFF;
-  RENDER_STEREO_MODE m_nextStereoMode = RENDER_STEREO_MODE_OFF;
   StreamHdrType m_hdrType;
 
   bool m_isTransferPQ{false};
