@@ -490,6 +490,14 @@ bool CStereoscopicsManager::OnAction(const CAction &action)
   return false;
 }
 
+void CStereoscopicsManager::Notify()
+{
+  CLog::Log(LOGDEBUG, "CStereoscopicsManager::Notify: TriggerUpdateResolution");
+  auto& components = CServiceBroker::GetAppComponents();
+  const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+  appPlayer->TriggerUpdateResolution();
+}
+
 void CStereoscopicsManager::ApplyStereoMode(const RENDER_STEREO_MODE &mode, bool notify)
 {
   RENDER_STEREO_MODE currentMode = CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode();
@@ -504,8 +512,6 @@ void CStereoscopicsManager::ApplyStereoMode(const RENDER_STEREO_MODE &mode, bool
               ConvertGuiStereoModeToString(mode));
     if (notify)
     {
-      CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(
-        CServiceBroker::GetWinSystem()->GetGfxContext().GetVideoResolution(), false);
       CGUIDialogKaiToast::QueueNotification(CGUIDialogKaiToast::Info, g_localizeStrings.Get(36501), GetLabelForStereoMode(mode));
     }
   }
@@ -611,6 +617,7 @@ void CStereoscopicsManager::OnStreamChange()
         else if (iItem == idx_select)    mode = GetStereoModeByUserChoice();
 
         SetStereoModeByUser(mode);
+        Notify();
       }
 
       CServiceBroker::GetAppMessenger()->SendMsg(TMSG_MEDIA_UNPAUSE);
@@ -618,9 +625,11 @@ void CStereoscopicsManager::OnStreamChange()
     break;
   case STEREOSCOPIC_PLAYBACK_MODE_PREFERRED: // Stereoscopic
     SetStereoMode(preferred);
+    Notify();
     break;
   case 2: // Mono
     SetStereoMode(RENDER_STEREO_MODE_MONO);
+    Notify();
     break;
   default:
     break;
