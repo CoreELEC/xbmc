@@ -50,6 +50,7 @@ public:
   void SetStereoMode(const RENDER_STEREO_MODE &mode);
 
   static const char* ConvertGuiStereoModeToString(const RENDER_STEREO_MODE &mode);
+  RENDER_STEREO_MODE GetStereoModeByUser() { return m_stereoModeSetByUser; };
   /**
    * @brief Converts a stereoscopics related action/command from Builtins and JsonRPC into the according cAction ID.
    * @param command The command/action
@@ -58,6 +59,7 @@ public:
    */
   static CAction ConvertActionCommandToAction(const std::string &command, const std::string &parameter);
   static std::string NormalizeStereoMode(const std::string &mode);
+  static int ConvertVideoToGuiStereoMode(const std::string &mode);
 
   void OnSettingChanged(const std::shared_ptr<const CSetting>& setting) override;
   void OnStreamChange();
@@ -79,6 +81,7 @@ private:
 
   void SetStereoModeByUser(const RENDER_STEREO_MODE &mode);
 
+  void Notify();
   void ApplyStereoMode(const RENDER_STEREO_MODE &mode, bool notify = true);
   void OnPlaybackStopped(void);
 
@@ -88,7 +91,6 @@ private:
    * @return -1 if not found, otherwise the according int of the RENDER_STEREO_MODE enum
    */
   static int ConvertStringToGuiStereoMode(const std::string &mode);
-  static int ConvertVideoToGuiStereoMode(const std::string &mode);
 
   // Construction parameters
   std::shared_ptr<CSettings> m_settings;
