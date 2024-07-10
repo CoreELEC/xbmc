@@ -315,6 +315,7 @@ void CBaseRenderer::ManageRenderArea()
 
   unsigned int stereo_mode  = CONF_FLAGS_STEREO_MODE_MASK(m_iFlags);
   int          stereo_view  = CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoView();
+  float    inputFrameRatio  = GetAspectRatio();
 
   if(CONF_FLAGS_STEREO_CADENCE(m_iFlags) == CONF_FLAGS_STEREO_CADANCE_RIGHT_LEFT)
   {
@@ -329,6 +330,8 @@ void CBaseRenderer::ManageRenderArea()
         m_sourceRect.y2 *= 0.5f;
       else if(stereo_view == RENDER_STEREO_VIEW_RIGHT)
         m_sourceRect.y1 += m_sourceRect.y2*0.5f;
+
+      inputFrameRatio *= (m_sourceRect.y2 / 1080.0f);
       break;
 
     case CONF_FLAGS_STEREO_MODE_SBS:
@@ -343,7 +346,7 @@ void CBaseRenderer::ManageRenderArea()
   }
 
   CalcNormalRenderRect(m_viewRect.x1, m_viewRect.y1, m_viewRect.Width(), m_viewRect.Height(),
-                       GetAspectRatio() * CDisplaySettings::GetInstance().GetPixelRatio(),
+                       inputFrameRatio * CDisplaySettings::GetInstance().GetPixelRatio(),
                        CDisplaySettings::GetInstance().GetZoomAmount(),
                        CDisplaySettings::GetInstance().GetVerticalShift());
 }
