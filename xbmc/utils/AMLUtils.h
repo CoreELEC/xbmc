@@ -51,6 +51,7 @@ enum AML_SUPPORT_H264_4K2K
 int  aml_get_cpufamily_id();
 bool aml_display_support_dv();
 bool aml_dv_support_ll();
+bool aml_display_support_3d();
 bool aml_support_hevc();
 bool aml_support_hevc_4k2k();
 bool aml_support_hevc_8k4k();
@@ -64,6 +65,7 @@ bool aml_has_frac_rate_policy();
 bool aml_video_started();
 void aml_video_mute(bool mute);
 void aml_set_audio_passthrough(bool passthrough);
+void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int view_mode);
 bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res);
 bool aml_get_native_resolution(RESOLUTION_INFO *res);
 bool aml_set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name, const int stereo_mode, bool force_mode_switch);
