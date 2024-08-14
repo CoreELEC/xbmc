@@ -751,7 +751,7 @@ std::string CActiveAESink::ValidateOuputDevice(const std::string& device, bool p
         if (!passthrough && d.m_onlyPassthrough)
           continue;
 
-        // filter L-PCM device when passthrough on Amlogic T7
+        // filter L-PCM device when passthrough on Amlogic S5/T7
         if (passthrough && (d.m_deviceName.substr(0, d.m_deviceName.find(':')) == "surround71"))
           continue;
 
@@ -777,7 +777,7 @@ std::string CActiveAESink::ValidateOuputDevice(const std::string& device, bool p
         if (!passthrough && d.m_onlyPassthrough)
           continue;
 
-        // filter L-PCM device when passthrough on Amlogic T7
+        // filter L-PCM device when passthrough on Amlogic S5/T7
         if (passthrough && (d.m_deviceName.substr(0, d.m_deviceName.find(':')) == "surround71"))
           continue;
 
@@ -805,7 +805,7 @@ std::string CActiveAESink::ValidateOuputDevice(const std::string& device, bool p
         if (!passthrough && d.m_onlyPassthrough)
           continue;
 
-        // filter L-PCM device when passthrough on Amlogic T7
+        // filter L-PCM device when passthrough on Amlogic S5/T7
         if (passthrough && (d.m_deviceName.substr(0, d.m_deviceName.find(':')) == "surround71"))
           continue;
 
@@ -838,7 +838,7 @@ std::string CActiveAESink::ValidateOuputDevice(const std::string& device, bool p
       if (!passthrough && d.m_onlyPassthrough)
         continue;
 
-      // filter L-PCM device when passthrough on Amlogic T7
+      // filter L-PCM device when passthrough on Amlogic S5/T7
       if (passthrough && (d.m_deviceName.substr(0, d.m_deviceName.find(':')) == "surround71"))
         continue;
 
