@@ -889,6 +889,10 @@ msgctxt "#31177"
 msgid "Choose weather icon pack"
 msgstr ""
 
+#: /xml/Variables.xml
+msgctxt "#31178"
+msgid "Playerprocessinfo"
+
 #empty strings from id 31178 to 31596
 
 #: /xml/Includes_SettingsDialog.xml
