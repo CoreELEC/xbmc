@@ -135,7 +135,7 @@
 				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
 				<control type="label">
 					<width>600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>[COLOR button_focus]$LOCALIZE[31635]:[/COLOR] $VAR[HDRcodectypeVar]</label>
 					<font>font10</font>
@@ -144,7 +144,7 @@
 				</control>
 				<control type="label">
 					<width>830</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
                     <label>[COLOR button_focus]$LOCALIZE[31600]:[/COLOR] $INFO[VideoPlayer.VideoCodec]</label>
 					<font>font10</font>
@@ -153,7 +153,7 @@
 				</control>
 				<control type="label">
 					<width>830</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
                     <label>[COLOR button_focus]$LOCALIZE[31601]:[/COLOR] $INFO[VideoPlayer.VideoResolution]</label>
 					<font>font10</font>
@@ -162,25 +162,16 @@
 				</control>
 				<control type="label">
 					<width>830</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31604]: [/COLOR]$VAR[AudioCodec1Var]</label>
+					<label>[COLOR button_focus]$LOCALIZE[31604]: [/COLOR]$VAR[AudioCodec1Var]  $VAR[AudioChannels1Var]</label>
 					<font>font10</font>
 					<shadowcolor>black</shadowcolor>
 					<visible>!String.IsEmpty(VideoPlayer.AudioCodec)</visible>
 				</control>
 				<control type="label">
 					<width>830</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31605]:[/COLOR] $VAR[AudioChannels1Var]</label>
-					<font>font10</font>
-					<shadowcolor>black</shadowcolor>
-					<visible>!String.IsEmpty(VideoPlayer.AudioChannels)</visible>
-				</control>
-				<control type="label">
-					<width>830</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[VideoPlayer.AudioLanguage,[COLOR button_focus]$LOCALIZE[21447]:[/COLOR] ]</label>
 					<font>font10</font>
@@ -189,7 +180,7 @@
 				</control>
 				<control type="label">
 					<width>830</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[VideoPlayer.SubtitlesLanguage,[COLOR button_focus]$LOCALIZE[21448]:[/COLOR] ]</label>
 					<font>font10</font>
@@ -198,7 +189,7 @@
 				</control>
 				<control type="label">
 					<width>830</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>[COLOR button_focus]$LOCALIZE[21448]:[/COLOR]$INFO[VideoPlayer.SubtitlesLanguage, (deactivated) ]</label>
 					<font>font10</font>
@@ -208,11 +199,11 @@
 			</control>
 			<control type="grouplist">
 				<left>1000</left>
-				<top>74</top>
+				<top>64</top>
 				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
 				<control type="label">
 					<width>870</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>[COLOR button_focus]$LOCALIZE[31030]:[/COLOR] $INFO[system.memory(used)] / $INFO[system.memory(total)] - $INFO[system.memory(used.percent)]</label>
 					<font>font10</font>
@@ -220,7 +211,7 @@
 					<visible>Player.HasVideo</visible>
 				</control>
 				<control type="label">
-					<height>10</height>
+					<height>6</height>
 					<width>870</width>
 					<aligny>bottom</aligny>
 					<label></label>
@@ -230,7 +221,7 @@
 				   <control type="progress">
 					<description>RAM BAR</description>
 					<width>870</width>
-					<height>14</height>
+					<height>18</height>
 					<info>system.memory(used)</info>
 				</control>
 			</control>
@@ -240,15 +231,7 @@
 				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
 				<control type="label">
 					<width>1200</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>$INFO[System.ScreenResolution,[COLOR button_focus]$LOCALIZE[31607]:[/COLOR] ]</label>
-					<font>font10</font>
-					<shadowcolor>black</shadowcolor>
-				</control>
-				<control type="label">
-					<width>1200</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(videodecoder),[COLOR button_focus]$LOCALIZE[31139]:[/COLOR] ]$VAR[VideoHWDecoder, (,)]</label>
 					<font>font10</font>
@@ -257,7 +240,7 @@
 				</control>
 				<control type="label">
 					<width>1200</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(deintmethod),[COLOR button_focus]$LOCALIZE[16038]:[/COLOR] ]</label>
 					<font>font10</font>
@@ -266,7 +249,7 @@
 				</control>
 				<control type="label">
 					<width>1600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
                     <label>[COLOR button_focus]$LOCALIZE[31602]: [/COLOR]$INFO[Player.Process(videodar),, AR]</label>
 					<font>font10</font>
@@ -275,7 +258,7 @@
 				</control>
 				<control type="label">
 					<width>1200</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(videowidth),[COLOR button_focus]$LOCALIZE[38031]:[/COLOR] ,x]$INFO[Player.Process(videoheight)]$INFO[Player.Process(videoscantype)]$INFO[Player.Process(videofps),$COMMA , FPS]$INFO[VideoPlayer.VideoBitrate,$COMMA , kb/s]</label>
 					<font>font10</font>
@@ -283,7 +266,7 @@
 				</control>
 					<control type="label">
 					<width>1200</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.CacheLevel,[COLOR button_focus]$LOCALIZE[31633]:[/COLOR] , %]</label>
 					<font>font10</font>
@@ -292,7 +275,7 @@
 				</control>
 				<control type="label">
 					<width>1600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>[COLOR button_focus]$LOCALIZE[460]:[/COLOR] $INFO[Player.Process(audiochannels),,$COMMA ]$INFO[Player.Process(audiodecoder)]$INFO[Player.Process(audiobitspersample),$COMMA , bits]$INFO[Player.Process(audiosamplerate),$COMMA , Hz]$INFO[VideoPlayer.AudioBitrate,$COMMA , kb/s]</label>
 					<font>font10</font>
@@ -300,7 +283,7 @@
 				</control>
 					<control type="label">
 					<width>1600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[System.CpuUsage,[COLOR button_focus]$LOCALIZE[31609]:[/COLOR] ]</label>
 					<font>font10</font>
@@ -308,7 +291,7 @@
 					<visible>System.SupportsCPUUsage</visible>
 				</control>
 					<control type="label">
-					<height>10</height>
+					<height>6</height>
 					<width>870</width>
 					<aligny>bottom</aligny>
 					<label></label>
@@ -318,7 +301,7 @@
 				   <control type="progress">
 					<description>CPU BAR</description>
 					<width>870</width>
-					<height>14</height>
+					<height>18</height>
 					<info>System.CPUUsage</info>
 				</control>
 			</control>
@@ -328,7 +311,7 @@
 				<visible>Control.HasFocus(5553)</visible>
 				<control type="label">
 					<width>600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(amlogic.displaymode),[COLOR button_focus]$LOCALIZE[32100]:[/COLOR] ]</label>
 					<font>font10</font>
@@ -337,7 +320,7 @@
 				</control>
 				<control type="label">
 					<width>600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(amlogic.eoft_gamut),[COLOR button_focus]$LOCALIZE[32101]:[/COLOR] ]</label>
 					<font>font10</font>
@@ -346,7 +329,7 @@
 				</control>
 				<control type="label">
 					<width>600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(amlogic.pixformat),[COLOR button_focus]$LOCALIZE[31140]:[/COLOR] ]</label>
 					<font>font10</font>
@@ -355,7 +338,7 @@
 				</control>
 				<control type="label">
 					<width>1200</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[System.FPS,[COLOR button_focus]$LOCALIZE[31630]:[/COLOR] , fps]</label>
 					<font>font10</font>
@@ -363,7 +346,7 @@
 				</control>
 					<control type="label">
 					<width>600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[System.CpuFrequency,[COLOR button_focus]$LOCALIZE[31631]:[/COLOR] ]</label>
 					<font>font10</font>
@@ -371,7 +354,7 @@
 				</control>
 					<control type="label">
 					<width>600</width>
-					<height>40</height>
+					<height>45</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[System.CPUTemperature,[COLOR button_focus]$LOCALIZE[31632]:[/COLOR] ]</label>
 					<font>font10</font>
