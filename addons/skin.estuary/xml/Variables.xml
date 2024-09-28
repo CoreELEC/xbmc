@@ -83,7 +83,7 @@
 		<value condition="ListItem.HasVideoVersions + Window.IsActive(videoplaylist)">$INFO[ListItem.Label]$INFO[ListItem.VideoVersionName, [I](,)[/I]]</value>
 		<value condition="String.IsEqual(ListItem.DbType,episode) + Window.IsActive(videoplaylist)">$INFO[ListItem.TVShowtitle,,: ]$INFO[ListItem.Season,,x]$INFO[ListItem.Episode,,. ]$INFO[ListItem.Title]</value>
 		<value condition="String.IsEqual(ListItem.DbType,musicvideo) + Window.IsActive(videoplaylist)">$INFO[ListItem.Artist,, - ]$INFO[ListItem.Title]</value>
-		<value condition="[!String.IsEmpty(ListItem.Season) | !String.IsEmpty(ListItem.Episode) | !String.IsEmpty(ListItem.EpisodeName)] + Window.IsActive(videoplaylist)">$INFO[ListItem.Title,,: ]$VAR[SeasonEpisodeLabel]</value>
+		<value condition="[!String.IsEmpty(ListItem.Season) | !String.IsEmpty(ListItem.Episode) | !String.IsEmpty(ListItem.EpisodeName)] + Window.IsActive(videoplaylist)">$INFO[ListItem.Title,,: ]$VAR[SeasonEpisodeLabel]$INFO[ListItem.EpisodeName]</value>
 		<value>$INFO[ListItem.Label]</value>
 	</variable>
 	<variable name="ListLabel2Var">
@@ -415,9 +415,9 @@
 	<variable name="OSDSubLabelVar">
 		<value condition="Window.IsActive(visualisation) + Integer.IsGreater(Playlist.Length(music),1) + Integer.IsGreater(Playlist.Position(music),0)">$LOCALIZE[554] $INFO[Playlist.Position] / $INFO[Playlist.Length]</value>
 		<value condition="VideoPlayer.Content(musicvideos)">$VAR[NowPlayingSublabelVar,,[CR]]$INFO[player.chapter,[COLOR button_focus]$LOCALIZE[21396]: [/COLOR]]$INFO[Player.ChapterCount,/]$INFO[Player.ChapterName, - ]</value>
-		<value condition="VideoPlayer.Content(episodes) + !player.chaptercount + ![String.IsEmpty(VideoPlayer.Episode) | String.IsEmpty(VideoPlayer.Title)]">[COLOR button_focus][CAPITALIZE]$LOCALIZE[36906]:[/CAPITALIZE][/COLOR] $INFO[VideoPlayer.Season,S]$INFO[VideoPlayer.Episode,E]$INFO[VideoPlayer.Title, - ]</value>
-		<value condition="VideoPlayer.Content(episodes) + player.chaptercount + ![String.IsEmpty(VideoPlayer.Episode) | String.IsEmpty(VideoPlayer.Title)]">[COLOR button_focus][CAPITALIZE]$LOCALIZE[36906]:[/CAPITALIZE][/COLOR] $INFO[VideoPlayer.Season,S]$INFO[VideoPlayer.Episode,E]$INFO[VideoPlayer.Title, - ,[CR]]$INFO[player.chapter,[COLOR button_focus]$LOCALIZE[21396]:[/COLOR] ]$INFO[Player.ChapterCount,/]$INFO[Player.ChapterName, - ]</value>
-		<value condition="[VideoPlayer.Content(LiveTV) | PVR.IsPlayingRecording | PVR.IsPlayingEpgTag] ">$VAR[VideoPlayerSeasonEpisodeLabel,[COLOR button_focus][CAPITALIZE]$LOCALIZE[36906]:[/CAPITALIZE][/COLOR]]</value>
+		<value condition="VideoPlayer.Content(episodes) + !player.chaptercount">$INFO[VideoPlayer.Season,[COLOR button_focus][CAPITALIZE]$LOCALIZE[36906][/CAPITALIZE]:[/COLOR] S]$INFO[VideoPlayer.Episode,E,: ]$INFO[VideoPlayer.Title]</value>
+		<value condition="VideoPlayer.Content(episodes) + player.chaptercount">$INFO[VideoPlayer.Season,[COLOR button_focus][CAPITALIZE]$LOCALIZE[36906][/CAPITALIZE]:[/COLOR] S]$INFO[VideoPlayer.Episode,E, - ]$INFO[VideoPlayer.Title,,[CR]]$INFO[player.chapter,[COLOR button_focus]$LOCALIZE[21396]:[/COLOR] ]$INFO[Player.ChapterCount,/]$INFO[Player.ChapterName, - ]</value>
+		<value condition="VideoPlayer.Content(LiveTV) | PVR.IsPlayingRecording | PVR.IsPlayingEpgTag">$INFO[VideoPlayer.Season,[COLOR button_focus][CAPITALIZE]$LOCALIZE[36906][/CAPITALIZE]:[/COLOR] S]$INFO[VideoPlayer.Episode,E, - ]$INFO[VideoPlayer.EpisodeName]</value>
 		<value condition="player.chaptercount + [!VideoPlayer.Content(episodes) + !VideoPlayer.Content(LiveTV)]">$INFO[player.chapter,[COLOR button_focus]$LOCALIZE[21396]:[/COLOR] ]$INFO[Player.ChapterCount,/]$INFO[Player.ChapterName, - ]</value>
 		<value>$INFO[VideoPlayer.Genre]</value>
 	</variable>
@@ -512,28 +512,24 @@
 		<value>$LOCALIZE[3]</value>
 	</variable>
 	<variable name="BreadcrumbsPVRChannelsVar">
-		<value condition="Window.IsActive(TVChannels)">$LOCALIZE[19020] / $LOCALIZE[19019] / $INFO[Control.GetLabel(29)]$INFO[Control.GetLabel(30), - ]</value>
-		<value>$LOCALIZE[19021] / $LOCALIZE[19019] / $INFO[Control.GetLabel(29)]$INFO[Control.GetLabel(30), - ]</value>
+		<value condition="Window.IsActive(TVChannels)">$LOCALIZE[19020] / $LOCALIZE[19019] / $INFO[Control.GetLabel(29)]</value>
+		<value>$LOCALIZE[19021] / $LOCALIZE[19019] / $INFO[Control.GetLabel(29)]</value>
 	</variable>
 	<variable name="BreadcrumbsPVRGuideVar">
 		<value condition="Window.IsActive(TVGuide)">$LOCALIZE[19020] / $LOCALIZE[19069] / $INFO[Control.GetLabel(30)]</value>
 		<value>$LOCALIZE[19021] / $LOCALIZE[19069] / $INFO[Control.GetLabel(30)]</value>
 	</variable>
 	<variable name="BreadcrumbsPVRRecordingsVar">
-		<value condition="Window.IsActive(TVRecordings) + String.Contains(Control.GetLabel(7),*)">$LOCALIZE[19020] / $LOCALIZE[19017]$INFO[Control.GetLabel(30), / ]$INFO[Control.GetLabel(29), - ] - $LOCALIZE[19179]</value>
-		<value condition="Window.IsActive(TVRecordings) + !String.Contains(Control.GetLabel(7),*)">$LOCALIZE[19020] / $LOCALIZE[19017]$INFO[Control.GetLabel(30), / ]$INFO[Control.GetLabel(29), - ]</value>
-		<value condition="Window.IsActive(RadioRecordings) + String.Contains(Control.GetLabel(7),*)">$LOCALIZE[19021] / $LOCALIZE[19017]$INFO[Control.GetLabel(30), / ]$INFO[Control.GetLabel(29), - ] - $LOCALIZE[19179]</value>
-		<value>$LOCALIZE[19021] / $LOCALIZE[19017]$INFO[Control.GetLabel(30), / ]$INFO[Control.GetLabel(29), - ]</value>
+		<value condition="Window.IsActive(TVRecordings) + String.Contains(Control.GetLabel(7),*)">$LOCALIZE[19020] / $LOCALIZE[19017]$INFO[Control.GetLabel(30), / ] - $LOCALIZE[19179]</value>
+		<value condition="Window.IsActive(TVRecordings) + !String.Contains(Control.GetLabel(7),*)">$LOCALIZE[19020] / $LOCALIZE[19017]$INFO[Control.GetLabel(30), / ]</value>
+		<value condition="Window.IsActive(RadioRecordings) + String.Contains(Control.GetLabel(7),*)">$LOCALIZE[19021] / $LOCALIZE[19017]$INFO[Control.GetLabel(30), / ] - $LOCALIZE[19179]</value>
+		<value>$LOCALIZE[19021] / $LOCALIZE[19017]$INFO[Control.GetLabel(30), / ]</value>
 	</variable>
 	<variable name="BreadcrumbsPVRTimersVar">
 		<value condition="Window.IsActive(TVTimers)">$LOCALIZE[19020] / $LOCALIZE[19040]</value>
 		<value condition="Window.IsActive(RadioTimers)">$LOCALIZE[19021] / $LOCALIZE[19040]</value>
 		<value condition="Window.IsActive(TVTimerRules)">$LOCALIZE[19020] / $LOCALIZE[19138]$INFO[Control.GetLabel(29), / ]</value>
 		<value>$LOCALIZE[19021] / $LOCALIZE[19138]$INFO[Control.GetLabel(29), / ]</value>
-	</variable>
-	<variable name="BreadcrumbsPVRProvidersVar">
-		<value condition="Window.IsActive(TVProviders)">$LOCALIZE[19020] / $LOCALIZE[19334]$INFO[Control.GetLabel(29), / ]</value>
-		<value condition="Window.IsActive(RadioProviders)">$LOCALIZE[19021] / $LOCALIZE[19334]$INFO[Control.GetLabel(29), / ]</value>
 	</variable>
 	<variable name="BreadcrumbsPVRSearchVar">
 		<value condition="Window.IsActive(TVSearch)">$LOCALIZE[19020] / $LOCALIZE[137]$INFO[Control.GetLabel(29), / ]$INFO[Control.GetLabel(30), ]</value>
@@ -546,6 +542,10 @@
 	</variable>
 	<variable name="BreadcrumbsGameVar">
 		<value>$LOCALIZE[15016]</value>
+	</variable>
+	<variable name="RepeatButtonColordiffuseVar">
+		<value condition="Control.HasFocus(704)">button_focus</value>
+		<value>FFFFFFFF</value>
 	</variable>
 	<variable name="PVRChannelMgrHeader">
 		<value condition="!String.IsEmpty(Window.Property(IsRadio))">$LOCALIZE[19199] - $LOCALIZE[19024]</value>
@@ -587,10 +587,8 @@
 		<value condition="Player.HasAudio">[COLOR grey]$INFO[MusicPlayer.Album][/COLOR]$INFO[MusicPlayer.Year, [,] ]</value>
 	</variable>
 	<variable name="PlayerLabel3">
-		<value condition="VideoPlayer.Content(livetv) | PVR.IsPlayingRecording + !String.IsEmpty(VideoPlayer.Episode) + String.IsEmpty(VideoPlayer.EpisodePart)">$INFO[VideoPlayer.Season,$LOCALIZE[20373]: , ]$INFO[VideoPlayer.Episode,$LOCALIZE[20359]: ]</value>
-		<value condition="VideoPlayer.Content(livetv) | PVR.IsPlayingRecording + !String.IsEmpty(VideoPlayer.Episode) + !String.IsEmpty(VideoPlayer.EpisodePart)">$INFO[VideoPlayer.Season,$LOCALIZE[20373]: , ]$INFO[VideoPlayer.Episode,$LOCALIZE[20359]: ]$INFO[VideoPlayer.EpisodePart,/]</value>
-		<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(livetv) + String.IsEmpty(VideoPlayer.Episode)">$INFO[VideoPlayer.Genre]</value>
 		<value condition="VideoPlayer.Content(episodes)">$INFO[VideoPlayer.TvShowTitle]</value>
+		<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(livetv)">$INFO[VideoPlayer.Genre]</value>
 		<value condition="Player.HasAudio">$INFO[MusicPlayer.TrackNumber,,: ][COLOR=grey]$INFO[Player.Title][/COLOR]</value>
 	</variable>
 	<variable name="PVRTimerIcon">
@@ -608,14 +606,8 @@
 		<value condition="ListItem.IsPlayable">icons/pvr/PVR-HasArchive.png</value>
 	</variable>
 	<variable name="SeasonEpisodeLabel">
-		<value condition="String.IsEmpty(ListItem.EpisodeName)">$INFO[ListItem.Season,S]$INFO[ListItem.Episode,E]$INFO[ListItem.EpisodePart,/]</value>
-		<value condition="!String.IsEmpty(ListItem.EpisodeName) + !String.IsEmpty(ListItem.EpisodePart)">$INFO[ListItem.Season,S]$INFO[ListItem.Episode,E]$INFO[ListItem.EpisodePart,/,: ]</value>
+		<value condition="String.IsEmpty(ListItem.EpisodeName)">$INFO[ListItem.Season,S]$INFO[ListItem.Episode,E]</value>
 		<value>$INFO[ListItem.Season,S]$INFO[ListItem.Episode,E,: ]</value>
-	</variable>
-	<variable name="VideoPlayerSeasonEpisodeLabel">
-		<value condition="!String.IsEmpty(VideoPlayer.Season)"> $INFO[VideoPlayer.Season,S]$INFO[VideoPlayer.Episode,E]$INFO[VideoPlayer.EpisodePart,/]$INFO[VideoPlayer.EpisodeName, - ]</value>
-		<value condition="!String.IsEmpty(VideoPlayer.Episode)"> $INFO[VideoPlayer.Episode]$INFO[VideoPlayer.EpisodePart,/]$INFO[VideoPlayer.EpisodeName, - ]</value>
-		<value condition="!String.IsEmpty(VideoPlayer.EpisodeName)"> $INFO[VideoPlayer.EpisodeName]</value>
 	</variable>
 	<variable name="FirstAiredLabel">
 		<value condition="String.IsEqual(ListItem.DBType,movie)">$LOCALIZE[20473]</value>
@@ -669,7 +661,7 @@
 	</variable>
 	<variable name="PVRListItemSubLabelFocused">
 		<value condition="ListItem.IsFolder">$INFO[ListItem.Timertype]</value>
-		<value condition="$EXP[listitem_has_episode_info] + !String.IsEmpty(ListItem.EpgEventTitle) + !String.StartsWith(ListItem.EpisodeName,ListItem.EpgEventTitle)">$INFO[ListItem.EpgEventTitle] | [COLOR grey]$VAR[SeasonEpisodeLabel]$INFO[ListItem.EpisodeName][/COLOR]</value>
+		<value condition="$EXP[listitem_has_episode_info] + !String.IsEmpty(ListItem.EpgEventTitle) + !String.StartsWith(ListItem.EpisodeName,ListItem.EpgEventTitle)">$INFO[ListItem.EpgEventTitle] | $VAR[SeasonEpisodeLabel]$INFO[ListItem.EpisodeName]</value>
 		<value condition="$EXP[listitem_has_episode_info]">$VAR[SeasonEpisodeLabel]$INFO[ListItem.EpisodeName]</value>
 		<value>$INFO[ListItem.EpgEventTitle]</value>
 	</variable>
@@ -707,29 +699,18 @@
 		<value condition="!String.IsEmpty(Container(6).ListItem.Art(thumb))">$INFO[Container(6).ListItem.Art(thumb)]</value>
 		<value condition="!String.IsEmpty(Container(50).ListItem.Art(landscape))">$INFO[Container(50).ListItem.Art(landscape)]</value>
 		<value condition="!String.IsEmpty(Container(50).ListItem.Art(thumb))">$INFO[Container(50).ListItem.Art(thumb)]</value>
-		<value>$INFO[ListItem.Art(thumb)]</value>
+		<value>$INFO[ListItem.Art(thumb)]</value>	
 	</variable>
-	<variable name="VideoListResolutionTypeVar">
+	<variable name="VideoResolutionTypeVar">
 		<value condition="String.IsEqual(ListItem.VideoResolution,480)">SD</value>
 		<value condition="String.IsEqual(ListItem.VideoResolution,540)">SD</value>
 		<value condition="String.IsEqual(ListItem.VideoResolution,576)">SD</value>
 		<value condition="String.IsEqual(ListItem.VideoResolution,720)">HD</value>
-		<value condition="String.IsEqual(ListItem.VideoResolution,1080)">HD</value>
+		<value condition="String.IsEqual(ListItem.VideoResolution,1080)">HD</value>			
 		<value condition="String.IsEqual(ListItem.VideoResolution,4K)">UHD</value>
-		<value condition="String.IsEqual(ListItem.VideoResolution,8K)">UHD</value>
-		<value>$INFO[ListItem.VideoResolution]</value>
+		<value condition="String.IsEqual(ListItem.VideoResolution,8K)">UHD</value>	
 	</variable>
-	<variable name="VideoPlayerResolutionTypeVar">
-		<value condition="String.IsEqual(VideoPlayer.VideoResolution,480)">SD</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoResolution,540)">SD</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoResolution,576)">SD</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoResolution,720)">HD</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoResolution,1080)">HD</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoResolution,4K)">UHD</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoResolution,8K)">UHD</value>
-		<value>$INFO[VideoPlayer.VideoResolution]</value>
-	</variable>
-	<variable name="VideoListCodecVar">
+	<variable name="VideoCodecVar">
 		<value condition="String.IsEqual(ListItem.VideoCodec,av1)">AV1</value>
 		<value condition="String.IsEqual(ListItem.VideoCodec,avc1)">AVC-1</value>
 		<value condition="String.IsEqual(ListItem.VideoCodec,div3)">DivX</value>
@@ -756,46 +737,13 @@
 		<value condition="String.IsEqual(ListItem.VideoCodec,xvid)">XviD</value>
 		<value>$INFO[ListItem.VideoCodec]</value>
 	</variable>
-	<variable name="VideoPlayerCodecVar">
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,av1)">AV1</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,avc1)">AVC-1</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,div3)">DivX</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,divx)">DivX</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,dx50)">DivX</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,flv)">FLV</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,h264)">H.264</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,hev1)">H.265</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,hevc)">H.265</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,hvc1)">H.265</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,mpeg1)">MPEG-1</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,mpeg2)">MPEG-2</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,mpeg2video)">MPEG-2</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,mp4v)">MPEG-4</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,mpeg4)">MPEG-4</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,theora)">Theora</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,vc1)">VC-1</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,vc-1)">VC-1</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,vp8)">VP8</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,vp9)">VP9</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,wmv)">WMV</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,wmv3)">WMV</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,wvc1)">VC-1</value>
-		<value condition="String.IsEqual(VideoPlayer.VideoCodec,xvid)">XviD</value>
-		<value>$INFO[VideoPlayer.VideoCodec]</value>
-	</variable>
-	<variable name="VideoListHDRVar">
-		<value condition="String.IsEqual(ListItem.HdrType,dolbyvision)">DoVi</value>
+	<variable name="VideoHDRVar">
+		<value condition="String.IsEqual(ListItem.HdrType,dolbyvision)">Dolby Vision</value>
 		<value condition="String.IsEqual(ListItem.HdrType,hdr10)">HDR10</value>
 		<value condition="String.IsEqual(ListItem.HdrType,hlg)">HLG</value>
 		<value>$INFO[ListItem.HdrType]</value>
 	</variable>
-	<variable name="VideoPlayerHDRVar">
-		<value condition="String.IsEqual(VideoPlayer.HdrType,dolbyvision)">DoVi</value>
-		<value condition="String.IsEqual(VideoPlayer.HdrType,hdr10)">HDR10</value>
-		<value condition="String.IsEqual(VideoPlayer.HdrType,hlg)">HLG</value>
-		<value>$INFO[VideoPlayer.HdrType]</value>
-	</variable>
-	<variable name="AudioListCodecVar">
+	<variable name="AudioCodecVar">
 		<value condition="String.IsEqual(ListItem.AudioCodec,aac)">AAC</value>
 		<value condition="String.IsEqual(ListItem.AudioCodec,aac_latm)">AAC</value>
 		<value condition="String.IsEqual(ListItem.AudioCodec,ac3)">Dolby D</value>
@@ -831,43 +779,7 @@
 		<value condition="String.IsEqual(ListItem.AudioCodec,wmav2)">WMA</value>
 		<value>$INFO[ListItem.AudioCodec]</value>
 	</variable>
-	<variable name="VideoPlayerAudioCodecVar">
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,aac)">AAC</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,aac_latm)">AAC</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,ac3)">Dolby D</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,aif)">AIFF</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,aifc)">AIFF</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,aiff)">AIFF</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,alac)">ALAC</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,ape)">APE</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,avc)">AVC</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,cdda)">CDDA</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,dca)">DTS</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,dolbydigital)">Dolby D</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,dts)">DTS</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,dtshd_hra)">DTSHD-HRA</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,dtshd_ma)">DTSHD-MA</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,dtsma)">DTSHD-MA</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,eac3)">Dolby D+</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,flac)">FLAC</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,mp1)">MP1</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,mp3)">MP3</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,mp3float)">MP3</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,ogg)">OGG</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,opus)">OPUS</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,pcm)">PCM</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,pcm_bluray)">PCM</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,pcm_s16le)">PCM</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,pcm_s24le)">PCM</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,truehd)">TrueHD</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,vorbis)">Vorbis</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,wav)">WAV</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,wavpack)">WAVP</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,wmapro)">WMA-PRO</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioCodec,wmav2)">WMA</value>
-		<value>$INFO[VideoPlayer.AudioCodec]</value>
-	</variable>
-	<variable name="AudioListChannelsVar">
+	<variable name="AudioChannelsVar">
 		<value condition="String.IsEqual(ListItem.AudioChannels,0)">0.0</value>
 		<value condition="String.IsEqual(ListItem.AudioChannels,1)">1.0</value>
 		<value condition="String.IsEqual(ListItem.AudioChannels,2)">2.0</value>
@@ -880,90 +792,47 @@
 		<value condition="String.IsEqual(ListItem.AudioChannels,10)">9.1</value>
 		<value>$INFO[ListItem.AudioChannels]</value>
 	</variable>
-	<variable name="VideoPlayerAudioChannelsVar">
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,0)">0.0</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,1)">1.0</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,2)">2.0</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,3)">2.1</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,4)">4.0</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,5)">4.1</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,6)">5.1</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,7)">6.1</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,8)">7.1</value>
-		<value condition="String.IsEqual(VideoPlayer.AudioChannels,10)">9.1</value>
-		<value>$INFO[VideoPlayer.AudioChannels]</value>
-	</variable>
-	<variable name="MusicPlayerCodecVar">
-		<value condition="String.IsEqual(MusicPlayer.Codec,aac)">AAC</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,aac_latm)">AAC</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,ac3)">Dolby D</value>
-		<value condition="String.IsEqual(LMusicPlayer.Codec,aif)">AIFF</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,aifc)">AIFF</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,aiff)">AIFF</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,alac)">ALAC</value>
-		<value condition="String.IsEqual(LMusicPlayer.Codec,ape)">APE</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,avc)">AVC</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,cdda)">CDDA</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,dca)">DTS</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,dolbydigital)">Dolby D</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,dts)">DTS</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,dtshd_hra)">DTSHD-HRA</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,dtshd_ma)">DTSHD-MA</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,dtsma)">DTSHD-MA</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,eac3)">Dolby D+</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,flac)">FLAC</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,mp1)">MP1</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,mp3)">MP3</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,mp3float)">MP3</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,ogg)">OGG</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,opus)">OPUS</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,pcm)">PCM</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,pcm_bluray)">PCM</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,pcm_s16le)">PCM</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,pcm_s24le)">PCM</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,truehd)">TrueHD</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,vorbis)">Vorbis</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,wav)">WAV</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,wavpack)">WAVP</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,wmapro)">WMA-PRO</value>
-		<value condition="String.IsEqual(MusicPlayer.Codec,wmav2)">WMA</value>
-		<value>$INFO[MusicPlayer.Codec]</value>
-	</variable>
-	<variable name="MusicListChannelsVar">
-		<value condition="String.IsEqual(ListItem.MusicChannels,0)">0.0</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,1)">1.0</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,2)">2.0</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,3)">2.1</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,4)">4.0</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,5)">4.1</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,6)">5.1</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,7)">6.1</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,8)">7.1</value>
-		<value condition="String.IsEqual(ListItem.MusicChannels,10)">9.1</value>
-		<value>$INFO[ListItem.MusicChannels]</value>
-	</variable>
-	<variable name="MusicPlayerAudioChannelsVar">
-		<value condition="String.IsEqual(MusicPlayer.Channels,0)">0.0</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,1)">1.0</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,2)">2.0</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,3)">2.1</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,4)">4.0</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,5)">4.1</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,6)">5.1</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,7)">6.1</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,8)">7.1</value>
-		<value condition="String.IsEqual(MusicPlayer.Channels,10)">9.1</value>
-		<value>$INFO[MusicPlayer.Channels]</value>
-	</variable>
 	<variable name="MediaInfoListLabelVar">
 		<value condition="Window.IsVisible(selectvideoversion)">$INFO[ListItem.VideoVersionName]</value>
 		<value>$INFO[ListItem.Label]</value>
 	</variable>
 	<variable name="MediaInfoListLabel2Var">
-		<value condition="ListItem.IsStereoscopic">$INFO[ListItem.Duration,$LOCALIZE[180]: ][CR]3D | $VAR[VideoListCodecVar]$INFO[ListItem.VideoResolution, | ]$VAR[VideoListResolutionTypeVar, ]$VAR[VideoListHDRVar, | ]$VAR[VideoListAspectVar, | ]$VAR[AudioListCodecVar, | ]$VAR[AudioListChannelsVar, ]</value>
-		<value>$INFO[ListItem.Duration,$LOCALIZE[180]: ][CR]$VAR[VideoListCodecVar]$INFO[ListItem.VideoResolution, | ]$VAR[VideoListResolutionTypeVar, ]$VAR[VideoListHDRVar, | ]$VAR[VideoListAspectVar, | ]$VAR[AudioListCodecVar, | ]$VAR[AudioListChannelsVar, ]</value>
+		<value condition="ListItem.IsStereoscopic">$INFO[ListItem.Duration,$LOCALIZE[180]: ][CR]$VAR[VideoCodecVar,, ]$INFO[ListItem.VideoResolution,| , ]$VAR[VideoResolutionTypeVar,, ]$VAR[VideoHDRVar,| , ]| 3D $INFO[ListItem.VideoAspect,| ,:1 ]$VAR[AudioCodecVar,| , ]$VAR[AudioChannelsVar]</value>
+		<value>$INFO[ListItem.Duration,$LOCALIZE[180]: ][CR]$VAR[VideoCodecVar,, ]$INFO[ListItem.VideoResolution,| , ]$VAR[VideoResolutionTypeVar,, ]$VAR[VideoHDRVar,| , ]$INFO[ListItem.VideoAspect,| ,:1 ]$VAR[AudioCodecVar,| , ]$VAR[AudioChannelsVar]</value>
 	</variable>
-	<variable name="PVRInstanceName">
-		<value condition="Integer.IsGreater(PVR.ClientCount,1)">$INFO[ListItem.PVRClientName,[COLOR grey]$LOCALIZE[31137]:[/COLOR] ,]$INFO[ListItem.PVRInstanceName, (,)]</value>
+	<variable name="AudioChannels1Var">
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,1)">Mono</value>
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,2)">2.0</value>
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,3)">2.1</value>
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,4)">4.0</value>
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,5)">5.0</value>
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,6)">5.1</value>
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,7)">6.1</value>
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,8)">7.1</value>
+		<value condition="Integer.IsEqual(VideoPlayer.AudioChannels,10)">9.1</value>
+	</variable>
+	<variable name="AudioCodec1Var">
+		<value condition="String.Contains(VideoPlayer.AudioCodec,dtshd)">DTS-HD</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,dtshd_ma)">DTS-HD MA</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,dtshd_hra)">DTS-HD HRA</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,dca) | String.Contains(VideoPlayer.AudioCodec,dts)">DTS</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,truehd)">Dolby TrueHD</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,eac3)">Dolby Digital+</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,ac3)">Dolby Digital</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,mp3)">MP3</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,mp2)">MP2</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,mp1)">MP1</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,vorbis)">Vorbis</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,aac)">AAC</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,wmav2)">WMA</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,wmapro)">WMA Pro</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,pcm) | String.IsEqual(VideoPlayer.AudioCodec,pcm_bluray) | String.IsEqual(VideoPlayer.AudioCodec,pcm_s16le) | String.IsEqual(VideoPlayer.AudioCodec,pcm_s24le)">PCM</value>
+		<value condition="String.Contains(VideoPlayer.AudioCodec,cook)">Cook</value>
+	</variable>
+	<variable name="HDRcodectypeVar">
+		<value condition="String.Contains(VideoPlayer.HdrType,dolbyvision)">Dolby Vision</value>
+		<value condition="String.Contains(VideoPlayer.HdrType,hdr10)">HDR</value>
+		<value condition="String.Contains(VideoPlayer.HdrType,hlg">HLG</value>
+		<value condition="String.IsEmpty(VideoPlayer.HdrType)">SDR</value>
 	</variable>
 </includes>
