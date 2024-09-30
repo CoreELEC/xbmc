@@ -193,6 +193,10 @@ msgctxt "#31039"
 msgid "Fast forward"
 msgstr "Előretekerés"
 
+msgctxt "#31040"
+msgid "Edit widgets"
+msgstr "Widgetek beállítása"
+
 msgctxt "#31041"
 msgid "Camera manufacturer"
 msgstr "Fényképezőkép gyártó"
@@ -445,6 +449,10 @@ msgstr "Nem látott Sorozatok"
 msgctxt "#31123"
 msgid "Same director"
 msgstr "Egyazon rendező"
+
+msgctxt "#31124"
+msgid "Playerprocessinfo"
+msgstr "Feldolgozási információ"
 
 msgctxt "#31125"
 msgid "Press up for actor info"
@@ -748,6 +756,30 @@ msgstr "Rendszer"
 #~ msgid "Extras"
 #~ msgstr "Extrák"
 
+msgctxt "#31630"
+msgid "System FPS"
+msgstr "Rendszer FPS"
+
+msgctxt "#31631"
+msgid "CPU frequency"
+msgstr "CPU frekvencia"
+
+msgctxt "#31632"
+msgid "SoC temp"
+msgstr "SoC hőmérséklet"
+
+msgctxt "#31633"
+msgid "Video stream cache"
+msgstr "Videófolyam puffer"
+
+msgctxt "#31634"
+msgid "Player process info"
+msgstr "Feldolgozási információ"
+
+msgctxt "#31635"
+msgid "Video source type"
+msgstr "Videó forrás típus"
+
 #~ msgctxt "#31059"
 #~ msgid "Select + X"
 #~ msgstr "Kiválasztás + X"
@@ -763,3 +795,11 @@ msgstr "Rendszer"
 #~ msgctxt "#31138"
 #~ msgid "Player process info"
 #~ msgstr "Feldolgozási információ"
+
+msgctxt "#32100"
+msgid "Display mode"
+msgstr "Kijelző mód"
+
+msgctxt "#32101"
+msgid "EOTF & Gamut"
+msgstr "EOTF & Gamut"
