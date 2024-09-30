@@ -1161,7 +1161,7 @@ static bool is_first_stream(int pid, const BLURAY_STREAM_INFO* info, int count)
 
 bool CDVDInputStreamBluray::GetPlaylistStreamLanguage(int pid, std::string& language) const
 {
-  if (pid == HDMV_PID_VIDEO)
+  if (pid == HDMV_PID_VIDEO || pid == HDMV_PID_VIDEO_EL)
     return find_stream(pid, m_clip->video_streams, m_clip->video_stream_count, language);
   if (HDMV_PID_AUDIO_FIRST <= pid && pid <= HDMV_PID_AUDIO_LAST)
     return find_stream(pid, m_clip->audio_streams, m_clip->audio_stream_count, language);
