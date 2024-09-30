@@ -179,5 +179,6 @@ protected:
   bool m_seekToKeyFrame = false;
   double m_startTime = 0;
   bool m_dv_dual_stream = false;
+  bool m_dv_dual_stream_started = false;
 };
 
