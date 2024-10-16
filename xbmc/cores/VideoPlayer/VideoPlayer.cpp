@@ -75,6 +75,11 @@
 using namespace KODI;
 using namespace std::chrono_literals;
 
+namespace
+{
+constexpr double VP_MESSAGE_QUEUE_TIME_SIZE = 8.0;
+}
+
 //------------------------------------------------------------------------------
 // selection streams
 //------------------------------------------------------------------------------
@@ -638,11 +643,7 @@ CVideoPlayer::CVideoPlayer(IPlayerCallback& callback)
   m_HasVideo = false;
   m_HasAudio = false;
   m_UpdateStreamDetails = false;
-
-  const int tenthsSeconds = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-      CSettings::SETTING_VIDEOPLAYER_QUEUETIMESIZE);
-
-  m_messageQueueTimeSize = static_cast<double>(tenthsSeconds) / 10.0;
+  m_messageQueueTimeSize = VP_MESSAGE_QUEUE_TIME_SIZE;
 
   m_SkipCommercials = true;
 
