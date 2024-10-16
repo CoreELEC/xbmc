@@ -40,7 +40,6 @@
 #include "settings/DisplaySettings.h"
 #include "settings/MediaSettings.h"
 #include "settings/MediaSourceSettings.h"
-#include "settings/PlayerSettings.h"
 #include "settings/ServicesSettings.h"
 #include "settings/SettingConditions.h"
 #include "settings/SettingsComponent.h"
@@ -420,10 +419,6 @@ void CSettings::InitializeOptionFillers()
       "filecachereadfactors", CServicesSettings::SettingOptionsReadFactorsFiller);
   GetSettingsManager()->RegisterSettingOptionsFiller(
       "filecachechunksizes", CServicesSettings::SettingOptionsCacheChunkSizesFiller);
-  GetSettingsManager()->RegisterSettingOptionsFiller(
-      "playerqueuetimesizes", CPlayerSettings::SettingOptionsQueueTimeSizesFiller);
-  GetSettingsManager()->RegisterSettingOptionsFiller(
-      "playerqueuedatasizes", CPlayerSettings::SettingOptionsQueueDataSizesFiller);
 }
 
 void CSettings::UninitializeOptionFillers()
@@ -475,8 +470,6 @@ void CSettings::UninitializeOptionFillers()
   GetSettingsManager()->UnregisterSettingOptionsFiller("filecachememorysizes");
   GetSettingsManager()->UnregisterSettingOptionsFiller("filecachereadfactors");
   GetSettingsManager()->UnregisterSettingOptionsFiller("filecachechunksizes");
-  GetSettingsManager()->UnregisterSettingOptionsFiller("playerqueuetimesizes");
-  GetSettingsManager()->UnregisterSettingOptionsFiller("playerqueuedatasizes");
 }
 
 void CSettings::InitializeConditions()
