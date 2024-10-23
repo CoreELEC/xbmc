@@ -307,6 +307,24 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       m_pFormatName = "am-h265";
       m_bitstream = new CBitstreamConverter();
       m_bitstream->Open(m_hints.codec, m_hints.extradata.GetData(), m_hints.extradata.GetSize(), true);
+
+      // check for hevc-hvcC and convert to h265-annex-b
+      if (m_hints.extradata && !m_hints.cryptoSession)
+      {
+        if (m_bitstream && aml_support_dolby_vision())
+        {
+          bool user_dv_disable = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+              CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
+          if ((m_hints.dovi.dv_profile == 4 || m_hints.dovi.dv_profile == 7) && m_hints.dovi.bl_present_flag == 0 && !user_dv_disable)
+          {
+            CLog::Log(LOGINFO, "{}::{} - HEVC bitstream will be converted to minimum enhancement layer because of no BL flag is present", __MODULE_NAME__, __FUNCTION__);
+            m_hints.dovi.el_present_flag = false;
+            m_hints.dovi.bl_present_flag = true;
+            m_bitstream->SetConvertDovi(DOVIMode::MODE_TOMEL);
+          }
+        }
+      }
+
       // make sure we do not leak the existing m_hints.extradata
       m_hints.extradata = {};
       m_hints.extradata = FFmpegExtraData(m_bitstream->GetExtraSize());
