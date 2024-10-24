@@ -377,10 +377,11 @@ bool CBitstreamConverter::Convert(uint8_t* pData, int iSize)
     return true;
   }
 
-  // Annex B input is passed through as is
   if (m_to_annexb && !m_convert_bitstream &&
       (m_codec == AV_CODEC_ID_H264 || m_codec == AV_CODEC_ID_HEVC))
   {
+    if (m_convert_dovi && m_codec == AV_CODEC_ID_HEVC)
+      return ProcessAnnexB(pData, iSize);
     m_inputBuffer = pData;
     m_inputSize = iSize;
     return true;
