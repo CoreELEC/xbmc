@@ -1201,28 +1201,23 @@ void CRenderManager::PrepareNextRender()
     combined = true;
   }
 
-  //if (renderPts >= nextFramePts && !m_forceNext)
-  //  aml_video_mute(false);
-
   if (renderPts >= nextFramePts || m_forceNext)
   {
     // see if any future queued frames are already due
     auto iter = m_queued.begin();
     int idx = *iter;
     int lateframes = 0;
-    int queue_size = m_queued.size();
 
     while (iter != m_queued.end())
     {
-      // the slot for rendering in time is [pts .. (pts +  x * frametime)]
+      // the slot for rendering in time is [pts .. (pts + frametime)]
       // renderer/drivers have internal queues, being slightly late here does not mean that
       // we are really late. The likelihood that we recover decreases the greater m_lateframes
       // get. Skipping a frame is easier than having decoder dropping one (lateframes > 10)
       double x = (m_lateframes <= 6) ? 0.98 : 0;
-      if ((renderPts - frametime * queue_size) < (m_Queue[*iter].pts + x * frametime))
+      if (renderPts < m_Queue[*iter].pts + x * frametime)
         break;
       lateframes++;
-      queue_size--;
       idx = *iter;
       ++iter;
     }
