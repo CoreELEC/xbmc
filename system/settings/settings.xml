@@ -3438,7 +3438,7 @@
           <control type="list" format="string" />
         </setting>
         <setting id="audiooutput.ac3passthrough" type="boolean" label="364" help="36365">
-          <level>2</level>
+          <level>1</level>
           <default>true</default>
           <dependencies>
             <dependency type="visible" on="property" name="aesettingvisible" setting="audiooutput.config">audiooutput.passthrough</dependency>
@@ -3447,7 +3447,7 @@
           <control type="toggle" />
         </setting>
         <setting id="audiooutput.ac3transcode" type="boolean" parent="audiooutput.ac3passthrough" label="667" help="36429">
-          <level>2</level>
+          <level>1</level>
           <default>false</default>
           <dependencies>
             <dependency type="enable">
@@ -3466,7 +3466,7 @@
           <control type="toggle" />
         </setting>
         <setting id="audiooutput.eac3passthrough" type="boolean" label="448" help="37016">
-          <level>2</level>
+          <level>1</level>
           <default>false</default>
           <dependencies>
             <dependency type="visible">
@@ -3480,7 +3480,7 @@
           <control type="toggle" />
         </setting>
         <setting id="audiooutput.dtspassthrough" type="boolean" label="254" help="36366">
-          <level>2</level>
+          <level>1</level>
           <default>false</default>
           <dependencies>
             <dependency type="visible">
@@ -3494,7 +3494,7 @@
           <control type="toggle" />
         </setting>
         <setting id="audiooutput.truehdpassthrough" type="boolean" label="349" help="36369">
-          <level>2</level>
+          <level>1</level>
           <default>false</default>
           <dependencies>
             <dependency type="visible">
@@ -3508,7 +3508,7 @@
           <control type="toggle" />
         </setting>
         <setting id="audiooutput.dtshdpassthrough" type="boolean" label="347" help="36370">
-          <level>2</level>
+          <level>1</level>
           <default>false</default>
           <dependencies>
             <dependency type="visible">
@@ -3522,7 +3522,7 @@
           <control type="toggle" />
         </setting>
         <setting id="audiooutput.dtshdcorefallback" type="boolean" parent="audiooutput.dtshdpassthrough" label="2203" help="2204">
-          <level>2</level>
+          <level>1</level>
           <default>true</default>
           <dependencies>
             <dependency type="visible">
