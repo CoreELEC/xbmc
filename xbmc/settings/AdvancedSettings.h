@@ -94,6 +94,8 @@ struct RefreshVideoLatency
   float refreshmin;
   float refreshmax;
 
+  unsigned int resolution;
+
   float delay;
 };
 
@@ -342,7 +344,7 @@ class CAdvancedSettings : public ISettingCallback, public ISettingsHandler
     std::vector<std::string> m_settingsFiles;
     void ParseSettingsFile(const std::string &file);
 
-    float GetLatencyTweak(float refreshrate);
+    float GetLatencyTweak(float refreshrate, unsigned int resolution);
     bool m_initialized;
 
     void SetDebugMode(bool debug);

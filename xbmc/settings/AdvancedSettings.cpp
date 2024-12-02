@@ -768,6 +768,10 @@ void CAdvancedSettings::ParseSettingsFile(const std::string &file)
         if (XMLUtils::GetFloat(pRefreshVideoLatency, "delay", delay, -600.0f, 600.0f))
           videolatency.delay = delay;
 
+        if (pRefreshVideoLatency->QueryUnsignedAttribute("resolution", &videolatency.resolution) ==
+            TIXML_NO_ATTRIBUTE)
+          videolatency.resolution = 0;
+
         if (videolatency.refreshmin > 0.0f && videolatency.refreshmax >= videolatency.refreshmin)
           m_videoRefreshLatency.push_back(videolatency);
         else
@@ -1392,13 +1396,15 @@ void CAdvancedSettings::AddSettingsFile(const std::string &filename)
   m_settingsFiles.push_back(filename);
 }
 
-float CAdvancedSettings::GetLatencyTweak(float refreshrate)
+float CAdvancedSettings::GetLatencyTweak(float refreshrate,
+                                         unsigned int resolution)
 {
   float delay = m_videoDefaultLatency;
   for (int i = 0; i < (int) m_videoRefreshLatency.size(); i++)
   {
     RefreshVideoLatency& videolatency = m_videoRefreshLatency[i];
-    if (refreshrate >= videolatency.refreshmin && refreshrate <= videolatency.refreshmax)
+    if ((refreshrate >= videolatency.refreshmin && refreshrate <= videolatency.refreshmax) &&
+        (videolatency.resolution == resolution || videolatency.resolution == 0));
       delay = videolatency.delay;
   }
 
