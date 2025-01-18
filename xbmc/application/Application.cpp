@@ -847,6 +847,9 @@ void CApplication::Render()
   if (!CServiceBroker::GetRenderSystem()->BeginRender())
     return;
 
+  // render video layer
+  CServiceBroker::GetGUI()->GetWindowManager().RenderEx();
+
   // render gui layer
   if (appPower->GetRenderGUI() && !m_skipGuiRender)
   {
@@ -871,9 +874,6 @@ void CApplication::Render()
 
     m_lastRenderTime = std::chrono::steady_clock::now();
   }
-
-  // render video layer
-  CServiceBroker::GetGUI()->GetWindowManager().RenderEx();
 
   CServiceBroker::GetRenderSystem()->EndRender();
 
