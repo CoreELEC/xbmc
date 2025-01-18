@@ -850,6 +850,9 @@ void CApplication::Render()
   if (!CServiceBroker::GetRenderSystem()->BeginRender())
     return;
 
+  // render video layer
+  CServiceBroker::GetGUI()->GetWindowManager().RenderEx();
+
   // render gui layer
   bool compositing = CServiceBroker::GetWinSystem()->BeginGuiComposite();
 
@@ -878,13 +881,10 @@ void CApplication::Render()
   }
 
   if (compositing)
+  {
     CServiceBroker::GetWinSystem()->EndGuiComposite();
-
-  // render video layer
-  CServiceBroker::GetGUI()->GetWindowManager().RenderEx();
-
-  if (compositing)
     CServiceBroker::GetWinSystem()->CompositeGui();
+  }
 
   CServiceBroker::GetRenderSystem()->EndRender();
 
