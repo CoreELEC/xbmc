@@ -184,6 +184,9 @@ void CGUIControl::DoRender()
       !m_renderRegion.Intersects(CServiceBroker::GetWinSystem()->GetGfxContext().GetScissors()))
     return;
 
+  CRect hitRect(m_hitRect);
+  hitRect.Intersect(CServiceBroker::GetWinSystem()->GetGfxContext().GetScissors());
+
   if (IsVisible() && !m_isCulled)
   {
     bool hasStereo =
@@ -204,7 +207,7 @@ void CGUIControl::DoRender()
     {
       KODI::UTILS::COLOR::Color color =
           CServiceBroker::GetWinSystem()->GetGfxContext().MergeAlpha(m_hitColor);
-      CGUITexture::DrawQuad(CServiceBroker::GetWinSystem()->GetGfxContext().GenerateAABB(m_hitRect), color);
+      CGUITexture::DrawQuad(CServiceBroker::GetWinSystem()->GetGfxContext().GenerateAABB(hitRect), color);
     }
 
     Render();
