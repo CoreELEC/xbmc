@@ -129,7 +129,7 @@ bool SupportsDolbyVision(const std::string& /*condition*/,
                          const std::string& /*value*/,
                          const SettingConstPtr& /*setting*/)
 {
-  return CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities().SupportsDolbyVision();
+  return CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities().SupportsDolbyVision() != DolbyVisionFormat::DOLBYVISION_TYPE_NONE;
 }
 
 bool SupportsScreenMove(const std::string& /*condition*/,
