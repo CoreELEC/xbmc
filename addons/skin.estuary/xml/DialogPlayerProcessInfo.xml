@@ -264,7 +264,6 @@
 					<aligny>bottom</aligny>
 					<label>[COLOR button_focus]$LOCALIZE[21448]: [/COLOR]$VAR[ActiveVideoPlayerSubtitleLang]</label>
 					<font>font12</font>
-					<scroll>true</scroll>
 					<shadowcolor>black</shadowcolor>
 				</control>
 			</control>
