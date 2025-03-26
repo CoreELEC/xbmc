@@ -1187,7 +1187,8 @@ const infomap player_process[] = {{"videodecoder", PLAYER_PROCESS_VIDEODECODER},
                                   {"videoscantype", PLAYER_PROCESS_VIDEOSCANTYPE},
                                   {"amlogic.pixformat", PLAYER_PROCESS_AML_PIXELFORMAT },
                                   {"amlogic.displaymode", PLAYER_PROCESS_AML_DISPLAYMODE },
-                                  {"amlogic.eoft_gamut", PLAYER_PROCESS_AML_EOFT_GAMUT }};
+                                  {"amlogic.eoft_gamut", PLAYER_PROCESS_AML_EOFT_GAMUT },
+                                  {"audiochannelssink", PLAYER_PROCESS_AUDIOCHANNELS_SINK}};
 
 /// \page modules__infolabels_boolean_conditions
 /// \subsection modules__infolabels_boolean_conditions_Weather Weather
