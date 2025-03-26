@@ -1244,7 +1244,7 @@ constexpr std::array<InfoMap, 10> player_times = {{
 ///
 /// -----------------------------------------------------------------------------
 // clang-format off
-constexpr std::array<InfoMap, 23> player_process = {{
+constexpr std::array<InfoMap, 24> player_process = {{
     {"videodecoder",        PLAYER_PROCESS_VIDEODECODER},
     {"deintmethod",         PLAYER_PROCESS_DEINTMETHOD},
     {"pixformat",           PLAYER_PROCESS_PIXELFORMAT},
@@ -1268,6 +1268,7 @@ constexpr std::array<InfoMap, 23> player_process = {{
     {"amlogic.pixformat",   PLAYER_PROCESS_AML_PIXELFORMAT},
     {"amlogic.displaymode", PLAYER_PROCESS_AML_DISPLAYMODE},
     {"amlogic.eoft_gamut",  PLAYER_PROCESS_AML_EOFT_GAMUT},
+    {"audiochannelssink",   PLAYER_PROCESS_AUDIOCHANNELS_SINK},
 }};
 // clang-format on
 
