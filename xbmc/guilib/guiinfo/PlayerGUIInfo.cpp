@@ -385,6 +385,9 @@ bool CPlayerGUIInfo::GetLabel(std::string& value, const CFileItem *item, int con
     case PLAYER_PROCESS_AUDIOCHANNELS:
       value = CServiceBroker::GetDataCacheCore().GetAudioChannels();
       return true;
+    case PLAYER_PROCESS_AUDIOCHANNELS_SINK:
+      value = CServiceBroker::GetDataCacheCore().GetAudioChannelsSink();
+      return true;
     case PLAYER_PROCESS_AUDIOSAMPLERATE:
       value = StringUtils::FormatNumber(CServiceBroker::GetDataCacheCore().GetAudioSampleRate());
       return true;
