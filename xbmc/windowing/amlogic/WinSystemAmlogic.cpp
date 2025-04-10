@@ -68,6 +68,8 @@ CWinSystemAmlogic::CWinSystemAmlogic()
   m_stereo_mode = RENDER_STEREO_MODE_OFF;
   m_delayDispReset = false;
 
+  m_nativeGUI = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING);
+
   m_libinput->Start();
 }
 
