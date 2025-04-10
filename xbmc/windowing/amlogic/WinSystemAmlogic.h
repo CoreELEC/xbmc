@@ -65,6 +65,7 @@ protected:
   CHDRCapabilities m_hdr_caps;
   bool m_hdr_caps_initialized;
   bool m_force_mode_switch;
+  bool m_nativeGUI;
 private:
   struct callback_data
   {
