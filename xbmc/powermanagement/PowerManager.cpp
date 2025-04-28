@@ -214,7 +214,7 @@ void CPowerManager::OnWake()
 {
   CLog::Log(LOGINFO, "{}: Running resume jobs", __FUNCTION__);
 
-  CServiceBroker::GetNetwork().WaitForNet();
+  CServiceBroker::GetNetwork().WaitForNet(true);
 
   // reset out timers
   auto& components = CServiceBroker::GetAppComponents();

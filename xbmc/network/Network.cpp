@@ -457,9 +457,13 @@ std::vector<SOCKET> CreateTCPServerSocket(const int port, const bool bindLocal, 
   return sockets;
 }
 
-void CNetworkBase::WaitForNet()
+void CNetworkBase::WaitForNet(const bool resume)
 {
-  const int timeout = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_POWERMANAGEMENT_WAITFORNETWORK);
+  int timeout = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_POWERMANAGEMENT_WAITFORNETWORK);
+
+  if (timeout <= 0 && resume)
+    timeout = 10; // wait for network after suspend
+
   if (timeout <= 0)
     return; // wait for network is disabled
 

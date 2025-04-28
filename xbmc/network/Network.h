@@ -94,7 +94,7 @@ public:
   bool IsLocalHost(const std::string& hostname);
 
   // Waits for the first network interface to become available
-  void WaitForNet();
+  void WaitForNet(const bool resume = false);
 
   /*!
     \brief  IPv6/IPv4 compatible conversion of host IP address
