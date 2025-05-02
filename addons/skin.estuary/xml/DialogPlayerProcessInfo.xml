@@ -258,7 +258,7 @@
 					<width>900</width>
 					<height>40</height>
 					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[460]:[/COLOR] $INFO[Player.Process(audiochannels),]</label>
+					<label>[COLOR button_focus]$LOCALIZE[472]:[/COLOR] $INFO[Player.Process(audiochannels),]</label>
 					<font>font12</font>
 					<shadowcolor>black</shadowcolor>
 					<visible>!Player.Passthrough</visible>
@@ -267,7 +267,7 @@
 					<width>900</width>
 					<height>40</height>
 					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[460]:[/COLOR] $INFO[Player.Process(audiochannelssink),]</label>
+					<label>[COLOR button_focus]$LOCALIZE[471]:[/COLOR] $INFO[Player.Process(audiochannelssink),]</label>
 					<font>font12</font>
 					<shadowcolor>black</shadowcolor>
 					<visible>Player.Passthrough</visible>
