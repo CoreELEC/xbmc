@@ -653,6 +653,11 @@ void CVideoPlayerVideo::Process()
         onlyPrioMsgs = true;
       }
     }
+    else if (pMsg->IsType(CDVDMsg::PLAYER_DISPLAY_RESET))
+    {
+      CLog::Log(LOGINFO, "CVideoPlayerVideo: display reset occurred, clear skipped frames");
+      m_renderManager.DisplayReset();
+    }
   }
 }
 
