@@ -6572,6 +6572,7 @@ void CVideoPlayer::OnResetDisplay()
   // Last: the player loop judges the hold as soon as it sees the display back
   m_displayLost = false;
   m_VideoPlayerAudio->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::PLAYER_DISPLAY_RESET), 1);
+  m_VideoPlayerVideo->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::PLAYER_DISPLAY_RESET), 1);
 }
 
 bool CVideoPlayer::HasPendingPlaybackRequest()
