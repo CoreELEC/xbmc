@@ -22,6 +22,11 @@
 #include "settings/SettingsComponent.h"
 #include "threads/Thread.h"
 
+extern "C"
+{
+#include <libavutil/hdr_dynamic_metadata.h>
+}
+
 #define __MODULE_NAME__ "DVDVideoCodecAmlogic"
 
 CAMLVideoBufferPool::~CAMLVideoBufferPool()
@@ -479,6 +484,31 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       m_videoBufferPool = std::shared_ptr<CAMLVideoBufferPool>(new CAMLVideoBufferPool());
 
       m_opened = true;
+    }
+  }
+
+  if (packet.pSideData && packet.iSideDataElems > 0)
+  {
+    const AVPacketSideData* sideData = av_packet_side_data_get(static_cast<AVPacketSideData*>(packet.pSideData),
+                                                               packet.iSideDataElems,
+                                                               AV_PKT_DATA_DYNAMIC_HDR10_PLUS);
+
+    if (sideData && sideData->size >= sizeof(AVDynamicHDRPlus))
+    {
+      // mkv block additions arrive parsed since ffmpeg 9, so the raw T.35 the
+      // kernel ioctl expects is rebuilt behind the 6 header bytes ffmpeg's
+      // serializer leaves out
+      uint8_t t35[6 + AV_HDR_PLUS_MAX_PAYLOAD_SIZE] = {0xb5, 0x00, 0x3c, 0x00, 0x01, 0x04};
+      uint8_t* payload = t35 + 6;
+      size_t payloadSize = sizeof(t35) - 6;
+      if (av_dynamic_hdr_plus_to_t35(reinterpret_cast<const AVDynamicHDRPlus*>(sideData->data),
+                                   &payload, &payloadSize) >= 0)
+      {
+        const size_t t35Size = payloadSize + 6;
+        if (m_Codec->AddHDR10PData(t35, t35Size) < 0)
+          CLog::Log(LOGWARNING, "CDVDVideoCodecAmlogic::{}: failed to set hdr10p data with size {}", __FUNCTION__,
+            t35Size);
+      }
     }
   }
 
