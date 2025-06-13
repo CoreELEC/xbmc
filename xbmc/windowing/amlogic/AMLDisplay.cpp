@@ -7,6 +7,7 @@
 #include <drm_fourcc.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 #include <amcodec/codec.h>
 
 #include "AMLDisplay.h"
@@ -19,18 +20,7 @@
 #include "settings/SettingsComponent.h"
 #include "utils/AMLUtils.h"
 #include "utils/log.h"
-#include "utils/RegExp.h"
 #include "windowing/GraphicContext.h"
-
-namespace
-{
-constexpr float FractionalRate(float rate)
-{
-  // Divide in double: in float the result lands one ULP low. Widened explicitly
-  // for -Werror=double-promotion.
-  return static_cast<float>(static_cast<double>(rate) / 1.001);
-}
-} // unnamed namespace
 
 void FbDestroyCallback(gbm_bo* bo, void* data)
 {
@@ -48,7 +38,7 @@ void FbDestroyCallback(gbm_bo* bo, void* data)
 
 CAMLGBMUtils::CAMLGBMUtils(int fd)
 {
-  m_device.reset(gbm_create_device(fd));
+  m_device = gbm_create_device(fd);
   if (!m_device)
   {
     CLog::Log(LOGERROR, "CAMLGBMUtils::{} - failed to create GBM device", __FUNCTION__);
@@ -56,29 +46,22 @@ CAMLGBMUtils::CAMLGBMUtils(int fd)
   }
 }
 
+CAMLGBMUtils::~CAMLGBMUtils()
+{
+  if (m_surface)
+    gbm_surface_destroy(m_surface);
+  gbm_device_destroy(m_device);
+}
+
 bool CAMLGBMUtils::CreateSurface(int width, int height, uint32_t format)
 {
-  m_buffer.reset();
-  m_drm_fb = nullptr;
-
   uint64_t modifier = DRM_FORMAT_MOD_LINEAR;
+  m_surface = gbm_surface_create_with_modifiers(m_device, width, height, format, &modifier, 1);
 
-  // First try modifier-aware surface
-  m_surface.reset(gbm_surface_create_with_modifiers(GetDevice(),
-                                                    width,
-                                                    height,
-                                                    format,
-                                                    &modifier,
-                                                    1));
-
-  // Fallback to legacy create if modifiers are not supported
   if (!m_surface)
   {
-    m_surface.reset(gbm_surface_create(GetDevice(),
-                                       width,
-                                       height,
-                                       format,
-                                       GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING));
+    m_surface = gbm_surface_create(m_device, width, height, format,
+                                 GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
   }
 
   if (!m_surface)
@@ -154,17 +137,15 @@ struct drm_fb* CAMLGBMUtils::GetFBFromBo(int fd, struct gbm_bo* bo)
   return fb;
 }
 
-bool CAMLGBMUtils::LockFrontBuffer(int fd)
+void CAMLGBMUtils::LockFrontBuffer(int fd)
 {
-  m_drm_fb = nullptr;
-  if (gbm_surface_has_free_buffers(GetSurface()))
+  if (gbm_surface_has_free_buffers(m_surface))
   {
-    m_buffer.reset(new CGBMSurfaceBuffer(GetSurface()));
-    if (m_buffer->Get())
-      m_drm_fb = GetFBFromBo(fd, m_buffer->Get());
-  }
+    m_buffer = gbm_surface_lock_front_buffer(m_surface);
 
-  return m_drm_fb != nullptr;
+    if (m_buffer)
+      m_drm_fb = GetFBFromBo(fd, m_buffer);
+  }
 }
 
 CAMLDRMUtils::CAMLDRMUtils()
@@ -186,15 +167,10 @@ CAMLDRMUtils::CAMLDRMUtils()
     throw std::runtime_error("failed to set universal planes capability");
   }
 
-  ret = drmSetClientCap(m_fd, DRM_CLIENT_CAP_ATOMIC, 1);
-  if (ret)
-  {
-    CLog::Log(LOGERROR, "CAMLDRMUtils::{} - failed to enable DRM client cap of drmDevice: {}",
-              __FUNCTION__, strerror(errno));
-    throw std::runtime_error("failed to enable DRM client cap");
-  }
-
   aml_init_drmDevice();
+
+  if (aml_get_drmDevice_connected())
+    aml_init_drmDevice_display();
 }
 
 CAMLDRMUtils::~CAMLDRMUtils()
@@ -217,42 +193,22 @@ CAMLDRMUtils::~CAMLDRMUtils()
 void CAMLDRMUtils::CleanAndClose()
 {
   if (m_resources)
-  {
     drmModeFreeResources(m_resources);
-    m_resources = nullptr;
-  }
 
   if (m_connector)
-  {
     drmModeFreeConnector(m_connector);
-    m_connector = nullptr;
-  }
 
   if (m_encoder)
-  {
     drmModeFreeEncoder(m_encoder);
-    m_encoder = nullptr;
-  }
 
   if (m_crtc)
-  {
     drmModeFreeCrtc(m_crtc);
-    m_crtc = nullptr;
-  }
 
   if (m_orig_crtc)
-  {
     free(m_orig_crtc);
-    m_orig_crtc = nullptr;
-  }
 
   if (m_plane)
-  {
     drmModeFreePlane(m_plane);
-    m_plane = nullptr;
-  }
-
-  m_connection = DRM_MODE_DISCONNECTED;
 }
 
 void CAMLDRMUtils::aml_init_drmDevice()
@@ -328,9 +284,6 @@ void CAMLDRMUtils::aml_init_drmDevice()
     CleanAndClose();
     throw std::runtime_error("failed to get primary plane of drmDevice");
   }
-
-  if (aml_get_drmDevice_connected())
-    aml_init_drmDevice_display();
 }
 
 void CAMLDRMUtils::aml_init_drmDevice_display()
@@ -405,8 +358,7 @@ void CAMLDRMUtils::aml_init_drmDevice_display()
 }
 
 void CAMLDRMUtils::aml_set_framebuffer_resolution(unsigned int width,
-                                                  unsigned int height,
-                                                  std::string framebuffer_name)
+  unsigned int height, std::string framebuffer_name)
 {
   int fd0;
   std::string framebuffer = "/dev/" + framebuffer_name;
@@ -414,7 +366,6 @@ void CAMLDRMUtils::aml_set_framebuffer_resolution(unsigned int width,
   if ((fd0 = open(framebuffer.c_str(), O_RDWR)) >= 0)
   {
     struct fb_var_screeninfo vinfo;
-
     if (ioctl(fd0, FBIOGET_VSCREENINFO, &vinfo) == 0)
     {
       if (width != vinfo.xres || height != vinfo.yres)
@@ -429,17 +380,6 @@ void CAMLDRMUtils::aml_set_framebuffer_resolution(unsigned int width,
       }
     }
     close(fd0);
-  }
-}
-
-void CAMLDRMUtils::aml_drmDevice_vsync()
-{
-  if (m_fd != -1 && aml_get_drmDevice_connected())
-  {
-    drmVBlank vbl = {};
-    vbl.request.type = DRM_VBLANK_RELATIVE;
-    vbl.request.sequence = 1;
-    drmWaitVBlank(m_fd, &vbl);
   }
 }
 
@@ -532,78 +472,61 @@ std::string CAMLDRMUtils::aml_get_drmDevice_modes(void)
 
 // set mode of drmDevice
 bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::string mode,
-  const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch,
-  bool hotplug_mode_switch)
+  std::string framebuffer_name, bool force_mode_switch)
 {
   std::unique_lock<CCriticalSection> lock(m_drmSection);
+  std::string current_mode = aml_get_drmDevice_mode();
   bool ret = false;
-  const bool _hotplug_mode_switch = hotplug_mode_switch && m_connector && m_connector->count_modes > 1;
-  const bool _force_mode_switch = force_mode_switch || _hotplug_mode_switch;
 
   m_width = res.iWidth;
   m_height = res.iHeight;
   m_ScreenWidth = res.iScreenWidth;
-  m_ScreenHeight = stereo_mode == RenderStereoMode::HARDWAREBASED ? res.iHeight : res.iScreenHeight;
+  m_ScreenHeight = res.iScreenHeight;
 
-  if (_force_mode_switch)
-  {
-    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{}: try to set mode: {} (forced mode switch)", __FUNCTION__, mode.c_str());
-  }
-  else
-    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{}: try to set mode: {}", __FUNCTION__, mode.c_str());
-
-  if (!aml_get_drmDevice_connected() && !_hotplug_mode_switch)
+  if (!aml_get_drmDevice_connected())
   {
     CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - connector of drmDevice is not connected", __FUNCTION__);
     ret = true;
     return ret;
   }
 
-  if (!m_crtc && _force_mode_switch)
+  if (!m_crtc->buffer_id)
   {
-    if (m_resources && m_resources->count_crtcs > 0)
-      m_crtc = drmModeGetCrtc(m_fd, m_resources->crtcs[0]);
+    CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - current crtc do not have frame buffer", __FUNCTION__);
+    ret = true;
+    return ret;
+  }
 
-    if (!m_crtc)
+  for (int i = 0; i < m_connector->count_modes; i++)
+  {
+    if (StringUtils::EqualsNoCase(m_connector->modes[i].name, mode))
     {
-      CLog::Log(LOGERROR, "CAMLDRMUtils::{} - failed to get CRTC for forced mode switch", __FUNCTION__);
-      if (_force_mode_switch)
+      CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - found mode in connector mode list: [{:d}]:{}", __FUNCTION__, i, mode);
+      drmModeFBPtr drm_fb = drmModeGetFB(m_fd, m_crtc->buffer_id);
+
+      aml_set_framebuffer_resolution(res.iScreenWidth, res.iScreenHeight, framebuffer_name);
+
+      ret = drmModeSetCrtc(m_fd, m_crtc->crtc_id, drm_fb->fb_id, 0, 0,
+        m_resources->connectors, 1, &m_connector->modes[i]);
+      m_crtc->mode = m_connector->modes[i];
+
+      if (!CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING))
+        aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name);
+      else
+        aml_set_framebuffer_resolution(res.iScreenWidth, res.iScreenHeight, framebuffer_name);
+
+      if (force_mode_switch)
         set_drmProp(m_connector->connector_id, "UPDATE", DRM_MODE_OBJECT_CONNECTOR, 1, NULL);
-      aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name);
-      return false;
+
+      drmModeFreeFB(drm_fb);
+      break;
     }
   }
-
-  int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
-  ret = aml_set_drmDevice_active(mode, fractional_rate, stereo_mode, _force_mode_switch, true);
-
-  if (ret && _hotplug_mode_switch)
-  {
-    drmModeConnectorPtr connector = drmModeGetConnector(m_fd, m_connector->connector_id);
-    if (connector)
-    {
-      m_connection = connector->encoder_id ? DRM_MODE_CONNECTED : DRM_MODE_DISCONNECTED;
-      drmModeFreeConnector(connector);
-    }
-  }
-
-  if (ret)
-  {
-    if (_force_mode_switch)
-      set_drmProp(m_connector->connector_id, "UPDATE", DRM_MODE_OBJECT_CONNECTOR, 1, NULL);
-
-    aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name);
-
-    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - finished set drmDevice mode", __FUNCTION__);
-  }
-  else
-    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to set drmDevice mode", __FUNCTION__);
 
   return ret;
 }
 
-int CAMLDRMUtils::get_drmProp(
-    unsigned int id, std::string name, unsigned int obj_type, void* data, int* data_len)
+int CAMLDRMUtils::get_drmProp(unsigned int id, std::string name, unsigned int obj_type)
 {
   int ret = -1;
   unsigned int i;
@@ -619,7 +542,7 @@ int CAMLDRMUtils::get_drmProp(
     return ret;
   }
 
-  for (i = 0; i < props->count_props; i++)
+  for(i = 0; i < props->count_props; i++)
   {
     drmModePropertyPtr prop = drmModeGetProperty(m_fd, props->props[i]);
 
@@ -628,46 +551,8 @@ int CAMLDRMUtils::get_drmProp(
 
     if (StringUtils::EqualsNoCase(prop->name, name))
     {
-      if (data && data_len && (prop->flags & DRM_MODE_PROP_BLOB))
-      {
-        drmModePropertyBlobPtr blob = drmModeGetPropertyBlob(m_fd, props->prop_values[i]);
-
-        if (!blob)
-        {
-          CLog::Log(LOGERROR, "CAMLDRMUtils::{} - failed to get blob data for property '{}'",
-                    __FUNCTION__, prop->name);
-          drmModeFreeProperty(prop);
-          break;
-        }
-
-        int copy_len = static_cast<int>(blob->length);
-        if (copy_len > *data_len)
-        {
-          CLog::Log(LOGWARNING,
-                    "CAMLDRMUtils::{} - blob property '{}' truncated, "
-                    "blob size: {}, buffer size: {}",
-                    __FUNCTION__, prop->name, blob->length, *data_len);
-          copy_len = *data_len;
-        }
-
-        memcpy(data, blob->data, copy_len);
-        *data_len = static_cast<int>(blob->length);
-        ret = static_cast<int>(blob->id);
-
-        CLog::Log(LOGDEBUG,
-                  "CAMLDRMUtils::{} - get blob property '{}', "
-                  "blob id: {}, length: {}",
-                  __FUNCTION__, prop->name, blob->id, blob->length);
-
-        drmModeFreePropertyBlob(blob);
-      }
-      else
-      {
-        ret = (int)props->prop_values[i];
-        CLog::Log(LOGDEBUG, LOGWINDOWING, "CAMLDRMUtils::{} - get property '{}', value: {:d}",
-                  __FUNCTION__, prop->name, ret);
-      }
-
+      ret = (int)props->prop_values[i];
+      CLog::Log(LOGDEBUG, LOGWINDOWING, "CAMLDRMUtils::{} - get property '{}', value: {:d}", __FUNCTION__, prop->name, ret);
       drmModeFreeProperty(prop);
       break;
     }
@@ -728,10 +613,7 @@ void CAMLDRMUtils::set_drmProp(unsigned int id, std::string name,
 }
 
 // get a property
-int CAMLDRMUtils::aml_get_drmProperty(std::string name,
-                                      unsigned int obj_type,
-                                      void* data,
-                                      int* data_len)
+int CAMLDRMUtils::aml_get_drmProperty(std::string name, unsigned int obj_type)
 {
   std::unique_lock<CCriticalSection> lock(m_drmSection);
   int ret = -1;
@@ -745,7 +627,7 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name,
       case DRM_MODE_OBJECT_CONNECTOR:
         if (m_connector)
           id = m_connector->connector_id;
-        ret = get_drmProp(id, name, obj_type, data, data_len);
+        ret = get_drmProp(id, name, obj_type);
         [[fallthrough]];
       default:
         return ret;
@@ -769,7 +651,7 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name,
       return ret;
   }
 
-  ret = get_drmProp(id, name, obj_type, data, data_len);
+  ret = get_drmProp(id, name, obj_type);
 
   return ret;
 }
@@ -783,16 +665,7 @@ void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, 
   if (!aml_get_drmDevice_connected())
   {
     CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - connector of drmDevice is not connected", __FUNCTION__);
-
-    switch (obj_type) {
-      case DRM_MODE_OBJECT_CONNECTOR:
-        if (m_connector)
-          id = m_connector->connector_id;
-        set_drmProp(id, name, obj_type, value, NULL);
-        [[fallthrough]];
-      default:
-        return;
-    }
+    return;
   }
 
   switch (obj_type) {
@@ -813,26 +686,6 @@ void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, 
   }
 
   set_drmProp(id, name, obj_type, value, NULL);
-}
-
-void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, std::string value)
-{
-  std::unique_lock<CCriticalSection> lock(m_drmSection);
-  uint32_t mode_blobid = 0;
-
-  if (!aml_get_drmDevice_connected())
-  {
-    CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - connector of drmDevice is not connected", __FUNCTION__);
-    return;
-  }
-
-  if (drmModeCreatePropertyBlob(m_fd, value.c_str(), value.size(), &mode_blobid))
-  {
-    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to create mode property blob", __FUNCTION__);
-    return;
-  }
-
-  aml_set_drmProperty(name, obj_type, mode_blobid);
 }
 
 // get modes count and status if current device is connected
@@ -874,45 +727,21 @@ std::string CAMLDRMUtils::aml_get_drmDevice_preferred_mode()
   return mode;
 }
 
-bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rate,
-  const RenderStereoMode stereo_mode, bool force_mode_switch, bool active)
+bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, bool active)
 {
   std::unique_lock<CCriticalSection> lock(m_drmSection);
   bool ret = false;
   drmModeModeInfoPtr drmDevicemode = NULL;
-  drmModeModeInfo syntheticMode = {};
-  const bool mode_switch_required =
-      force_mode_switch || !StringUtils::EqualsNoCase(aml_get_drmDevice_mode(), mode);
 
-  if (mode_switch_required)
+  for (int i = 0; i < m_connector->count_modes; i++)
   {
-    for (int i = 0; i < m_connector->count_modes; i++)
+    std::string connector_mode = static_cast<std::string>(m_connector->modes[i].name);
+    if (StringUtils::EqualsNoCase(connector_mode, mode))
     {
-      std::string connector_mode = static_cast<std::string>(m_connector->modes[i].name);
-      if (StringUtils::EqualsNoCase(connector_mode, mode))
-      {
-        CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - use mode[{:d}]: {}", __FUNCTION__, i, connector_mode);
-        drmDevicemode = &m_connector->modes[i];
-        break;
-      }
+      CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - use mode[{:d}]: {}", __FUNCTION__, i, connector_mode);
+      drmDevicemode = &m_connector->modes[i];
+      break;
     }
-  }
-
-  if (drmDevicemode && stereo_mode == RenderStereoMode::HARDWAREBASED)
-  {
-    syntheticMode = *drmDevicemode;
-    syntheticMode.clock       *= 2;
-    syntheticMode.vdisplay    += syntheticMode.vtotal;
-    syntheticMode.vsync_start += syntheticMode.vtotal;
-    syntheticMode.vsync_end   += syntheticMode.vtotal;
-    syntheticMode.vtotal      *= 2;
-    drmDevicemode = &syntheticMode;
-  }
-
-  if (!mode_switch_required)
-  {
-    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - mode {} is already set", __FUNCTION__, mode);
-    return true;
   }
 
   if (drmDevicemode != NULL)
@@ -920,35 +749,60 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rat
     uint32_t mode_blobid = 0;
     drmModeAtomicReqPtr req = drmModeAtomicAlloc();
 
+    int res = drmSetClientCap(m_fd, DRM_CLIENT_CAP_ATOMIC, 1);
+    if (res)
+    {
+      CLog::Log(LOGERROR, "CAMLDRMUtils::{} - failed to set client cap of drmDevice ({:d})", __FUNCTION__, res);
+      return ret;
+    }
+
     if (req)
     {
-      set_drmProp(m_connector->connector_id, "CRTC_ID", DRM_MODE_OBJECT_CONNECTOR, m_crtc->crtc_id, req);
-      set_drmProp(m_connector->connector_id, "FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR, fractional_rate, req);
-
-      if (drmModeCreatePropertyBlob(m_fd, drmDevicemode, sizeof(*drmDevicemode), &mode_blobid))
+      if (!m_crtc)
       {
-        CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to create mode property blob", __FUNCTION__);
-        drmModeAtomicFree(req);
-        return false;
+        m_crtc = drmModeGetCrtc(m_fd, m_resources->crtcs[0]);
+        m_crtc->mode = *drmDevicemode;
       }
+
+      set_drmProp(m_connector->connector_id, "CRTC_ID", DRM_MODE_OBJECT_CONNECTOR, m_crtc->crtc_id, req);
+
+      drmModeCreatePropertyBlob(m_fd, drmDevicemode, sizeof(*drmDevicemode), &mode_blobid);
 
       set_drmProp(m_crtc->crtc_id, "MODE_ID", DRM_MODE_OBJECT_CRTC, mode_blobid, req);
       set_drmProp(m_crtc->crtc_id, "ACTIVE", DRM_MODE_OBJECT_CRTC, active ? 1 : 0, req);
 
-      ret = (drmModeAtomicCommit(m_fd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL) == 0);
-      if (!ret)
+      ret = drmModeAtomicCommit(m_fd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
+      if (ret)
         CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to set drmDevice mode: {}", __FUNCTION__, drmDevicemode->name);
-      else
-        m_crtc->mode = *drmDevicemode;
 
       drmModeAtomicFree(req);
       drmModeDestroyPropertyBlob(m_fd, mode_blobid);
     }
-    else
-      CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to allocate atomic request", __FUNCTION__);
   }
-  else
-    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to find mode {}", __FUNCTION__, mode);
+
+  return ret;
+}
+
+bool CAMLDRMUtils::aml_set_drmDevice_hotplug_mode(std::string mode)
+{
+  std::string current_mode = aml_get_drmDevice_mode();
+  bool ret = false;
+
+  CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - current mode: {}, new mode: {}", __FUNCTION__,
+    current_mode, mode);
+
+  if (StringUtils::EqualsNoCase(current_mode, mode))
+  {
+    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - hotplug mode already changed: {}", __FUNCTION__, mode);
+    ret = true;
+    return ret;
+  }
+
+  ret = aml_set_drmDevice_active(mode, true);
+  // force connected
+  m_connection = DRM_MODE_CONNECTED;
+
+  CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - reset of drmDevice finished", __FUNCTION__);
 
   return ret;
 }
@@ -985,108 +839,26 @@ void CAMLDRMUtils::FlipPage(uint32_t fb_id)
   set_drmProp(m_plane->plane_id, "CRTC_W", DRM_MODE_OBJECT_PLANE , m_ScreenWidth, req);
   set_drmProp(m_plane->plane_id, "CRTC_H", DRM_MODE_OBJECT_PLANE , m_ScreenHeight, req);
 
-  if (m_inFenceFd != -1)
-  {
-    set_drmProp(m_crtc->crtc_id, "OUT_FENCE_PTR", DRM_MODE_OBJECT_CRTC , reinterpret_cast<uint64_t>(&m_outFenceFd), req);
-    set_drmProp(m_plane->plane_id, "IN_FENCE_FD", DRM_MODE_OBJECT_PLANE , m_inFenceFd, req);
-  }
-
   if (drmModeAtomicCommit(m_fd, req, DRM_MODE_ATOMIC_NONBLOCK, NULL))
     CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to make drmDevice atomic commit", __FUNCTION__);
-
-  if (m_inFenceFd != -1)
-  {
-    close(m_inFenceFd);
-    m_inFenceFd = -1;
-  }
 
   drmModeAtomicFree(req);
 }
 
 CAMLDisplay::CAMLDisplay()
 :  m_amlDRMUtils(new CAMLDRMUtils)
-,  m_stereo_mode(RenderStereoMode::UNDEFINED)
 {
-}
-
-void CAMLDisplay::aml_refresh_display_caps()
-{
-  // built locally so a stream opening during the update cannot see empty caps
-  // refresh HDR capabilities
-  CHDRCapabilities caps;
-  int hdr_cap = m_amlDRMUtils->aml_get_drmProperty("hdr_cap", DRM_MODE_OBJECT_CONNECTOR);
-  int dv_cap = m_amlDRMUtils->aml_get_drmProperty("dv_cap", DRM_MODE_OBJECT_CONNECTOR);
-
-  hdr_cap = hdr_cap < 0 ? 0 : hdr_cap;
-  dv_cap = dv_cap < 0 ? 0 : dv_cap;
-
-  if (hdr_cap & (HDR10_CAP | SMPTE_ST_2084_CAP))
-    caps.SetHDR10();
-
-  if (hdr_cap & HDR10_PLUS_CAP)
-    caps.SetHDR10Plus();
-
-  if (hdr_cap & HLG_CAP)
-    caps.SetHLG();
-
-  // refresh DV capability
-  if (dv_cap)
-    caps.SetDolbyVision();
-
-  if (dv_cap & DV_2160p60Hz)
-    caps.SetDolbyVision4k60();
-
-  if (dv_cap & DV_RGB_444_8BIT)
-    caps.SetDolbyVisionTVLED();
-
-  if (dv_cap & LL_YCbCr_422_12BIT)
-    caps.SetDolbyVisionPlayerLED();
-
-  m_hdr_caps = caps;
-
-  // refresh display widescreen
-  bool is_widescreen = true;
-  CSysfsPath edid{"/sys/class/amhdmitx/amhdmitx0/edid"};
-
-  if (edid.Exists())
-  {
-    std::string valstr = edid.Get<std::string>().value_or("");
-    size_t pos = valstr.find("Physical size(mm):");
-    if (pos != std::string::npos)
-    {
-      int width_mm = 0, height_mm = 0;
-      sscanf(valstr.c_str() + pos, "Physical size(mm): %d x %d", &width_mm, &height_mm);
-      if (width_mm > 0 && height_mm > 0)
-      {
-          float ratio = static_cast<float>(width_mm) / height_mm;
-          // 16:9 range (with some tolerance)
-          is_widescreen = (ratio > 1.65f) ? 1 : 0;
-          CLog::Log(LOGDEBUG, "AMLUtils: display {} wide screen ({}x{}mm)",
-            is_widescreen ? "is" : "is not", width_mm, height_mm);
-      }
-    }
-  }
-
-  m_is_widescreen = is_widescreen;
-
-  // refresh 3D capability
-  bool support_3d = false;
-  CSysfsPath amhdmitx0_support_3d{"/sys/class/amhdmitx/amhdmitx0/support_3d"};
-  if (amhdmitx0_support_3d.Exists())
-    support_3d = amhdmitx0_support_3d.Get<int>().value_or(0);
-
-  m_support_3d = support_3d;
 }
 
 bool CAMLDisplay::set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
-  const RenderStereoMode stereo_mode, bool force_mode_switch, bool hotplug_mode_switch)
+  const RenderStereoMode stereo_mode, bool force_mode_switch)
 {
   bool result = false;
 
   if (aml_get_cpufamily_id() < AML_T7)
   {
     handle_display_stereo_mode(stereo_mode);
-    result = set_display_resolution(res, framebuffer_name, force_mode_switch, hotplug_mode_switch);
+    result = set_display_resolution(res, framebuffer_name, force_mode_switch);
     if (stereo_mode != RenderStereoMode::OFF)
       CSysfsPath("/sys/class/amhdmitx/amhdmitx0/phy", 1);
   }
@@ -1095,7 +867,7 @@ bool CAMLDisplay::set_native_resolution(const RESOLUTION_INFO &res, std::string 
     if (stereo_mode == RenderStereoMode::HARDWAREBASED ||
         stereo_mode == RenderStereoMode::OFF)
       handle_display_stereo_mode(stereo_mode);
-    result = set_display_resolution(res, framebuffer_name, force_mode_switch, hotplug_mode_switch);
+    result = set_display_resolution(res, framebuffer_name, force_mode_switch);
     if (stereo_mode != RenderStereoMode::HARDWAREBASED &&
         stereo_mode != RenderStereoMode::OFF)
       handle_display_stereo_mode(stereo_mode);
@@ -1106,15 +878,17 @@ bool CAMLDisplay::set_native_resolution(const RESOLUTION_INFO &res, std::string 
 
 void CAMLDisplay::handle_display_stereo_mode(const RenderStereoMode stereo_mode)
 {
-  if (m_stereo_mode == RenderStereoMode::UNDEFINED)
+  static RenderStereoMode kernel_stereo_mode = RenderStereoMode::UNDEFINED;
+
+  if (kernel_stereo_mode == RenderStereoMode::UNDEFINED)
   {
     CSysfsPath _kernel_stereo_mode{"/sys/class/amhdmitx/amhdmitx0/stereo_mode"};
     if (_kernel_stereo_mode.Exists())
-      m_stereo_mode = static_cast<RenderStereoMode>(
+      kernel_stereo_mode = static_cast<RenderStereoMode>(
           _kernel_stereo_mode.Get<int>().value_or(static_cast<int>(RenderStereoMode::UNDEFINED)));
   }
 
-  if (m_stereo_mode != stereo_mode)
+  if (kernel_stereo_mode != stereo_mode)
   {
     std::string command = "3doff";
     switch (stereo_mode)
@@ -1135,14 +909,15 @@ void CAMLDisplay::handle_display_stereo_mode(const RenderStereoMode stereo_mode)
 
     CLog::Log(LOGDEBUG, "CAMLDisplay::{} setting new mode: {}", __FUNCTION__, command);
     CSysfsPath("/sys/class/amhdmitx/amhdmitx0/config", command);
-    m_stereo_mode = stereo_mode;
+    kernel_stereo_mode = stereo_mode;
   }
 }
 
 bool CAMLDisplay::set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
-  bool force_mode_switch, bool hotplug_mode_switch)
+  bool force_mode_switch)
 {
   std::string mode = res.strId.c_str();
+  std::string cur_mode;
   std::vector<std::string> _mode = StringUtils::Split(mode, ' ');
   std::string mode_options;
 
@@ -1162,8 +937,16 @@ bool CAMLDisplay::set_display_resolution(const RESOLUTION_INFO &res, std::string
   else
     CLog::Log(LOGDEBUG, "CAMLDisplay::{}: try to set mode: {}", __FUNCTION__, mode.c_str());
 
-  return m_amlDRMUtils->aml_set_drmDevice_mode(
-      res, mode, m_stereo_mode, framebuffer_name, force_mode_switch, hotplug_mode_switch);
+  cur_mode = m_amlDRMUtils->aml_get_drmDevice_mode();
+
+  int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
+
+  if (m_amlDRMUtils->aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR) != fractional_rate)
+    m_amlDRMUtils->aml_set_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR, fractional_rate);
+
+  m_amlDRMUtils->aml_set_drmDevice_mode(res, mode, framebuffer_name, force_mode_switch);
+
+  return true;
 }
 
 std::string CAMLDisplay::aml_get_preferred_mode()
@@ -1201,6 +984,11 @@ std::string CAMLDisplay::aml_get_preferred_mode()
   CLog::Log(LOGDEBUG, "CAMLDisplay::{} - preferred mode: {}", __FUNCTION__, mode);
 
   return mode;
+}
+
+bool CAMLDisplay::aml_set_hotplug_mode(std::string mode)
+{
+  return m_amlDRMUtils->aml_set_drmDevice_hotplug_mode(mode);
 }
 
 bool CAMLDisplay::aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
@@ -1272,8 +1060,8 @@ bool CAMLDisplay::aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     return false;
   }
 
-  res->iWidth  = std::min(nativeGui ? width  : (width  <= 1920 ? width  : width  / 2), 3840);
-  res->iHeight = std::min(nativeGui ? height : (height <= 1080 ? height : height / 2), 2160);
+  res->iWidth = nativeGui ? width : std::min(width, 1920);
+  res->iHeight= nativeGui ? height : std::min(height, 1080);
   res->iScreenWidth = width;
   res->iScreenHeight = height;
   res->dwFlags = (*smode == 'p') ? D3DPRESENTFLAG_PROGRESSIVE : D3DPRESENTFLAG_INTERLACED;
@@ -1283,7 +1071,7 @@ bool CAMLDisplay::aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     case 23:
     case 29:
     case 59:
-      res->fRefreshRate = FractionalRate(rrate + 1);
+      res->fRefreshRate = (float)((rrate + 1)/1.001f);
       break;
     default:
       res->fRefreshRate = (float)rrate;
@@ -1293,12 +1081,6 @@ bool CAMLDisplay::aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
   res->bFullScreen   = true;
   res->iSubtitles    = (int)(0.965 * res->iHeight);
   res->fPixelRatio   = 1.0f;
-
-  // Fix pixel ratio when 4:3 resolution is used on wide screen
-  const float res_ratio = static_cast<float>(res->iScreenWidth) / res->iScreenHeight;
-  if (res_ratio < 1.65f && m_is_widescreen)
-    res->fPixelRatio = (16.0f / 9.0f) / res_ratio;
-
   res->strId         = fromMode;
   res->strMode       = StringUtils::Format("{:d}x{:d} @ {:.2f}{} - Full Screen", res->iScreenWidth, res->iScreenHeight, res->fRefreshRate,
     res->dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "");
@@ -1324,7 +1106,7 @@ bool CAMLDisplay::aml_get_native_resolution(RESOLUTION_INFO *res)
   bool result = aml_mode_to_resolution(mode.c_str(), res);
 
   if (m_amlDRMUtils->aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR) == 1)
-    res->fRefreshRate = FractionalRate(res->fRefreshRate);
+    res->fRefreshRate /= 1.001f;
 
   return result;
 }
@@ -1385,7 +1167,7 @@ bool CAMLDisplay::aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolution
           case 24:
           case 30:
           case 60:
-            res.fRefreshRate = FractionalRate(res.fRefreshRate);
+            res.fRefreshRate /= 1.001f;
             res.strMode       = StringUtils::Format("{:d}x{:d} @ {:.2f}{} - Full Screen", res.iScreenWidth, res.iScreenHeight, res.fRefreshRate,
               res.dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "");
             resolutions.push_back(res);
