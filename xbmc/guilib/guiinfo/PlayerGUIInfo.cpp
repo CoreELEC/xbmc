@@ -26,7 +26,6 @@
 #include "guilib/guiinfo/GUIInfo.h"
 #include "guilib/guiinfo/GUIInfoHelper.h"
 #include "guilib/guiinfo/GUIInfoLabels.h"
-#include "utils/AMLUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
 #include "utils/Variant.h"
@@ -82,9 +81,10 @@ std::string CPlayerGUIInfo::GetAMLConfigInfo(std::string item) const
 
           if (sub_items.size() > 1)
           {
+            double fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
             item_value = StringUtils::Left(sub_items.at(1), sub_items.at(1).length() - 4) + " ";
 
-            if (aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR))
+            if (fps != floor(fps))
             {
               float refreshrate = static_cast<float>(atof(StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2).c_str())) / 1.001f;
               float refreshrate_rounded = std::round(refreshrate * 1000.0f) / 1000.0f;
