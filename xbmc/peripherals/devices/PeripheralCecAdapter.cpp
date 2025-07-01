@@ -93,7 +93,7 @@ CPeripheralCecAdapter::CPeripheralCecAdapter(CPeripherals& manager,
   m_strComPort = scanResult.m_strLocation;
 }
 
-CPeripheralCecAdapter::~CPeripheralCecAdapter(void)
+void CPeripheralCecAdapter::Deinitialize(void)
 {
   m_manager.GetInputManager().UnregisterCecInputProvider(this);
 
