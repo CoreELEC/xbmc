@@ -7,7 +7,6 @@
 #include <drm_fourcc.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
 #include <amcodec/codec.h>
 
 #include "AMLDisplay.h"
