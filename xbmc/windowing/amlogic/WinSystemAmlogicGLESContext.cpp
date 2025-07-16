@@ -306,6 +306,10 @@ void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
         (*i)->OnResetDisplay();
     }
   }
+  else if (!rendered && !videoLayer)
+  {
+    m_amlDisplay->aml_drmDevice_vsync();
+  }
 }
 
 EGLDisplay CWinSystemAmlogicGLESContext::GetEGLDisplay() const
