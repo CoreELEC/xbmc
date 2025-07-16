@@ -294,6 +294,10 @@ void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
       m_amlGBMUtils->UnlockFrontBuffer();
     }
   }
+  else if (!videoLayer)
+  {
+    m_amlDisplay->aml_drmDevice_vsync();
+  }
 
   if (m_delayDispReset && m_dispResetTimer.IsTimePast())
   {
