@@ -19,6 +19,7 @@
 #include "HevcSei.h"
 
 #include <algorithm>
+#include <arpa/inet.h>
 
 extern "C"
 {
@@ -545,6 +546,23 @@ bool CBitstreamConverter::Open(enum AVCodecID codec, uint8_t *in_extradata, int 
       }
       return false;
       break;
+    case AV_CODEC_ID_VVC:
+      if (in_extradata[0] == 0xff && in_extradata[1] == 0x0)
+      {
+        CLog::Log(LOGINFO, "CBitstreamConverter::Open VVC, convert to annexb format");
+        m_convert_bitstream = true;
+      }
+      else if (in_extradata[0] == 0x0 && in_extradata[1] == 0x0 && in_extradata[2] == 0x1)
+      {
+        CLog::Log(LOGINFO, "CBitstreamConverter::Open VVC, convert to annexb format is not need");
+      }
+      else
+      {
+        CLog::Log(LOGINFO, "CBitstreamConverter::Open VVC, unknown codec extra data: {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} ...",
+          in_extradata[0], in_extradata[1], in_extradata[2], in_extradata[3], in_extradata[4], in_extradata[5]);
+      }
+      return true;
+      break;
     default:
       return false;
       break;
@@ -758,6 +776,24 @@ bool CBitstreamConverter::Convert(uint8_t *pData, int iSize)
         }
         return true;
       }
+    }
+    else if (m_codec == AV_CODEC_ID_VVC)
+    {
+      m_inputSize = iSize;
+      m_inputBuffer = pData;
+
+      if (m_convert_bitstream)
+      {
+        int nal_stream_pos = 0;
+
+        while (nal_stream_pos < iSize)
+        {
+          uint32_t nal_size = AV_RB32(m_inputBuffer + nal_stream_pos) + 4;
+          *(uint32_t *)(m_inputBuffer + nal_stream_pos) = htonl(0x1);
+          nal_stream_pos += nal_size;
+        }
+      }
+      return true;
     }
   }
 
