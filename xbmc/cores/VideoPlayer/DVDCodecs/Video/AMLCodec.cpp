@@ -29,6 +29,7 @@
 
 #include "platform/linux/SysfsPath.h"
 
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <queue>
 #include <vector>
@@ -937,6 +938,44 @@ static int hevc_write_header(am_private_t *para, am_packet_t *pkt)
     return ret;
 }
 
+int vvc_add_frame_dec_info(am_private_t *para)
+{
+  size_t size = para->extradata.GetSize();
+  size_t data_pos = 0;
+
+  if (size)
+  {
+    uint8_t *header_data = para->extradata.GetData();
+
+    if (header_data[0] == 0xff && header_data[1] == 0x0)
+    {
+      while ((size_t)(header_data - para->extradata.GetData()) < size) {
+        if (header_data[0] == 0x0 && header_data[1] == 0x1 && header_data[2] == 0x0 && header_data[3] > 0)
+        {
+          size_t nal_size = header_data[3] + 4;
+          para->hdr_buf.data = (char *)realloc(para->hdr_buf.data, data_pos + nal_size);
+          memcpy(para->hdr_buf.data + data_pos, header_data, nal_size);
+          *(uint32_t *)(para->hdr_buf.data + data_pos) = htonl(0x1);
+          header_data += nal_size;
+          data_pos += nal_size;
+        }
+        else
+          header_data++;
+      }
+    }
+    else if (header_data[0] == 0x0 && header_data[1] == 0x0 && header_data[2] == 0x1)
+    {
+      para->hdr_buf.data = (char *)malloc(size);
+      memcpy(para->hdr_buf.data, header_data, size);
+      data_pos = size;
+    }
+
+    para->hdr_buf.size = data_pos;
+  }
+
+  return PLAYER_SUCCESS;
+}
+
 int mpeg12_add_frame_dec_info(am_private_t *para)
 {
   am_packet_t *pkt = &para->am_pkt;
@@ -1560,6 +1599,11 @@ int pre_header_feeding(am_private_t *para, am_packet_t *pkt)
             }
         } else if (VFORMAT_HEVC == para->video_format) {
             ret = hevc_write_header(para, pkt);
+            if (ret != PLAYER_SUCCESS) {
+                return ret;
+            }
+        } else if (VFORMAT_H266 == para->video_format) {
+            ret = vvc_add_frame_dec_info(para);
             if (ret != PLAYER_SUCCESS) {
                 return ret;
             }
