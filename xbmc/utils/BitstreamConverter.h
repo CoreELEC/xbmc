@@ -61,6 +61,8 @@ public:
 protected:
   // bitstream to bytestream (Annex B) conversion support.
   bool IsIDR(uint8_t unit_type);
+  static bool IsAnnexB(const uint8_t* data, int size);
+  bool HasVvcStartAnnexB(const uint8_t* data, int size);
 
 #ifdef HAVE_LIBDOVI
   const DoviData* processDoviRpu(uint8_t* buf, uint32_t nalSize);
@@ -68,6 +70,10 @@ protected:
 
   uint8_t* m_convertBuffer;
   int m_convertSize;
+  bool m_vvcFormatChecked{false};
+  bool m_vvcAnnexB{false};
+  uint8_t* m_inputBuffer{nullptr};
+  int m_inputSize{0};
 
   bool m_convert_bitstream;
 
