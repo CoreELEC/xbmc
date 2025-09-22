@@ -70,6 +70,14 @@ enum
 
 enum
 {
+  VVC_IDR_W_RADL = 7,
+  VVC_IDR_N_LP = 8,
+  VVC_CRA_NUT = 9,
+  VVC_SPS_NUT = 15
+};
+
+enum
+{
   SEI_BUFFERING_PERIOD = 0,
   SEI_PIC_TIMING,
   SEI_PAN_SCAN_RECT,
@@ -261,6 +269,16 @@ bool CBitstreamConverter::Open(enum AVCodecID codec, const uint8_t* in_extradata
       }
       CLog::LogF(LOGINFO, "Invalid hvcC");
       return false;
+    case AV_CODEC_ID_VVC:
+      // vvcC starts with five reserved bits set to one, Annex B starts with a start code
+      if (in_extradata && in_extrasize > 1 && (in_extradata[0] & 0xf8) == 0xf8)
+      {
+        CLog::LogF(LOGINFO, "VVC, convert to annexb format");
+        BitstreamConvertInit("vvc_mp4toannexb", in_extradata, in_extrasize);
+      }
+      else
+        CLog::LogF(LOGINFO, "VVC, no extra data");
+      return true;
     default:
       return false;
   }
@@ -273,6 +291,9 @@ void CBitstreamConverter::Close()
   if (m_convertBuffer)
     av_free(m_convertBuffer), m_convertBuffer = NULL;
   m_convertSize = 0;
+
+  m_inputBuffer = nullptr;
+  m_inputSize = 0;
 
   m_extraData = {};
 
@@ -287,18 +308,37 @@ bool CBitstreamConverter::Convert(uint8_t* pData, int iSize)
     m_convertBuffer = NULL;
   }
   m_convertSize = 0;
+  m_inputBuffer = nullptr;
+  m_inputSize = 0;
 
-  return pData && iSize > 0 && m_convert_bitstream && BitstreamConvert(pData, iSize);
+  if (!pData || iSize <= 0)
+    return false;
+
+  if (m_codec == AV_CODEC_ID_VVC && !m_vvcFormatChecked)
+  {
+    m_vvcAnnexB = !m_convert_bitstream || IsAnnexB(pData, iSize);
+    m_vvcFormatChecked = true;
+  }
+  if (m_codec == AV_CODEC_ID_VVC && m_vvcAnnexB)
+  {
+    if (!m_start_decode)
+      m_start_decode = HasVvcStartAnnexB(pData, iSize);
+    m_inputBuffer = pData;
+    m_inputSize = iSize;
+    return true;
+  }
+
+  return m_convert_bitstream && BitstreamConvert(pData, iSize);
 }
 
 uint8_t* CBitstreamConverter::GetConvertBuffer() const
 {
-  return m_convertBuffer;
+  return m_inputBuffer ? m_inputBuffer : m_convertBuffer;
 }
 
 int CBitstreamConverter::GetConvertSize() const
 {
-  return m_convertSize;
+  return m_inputBuffer ? m_inputSize : m_convertSize;
 }
 
 uint8_t* CBitstreamConverter::GetExtraData()
@@ -380,7 +420,10 @@ bool CBitstreamConverter::BitstreamConvertInit(const char* filterName,
             : FFmpegExtraData{output->extradata, static_cast<size_t>(output->extradata_size)};
   }
 
-  m_nalLengthSize = (extraData[m_codec == AV_CODEC_ID_H264 ? 4 : 21] & 3) + 1;
+  if (m_codec == AV_CODEC_ID_VVC)
+    m_nalLengthSize = ((extraData[0] >> 1) & 3) + 1;
+  else
+    m_nalLengthSize = (extraData[m_codec == AV_CODEC_ID_H264 ? 4 : 21] & 3) + 1;
   m_convert_bitstream = true;
   return true;
 }
@@ -394,17 +437,46 @@ bool CBitstreamConverter::IsIDR(uint8_t unit_type)
     case AV_CODEC_ID_HEVC:
       return unit_type == HEVC_NAL_IDR_W_RADL || unit_type == HEVC_NAL_IDR_N_LP ||
              unit_type == HEVC_NAL_CRA_NUT;
+    case AV_CODEC_ID_VVC:
+      return unit_type == VVC_IDR_W_RADL || unit_type == VVC_IDR_N_LP || unit_type == VVC_CRA_NUT;
     default:
       return false;
   }
+}
+
+bool CBitstreamConverter::IsAnnexB(const uint8_t* data, int size)
+{
+  return size >= 3 && !data[0] && !data[1] &&
+         (data[2] == 1 || (size >= 4 && !data[2] && data[3] == 1));
+}
+
+bool CBitstreamConverter::HasVvcStartAnnexB(const uint8_t* data, int size)
+{
+  const uint8_t* const end = data + size;
+  const uint8_t* nal = avc_find_startcode(data, end);
+  while (nal < end)
+  {
+    while (nal < end && !*nal)
+      ++nal;
+    if (nal >= end || *nal++ != 1 || nal + 1 >= end)
+      break;
+
+    const uint8_t unitType = (nal[1] >> 3) & 0x1f;
+    if (unitType == VVC_SPS_NUT || IsIDR(unitType))
+      return true;
+    nal = avc_find_startcode(nal, end);
+  }
+  return false;
 }
 
 bool CBitstreamConverter::HasRecoveryPoint(const uint8_t* data, int size)
 {
   const uint8_t* const end = data + size;
   const bool h264 = m_codec == AV_CODEC_ID_H264;
-  const uint8_t nalSps =
-      h264 ? static_cast<uint8_t>(AVC_NAL_SPS) : static_cast<uint8_t>(HEVC_NAL_SPS);
+  const bool vvc = m_codec == AV_CODEC_ID_VVC;
+  const uint8_t nalSps = h264  ? static_cast<uint8_t>(AVC_NAL_SPS)
+                         : vvc ? static_cast<uint8_t>(VVC_SPS_NUT)
+                               : static_cast<uint8_t>(HEVC_NAL_SPS);
   const uint8_t nalSei =
       h264 ? static_cast<uint8_t>(AVC_NAL_SEI) : static_cast<uint8_t>(HEVC_NAL_SEI_PREFIX);
   while (data < end)
@@ -420,7 +492,10 @@ bool CBitstreamConverter::HasRecoveryPoint(const uint8_t* data, int size)
     if (nalSize == 0)
       continue;
 
-    const uint8_t unitType = h264 ? (*data & 0x1f) : ((*data >> 1) & 0x3f);
+    if (vvc && nalSize < 2)
+      return false;
+    const uint8_t unitType =
+        h264 ? (*data & 0x1f) : vvc ? ((data[1] >> 3) & 0x1f) : ((*data >> 1) & 0x3f);
     if (unitType == nalSps || IsIDR(unitType) ||
         (unitType == nalSei && has_sei_recovery_point(data, data + nalSize, h264 ? 1 : 2)))
       return true;
