@@ -527,9 +527,23 @@ void CDVDVideoCodecAmlogic::Reset(void)
 
   m_mpeg2_sequence_pts = 0;
   m_has_keyframe = false;
-  if (m_bitstream && m_hints.codec == AV_CODEC_ID_H264 ||
-      m_bitstream && m_hints.codec == AV_CODEC_ID_HEVC)
-    m_bitstream->ResetStartDecode();
+  if (m_bitstream)
+  {
+    switch(m_hints.codec)
+    {
+      case AV_CODEC_ID_VVC:
+        if (m_hints.extradata.GetSize() > 0)
+          break;
+        [[fallthrough]];
+      case AV_CODEC_ID_H264:
+        [[fallthrough]];
+      case AV_CODEC_ID_HEVC:
+        m_bitstream->ResetStartDecode();
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoPicture)
