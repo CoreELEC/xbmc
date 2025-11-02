@@ -2040,6 +2040,10 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type)
       {
         dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() & ~(FLAG_FORCE_DV_LL));
         dolby_vision_ll_policy.Set(DOLBY_VISION_LL_DISABLE);
+
+        CSysfsPath dolby_vision_source_meta_levels{"/sys/module/amdolby_vision/parameters/dolby_vision_use_source_meta_levels"};
+        dolby_vision_source_meta_levels
+          .Set(CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_STD_SOURCE_LEVELS_METADATA));
       }
     }
 
