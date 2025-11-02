@@ -8836,7 +8836,19 @@ msgctxt "#14427"
 msgid "Player-Led"
 msgstr ""
 
-#empty strings from id 14428 to 15010
+#. Title of Dolby Vision Display Led Source Levels Metadata setting
+#: system/settings/settings.xml
+msgctxt "#14428"
+msgid "Source levels metadata"
+msgstr ""
+
+#. Help text for setting "Source levels metadata" of label #14428
+#: system/settings/settings.xml
+msgctxt "#14429"
+msgid "When using Display Led (DV-Std), send the source's levels Metadata, otherwise send then Dolby Vision engines altered levels metadata to the display."
+msgstr ""
+
+#empty strings from id 14430 to 15010
 
 #: xbmc/music/MusicDatabase.cpp
 #: xbmc/video/VideoDatabase.cpp
