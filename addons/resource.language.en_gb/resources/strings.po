@@ -8836,7 +8836,19 @@ msgctxt "#14427"
 msgid "Player-Led"
 msgstr ""
 
-#empty strings from id 14428 to 15010
+#. Title of Dolby Vision level 5 metadata zero override setting
+#: system/settings/settings.xml
+msgctxt "#14428"
+msgid "Override level 5 metadata to zero"
+msgstr ""
+
+#. Help text for setting "Dolby Vision: Override level 5 metadata to zero" of label #39202
+#: system/settings/settings.xml
+msgctxt "#14429"
+msgid "If enabled, Dolby Vision files will have level 5 (active area) metadata overridden to zero offsets. Enable if your TV has issues with incorrectly cropped image in Dolby Vision playback."
+msgstr ""
+
+#empty strings from id 14430 to 15010
 
 #: xbmc/music/MusicDatabase.cpp
 #: xbmc/video/VideoDatabase.cpp

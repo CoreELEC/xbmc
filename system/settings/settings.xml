@@ -3902,6 +3902,15 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="coreelec.amlogic.dovizerolevel5" type="boolean" label="14428" help="14429" parent="coreelec.amlogic.dolbyvisionled">
+          <requirement>HAVE_AMCODEC</requirement>
+          <level>2</level>
+          <default>true</default>
+          <control type="toggle" />
+          <dependencies>
+            <dependency type="visible" setting="coreelec.amlogic.dolbyvisionled" operator="is">0</dependency>
+          </dependencies>
+        </setting>
       </group>
     </category>
     <category id="cache" label="439" help="36399">

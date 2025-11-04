@@ -307,6 +307,15 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       m_pFormatName = "am-h265";
       m_bitstream = new CBitstreamConverter();
       m_bitstream->Open(m_hints.codec, m_hints.extradata.GetData(), m_hints.extradata.GetSize(), true);
+
+      if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+              CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_TV_LED)
+      {
+        m_bitstream->SetDoviZeroLevel5(
+            CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+                CSettings::SETTING_COREELEC_AMLOGIC_DOVIZEROLEVEL5));
+      }
+
       // make sure we do not leak the existing m_hints.extradata
       m_hints.extradata = {};
       m_hints.extradata = FFmpegExtraData(m_bitstream->GetExtraSize());
