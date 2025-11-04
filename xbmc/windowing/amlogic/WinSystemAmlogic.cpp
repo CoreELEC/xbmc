@@ -266,6 +266,13 @@ bool CWinSystemAmlogic::InitWindowSystem()
       setting->SetVisible(false);
       settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED, AML_DV_TV_LED);
     }
+
+    setting = settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5);
+    if (setting)
+    {
+      setting->SetVisible(false);
+      settings->SetBool(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5, true);
+    }
   }
   else
   {
