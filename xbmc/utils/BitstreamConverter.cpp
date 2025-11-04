@@ -339,6 +339,7 @@ CBitstreamConverter::CBitstreamConverter()
   m_convert_dovi = false;
   m_removeDovi = false;
   m_removeHdr10Plus = false;
+  m_setDoviZeroLevel5 = false;
   m_dovi_el_type = ELType::TYPE_NONE;
   m_combine = false;
 }
@@ -1809,6 +1810,7 @@ bool CBitstreamConverter::h264_sequence_header(const uint8_t *data, const uint32
 #ifdef HAVE_LIBDOVI
 // Processes Dolby Vision RPU
 //   - Converts to profile 8.1 if `m_convert_dovi` is enabled
+//   - Sets level 5 metadata to 0 offsets if `m_setDoviZeroLevel5` is enabled
 //   - Updates `m_dovi_el_type` according to the current header
 //
 // The returned data must be freed with `dovi_data_free`
@@ -1840,6 +1842,15 @@ const DoviData* CBitstreamConverter::processDoviRpu(uint8_t* buf, uint32_t nal_s
   if (m_convert_dovi && header->guessed_profile == 7)
   {
     ret = dovi_convert_rpu_with_mode(rpu, 2);
+    if (ret < 0)
+      goto done;
+
+    processed = true;
+  }
+
+  if (m_setDoviZeroLevel5)
+  {
+    ret = dovi_rpu_set_active_area_offsets(rpu, 0, 0, 0, 0);
     if (ret < 0)
       goto done;
 
