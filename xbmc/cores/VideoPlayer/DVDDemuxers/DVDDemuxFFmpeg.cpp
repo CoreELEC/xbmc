@@ -3085,7 +3085,8 @@ TRANSPORT_STREAM_STATE CDVDDemuxFFmpeg::TransportStreamVideoState()
       if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
       {
         if (idx == m_pkt.pkt.stream_index && m_pkt.pkt.dts != AV_NOPTS_VALUE &&
-            (st->codecpar->extradata || (st->codecpar->codec_id == AV_CODEC_ID_VVC)))
+            (st->codecpar->extradata || (st->codecpar->codec_id == AV_CODEC_ID_VVC) ||
+            (st->codecpar->codec_id == AV_CODEC_ID_AVS2)))
         {
           if (!m_startTime)
           {
@@ -3107,7 +3108,8 @@ TRANSPORT_STREAM_STATE CDVDDemuxFFmpeg::TransportStreamVideoState()
       if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
       {
         if (static_cast<int>(i) == m_pkt.pkt.stream_index && m_pkt.pkt.dts != AV_NOPTS_VALUE &&
-            (st->codecpar->extradata || (st->codecpar->codec_id == AV_CODEC_ID_VVC)))
+            (st->codecpar->extradata || (st->codecpar->codec_id == AV_CODEC_ID_VVC) ||
+            (st->codecpar->codec_id == AV_CODEC_ID_AVS2)))
         {
           if (!m_startTime)
           {
