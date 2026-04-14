@@ -362,9 +362,7 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
     std::unique_lock<CCriticalSection> lock(m_resourceSection);
     // tell any shared resources
     for (std::vector<IDispResource *>::iterator i = m_resources.begin(); i != m_resources.end(); ++i)
-    {
       (*i)->OnResetDisplay();
-    }
   }
 
   m_bWindowCreated = true;

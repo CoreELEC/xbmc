@@ -180,11 +180,6 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
   m_bFullScreen = fullScreen;
   m_nativeGUI = nativeGUI;
 
-  if (!CWinSystemAmlogic::CreateNewWindow(name, fullScreen, res))
-  {
-    return false;
-  }
-
   if (m_amlGBMUtils)
   {
     uint32_t format = m_pGLContext->GetConfigAttrib(EGL_NATIVE_VISUAL_ID);
@@ -221,12 +216,9 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
     return false;
   }
 
-  if (!m_delayDispReset)
+  if (!CWinSystemAmlogic::CreateNewWindow(name, fullScreen, res))
   {
-    std::unique_lock<CCriticalSection> lock(m_resourceSection);
-    // tell any shared resources
-    for (std::vector<IDispResource *>::iterator i = m_resources.begin(); i != m_resources.end(); ++i)
-      (*i)->OnResetDisplay();
+    return false;
   }
 
   return true;
