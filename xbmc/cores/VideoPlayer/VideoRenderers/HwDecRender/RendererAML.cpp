@@ -32,6 +32,7 @@ CRendererAML::CRendererAML()
 
 CRendererAML::~CRendererAML()
 {
+  CServiceBroker::GetWinSystem()->SetGuiCompositing(0);
   Reset();
   CServiceBroker::GetWinSystem()->GetGfxContext().SetTransferPQ(false);
 }
@@ -70,10 +71,12 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
   bool user_dv_disable(CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
   bool dv_is_used(device_support_dv && !user_dv_disable &&
     picture.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && aml_display_support_dv());
-  bool hdr_is_used((picture.hdrType == StreamHdrType::HDR_TYPE_HLG || picture.color_transfer == AVCOL_TRC_SMPTE2084) &&
+  bool hdr_is_used((picture.color_transfer == AVCOL_TRC_ARIB_STD_B67 || picture.color_transfer == AVCOL_TRC_SMPTE2084) &&
     CServiceBroker::GetWinSystem()->IsHDRDisplay());
   CLog::Log(LOGDEBUG, "CRendererAML::Configure {}DV support, {}, DV system is {}, HDR is {}", device_support_dv ? "" : "no ",
     user_dv_disable ? "disabled" : "enabled", dv_is_used ? "enabled" : "disabled", hdr_is_used ? "used" : "not used");
+
+  CServiceBroker::GetWinSystem()->SetGuiCompositing(hdr_is_used ? picture.color_transfer : dv_is_used ? AVCOL_TRC_SMPTE2084 : 0);
 
   m_bConfigured = true;
 
