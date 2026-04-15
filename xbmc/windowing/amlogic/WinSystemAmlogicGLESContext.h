@@ -8,8 +8,10 @@
 
 #pragma once
 
-#include "utils/EGLUtils.h"
+#include "cores/VideoPlayer/VideoRenderers/FrameBufferObject.h"
+#include "rendering/gles/GuiCompositeShaderGLES.h"
 #include "rendering/gles/RenderSystemGLES.h"
+#include "utils/EGLUtils.h"
 #include "utils/GlobalsHandling.h"
 #include "utils/StreamDetails.h"
 #include "WinSystemAmlogic.h"
@@ -48,6 +50,13 @@ public:
   bool SupportsStereo(const RenderStereoMode mode) const override;
   void PresentRender(bool rendered, bool videoLayer) override;
 
+  // GUI compositing for HDR
+  bool SetGuiCompositing(int colorTransfer) override;
+  bool BeginGuiComposite(bool guiWillRender) override;
+  void EndGuiComposite() override;
+  void CompositeGui() override;
+  bool IsHdrComposite() const override { return m_guiCompositing; }
+
   EGLDisplay GetEGLDisplay() const;
   EGLSurface GetEGLSurface() const;
   EGLContext GetEGLContext() const;
@@ -59,6 +68,17 @@ protected:
 private:
   std::unique_ptr<CEGLContextUtils> m_pGLContext;
   StreamHdrType m_hdrType = StreamHdrType::HDR_TYPE_NONE;
+
+  bool m_guiCompositing{false};
+  CFrameBufferObject m_guiFbo;
+  int m_guiFboWidth{0};
+  int m_guiFboHeight{0};
+  // True when the GUI FBO is empty (no draws this frame); CompositeGui skips composite when true.
+  bool m_guiFboClean{false};
+  // Whether the GUI render pass will run this frame; set by BeginGuiComposite.
+  bool m_guiWillRender{true};
+
+  std::unique_ptr<CGuiCompositeShaderGLES> m_compositeShader;
 };
 
 }
