@@ -466,14 +466,6 @@ CHDRCapabilities CWinSystemAmlogic::GetDisplayHDRCapabilities() const
   return m_hdr_caps;
 }
 
-float CWinSystemAmlogic::GetGuiSdrPeakLuminance() const
-{
-  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-  const int guiSdrPeak = settings->GetInt(CSettings::SETTING_VIDEOSCREEN_GUISDRPEAKLUMINANCE);
-
-  return ((0.7f * guiSdrPeak + 30.0f) / 100.0f);
-}
-
 HDR_STATUS CWinSystemAmlogic::GetOSHDRStatus()
 {
   return (IsHDRDisplay() ? HDR_STATUS::HDR_ON : HDR_STATUS::HDR_UNSUPPORTED);
