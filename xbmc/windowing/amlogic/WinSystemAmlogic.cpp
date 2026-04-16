@@ -24,6 +24,7 @@
 #include "platform/linux/ScreenshotSurfaceAML.h"
 #include "resources/LocalizeStrings.h"
 #include "resources/ResourcesComponent.h"
+#include "settings/AdvancedSettings.h"
 #include "settings/DisplaySettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
@@ -471,6 +472,11 @@ float CWinSystemAmlogic::GetGuiSdrPeakLuminance() const
   const int guiSdrPeak = settings->GetInt(CSettings::SETTING_VIDEOSCREEN_GUISDRPEAKLUMINANCE);
 
   return ((0.7f * guiSdrPeak + 30.0f) / 100.0f);
+}
+
+float CWinSystemAmlogic::GetGuiSaturationBoost() const
+{
+  return CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_guiSaturationBoost;
 }
 
 HDR_STATUS CWinSystemAmlogic::GetOSHDRStatus()
