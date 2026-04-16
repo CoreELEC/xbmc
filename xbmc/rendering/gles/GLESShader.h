@@ -72,4 +72,5 @@ protected:
   GLfloat m_clipYOffset;
 
   GLfloat m_sdrPeak;
+  GLfloat m_saturationBoost;
 };
