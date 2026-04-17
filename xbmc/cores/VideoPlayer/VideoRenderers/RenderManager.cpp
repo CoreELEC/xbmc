@@ -1075,7 +1075,8 @@ void CRenderManager::PrepareNextRender()
       m_latencyTweak +
       static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency()) -
       m_videoDelay -
-      static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment()));
+      static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment()) -
+      m_deinterlaceDelay);
 
   const bool isPaused = m_dvdClock.IsPaused();
   double renderPts = frameOnScreen;
