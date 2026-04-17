@@ -122,6 +122,7 @@ void CDVDClock::Advance(double time)
   }
 }
 
+
 void CDVDClock::SetSpeed(int iSpeed)
 {
   // this will sometimes be a little bit of due to rounding errors, ie clock might jump a bit when changing speed
