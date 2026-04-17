@@ -695,8 +695,21 @@ void CVideoPlayerVideo::Process()
           CSysfsPath frame_format{"/sys/class/deinterlace/di0/frame_format"};
           if (frame_format.Exists())
             m_vfmt = frame_format.Get<std::string>().value_or("");
+          // Only update interlace state from vfmt when it gives a definitive answer.
+          // For MBAFF content, the DI module transiently reports "progressive"
+          // (reflecting current macroblock type), then falls back to "null".
+          // Don't let a transient "progressive" clear interlace when the demuxer
+          // flagged the stream as interlaced — the demuxer is authoritative for
+          // the overall stream type, vfmt only for truly misidentified content.
           if (m_vfmt.size() > 4)
-            m_processInfo.SetVideoInterlaced(m_vfmt.compare("progressive"));
+          {
+            bool vfmtIsInterlaced = m_vfmt.compare("progressive") != 0;
+            if (vfmtIsInterlaced)
+            {
+              m_processInfo.SetVideoInterlaced(vfmtIsInterlaced);
+              vfmtCheckCount = 0;
+            }
+          }
           CLog::Log(LOGDEBUG, "CVideoPlayerVideo - CDVDMsg::DEMUXER_PACKET - checking interlace vfmt: {}", m_vfmt);
         }
       }
@@ -793,17 +806,21 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(double &frametime, double &pts)
 
     // Detect progressive content misidentified as interlaced: if picture
     // duration consistently equals double what the fps implies, halve fps.
-    // Skip when the hardware deinterlace module has confirmed interlaced
-    // content (vfmt) — MBAFF streams legitimately mix field and frame
-    // output, and the full-frame duration would falsely trigger this.
-    if (m_processInfo.GetVideoInterlaced() && m_vfmt != "interlace" &&
+    // Never override when the demuxer flagged interlaced —
+    // MBAFF streams have genuine progressive macroblocks that cause transient
+    // "progressive" vfmt readings and 40ms frame durations, but the stream
+    // is still interlaced overall. Only allow for runtime-detected interlace
+    // (not demuxer-flagged) when hardware confirms progressive.
+    if (m_processInfo.GetVideoInterlaced() &&
+        m_vfmt == "progressive" &&
         MathUtils::FloatEquals(static_cast<float>(m_picture.iDuration), static_cast<float>(2 * DVD_TIME_BASE) / m_processInfo.GetVideoFps(), 700.0f))
     {
       if (++m_retryProgressive > 3)
       {
-        m_processInfo.SetVideoFps(m_processInfo.GetVideoFps() / 2.0f);
+        float halvedFps = m_processInfo.GetVideoFps() / 2.0f;
+        m_processInfo.SetVideoFps(halvedFps);
         m_processInfo.SetVideoInterlaced(false);
-        m_renderManager.TriggerUpdateResolution(m_processInfo.GetVideoFps() / 2.0f, m_hints.width, m_hints.height, m_hints.stereo_mode);
+        m_renderManager.TriggerUpdateResolution(halvedFps, m_hints.width, m_hints.height, m_hints.stereo_mode);
       }
     }
     else
@@ -1267,11 +1284,28 @@ void CVideoPlayerVideo::CalcFrameRate()
       //store the calculated framerate if it differs too much from m_fFrameRate
       if (fabs(m_fFrameRate - (m_fStableFrameRate / m_iFrameRateCount)) > MAXFRAMERATEDIFF || m_bFpsInvalid)
       {
-        CLog::Log(LOGDEBUG, "{} framerate was:{:f} calculated:{:f}", __FUNCTION__, m_fFrameRate,
-                  m_fStableFrameRate / m_iFrameRateCount);
-        m_fFrameRate = m_fStableFrameRate / m_iFrameRateCount;
-        m_bFpsInvalid = false;
-        m_processInfo.SetVideoFps(static_cast<float>(m_fFrameRate));
+        double calculated = m_fStableFrameRate / m_iFrameRateCount;
+        // For demuxer-flagged interlaced content (e.g. MBAFF), don't let the
+        // calculated frame rate halve the field rate just because progressive
+        // sections dominate the measurement window — the stream is still
+        // interlaced overall, and halving m_fFrameRate to 25 makes the
+        // renderer and DI output path behave as if it were 25fps progressive.
+        bool skipHalving = m_processInfo.GetVideoInterlaced() &&
+                           calculated > 0 &&
+                           fabs(m_fFrameRate - 2.0 * calculated) < MAXFRAMERATEDIFF;
+        if (skipHalving)
+        {
+          CLog::Log(LOGDEBUG, "{} skipping halve: interlaced stream, keeping fps {:f} (measured {:f})",
+                    __FUNCTION__, m_fFrameRate, calculated);
+        }
+        else
+        {
+          CLog::Log(LOGDEBUG, "{} framerate was:{:f} calculated:{:f}", __FUNCTION__, m_fFrameRate,
+                    calculated);
+          m_fFrameRate = calculated;
+          m_bFpsInvalid = false;
+          m_processInfo.SetVideoFps(static_cast<float>(m_fFrameRate));
+        }
       }
 
       //reset the stored framerates
