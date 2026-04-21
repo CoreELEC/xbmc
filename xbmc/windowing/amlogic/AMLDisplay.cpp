@@ -489,6 +489,15 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
   m_ScreenWidth = res.iScreenWidth;
   m_ScreenHeight = res.iScreenHeight;
 
+  if (force_mode_switch)
+  {
+    // force connected
+    m_connection = DRM_MODE_CONNECTED;
+    CLog::Log(LOGDEBUG, "CAMLDisplay::{}: try to set mode: {} (forced mode switch)", __FUNCTION__, mode.c_str());
+  }
+  else
+    CLog::Log(LOGDEBUG, "CAMLDisplay::{}: try to set mode: {}", __FUNCTION__, mode.c_str());
+
   if (!aml_get_drmDevice_connected())
   {
     CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - connector of drmDevice is not connected", __FUNCTION__);

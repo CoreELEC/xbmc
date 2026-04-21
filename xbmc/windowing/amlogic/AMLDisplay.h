@@ -127,7 +127,11 @@ public:
 
   void SetInFenceFd(int fd) { m_amlDRMUtils->SetInFenceFd(fd); }
   int TakeOutFenceFd() const { return m_amlDRMUtils->TakeOutFenceFd(); }
+
+  bool GetHotPlug() { bool ret = m_bHotPlug; m_bHotPlug = false; return ret; }
+  void SetHotPlug() { m_bHotPlug = true; }
 private:
   std::unique_ptr<CAMLDRMUtils> m_amlDRMUtils;
   bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res);
+  bool m_bHotPlug = false;
 };
