@@ -1075,8 +1075,7 @@ void CRenderManager::PrepareNextRender()
       m_latencyTweak +
       static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency()) -
       m_videoDelay -
-      static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment()) -
-      m_deinterlaceDelay);
+      static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment()));
 
   // While the clock is paused, frameOnScreen does not advance, so adding the display
   // latency would pick a frame ahead of the one actually shown. That only holds for
