@@ -47,6 +47,9 @@ CAMLGBMUtils::CAMLGBMUtils(int fd)
 
 bool CAMLGBMUtils::CreateSurface(int width, int height, uint32_t format)
 {
+  m_buffer.reset();
+  m_drm_fb = nullptr;
+
   uint64_t modifier = DRM_FORMAT_MOD_LINEAR;
 
   // First try modifier-aware surface
@@ -140,15 +143,17 @@ struct drm_fb* CAMLGBMUtils::GetFBFromBo(int fd, struct gbm_bo* bo)
   return fb;
 }
 
-void CAMLGBMUtils::LockFrontBuffer(int fd)
+bool CAMLGBMUtils::LockFrontBuffer(int fd)
 {
+  m_drm_fb = nullptr;
   if (gbm_surface_has_free_buffers(GetSurface()))
   {
-    m_buffer = gbm_surface_lock_front_buffer(GetSurface());
-
-    if (m_buffer)
-      m_drm_fb = GetFBFromBo(fd, m_buffer);
+    m_buffer.reset(new CGBMSurfaceBuffer(GetSurface()));
+    if (m_buffer->Get())
+      m_drm_fb = GetFBFromBo(fd, m_buffer->Get());
   }
+
+  return m_drm_fb != nullptr;
 }
 
 CAMLDRMUtils::CAMLDRMUtils()
