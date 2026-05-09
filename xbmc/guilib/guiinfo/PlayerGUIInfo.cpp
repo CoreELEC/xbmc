@@ -236,11 +236,11 @@ std::string HdrTypeToString(StreamHdrType hdrType) {
   return "";
 }
 
-std::string DoViELTypeToString(DOVIELType doviElType) {
+std::string DoViELTypeToString(ELType doviElType) {
   switch (doviElType) {
-    case DOVIELType::TYPE_NONE: return "none";
-    case DOVIELType::TYPE_FEL: return "full";
-    case DOVIELType::TYPE_MEL: return "minimum";
+    case ELType::TYPE_NONE: return "none";
+    case ELType::TYPE_FEL: return "full";
+    case ELType::TYPE_MEL: return "minimum";
   }
   return "";
 }
