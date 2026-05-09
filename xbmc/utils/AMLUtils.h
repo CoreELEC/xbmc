@@ -38,6 +38,12 @@ enum AML_DISPLAY_DV_LED
 #define AML_S7D     0x47
 #define AML_S6      0x48
 
+#define DOLBY_VISION_OUTPUT_MODE_IPT        (unsigned int)(0)
+#define DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL (unsigned int)(1)
+#define DOLBY_VISION_OUTPUT_MODE_HDR10      (unsigned int)(2)
+#define DOLBY_VISION_OUTPUT_MODE_SDR10      (unsigned int)(3)
+#define DOLBY_VISION_OUTPUT_MODE_BYPASS     (unsigned int)(5)
+
 int  aml_get_cpufamily_id();
 std::string aml_get_cpufamily_name(int cpuid = -1);
 bool aml_display_support_dv();
@@ -57,3 +63,6 @@ bool aml_dolby_vision_enabled();
 bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType);
 bool aml_video_started();
 void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int view_mode);
+unsigned int aml_dv_dolby_vision_mode();
+std::string aml_video_fps_info();
+std::string aml_video_fps_drop();
