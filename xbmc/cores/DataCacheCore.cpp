@@ -312,7 +312,8 @@ void CDataCacheCore::SetVideoDoViFrameMetadata(DOVIFrameMetadata value)
   std::lock_guard lock(m_videoPlayerSection);
 
   uint64_t pts = value.pts;
-  logM(LOGDEBUG, "CDataCacheCore", "Set meta for pts [{}] [{}]", pts, value.level1_max_pq);
+  CLog::Log(LOGDEBUG, "CDataCacheCore: Set meta for pts [{}] [{}]", pts, value.level1_max_pq);
+
   m_playerVideoInfo.doviFrameMetadataMap.insert(pts, std::move(value));
 }
 
@@ -324,7 +325,7 @@ DOVIFrameMetadata CDataCacheCore::GetVideoDoViFrameMetadata()
   auto doviFrameMetadata = m_playerVideoInfo.doviFrameMetadataMap.findOrLatest(pts);
   if (doviFrameMetadata != m_playerVideoInfo.doviFrameMetadataMap.end())
   {
-    logM(LOGDEBUG, "CDataCacheCore", "Get meta for pts [{}] [{}] (matched pts [{}])",
+    CLog::Log(LOGDEBUG, "CDataCacheCore: Get meta for pts [{}] [{}] (matched pts [{}])",
                                      pts, doviFrameMetadata->second.level1_max_pq, doviFrameMetadata->first);
     return doviFrameMetadata->second;
   }
