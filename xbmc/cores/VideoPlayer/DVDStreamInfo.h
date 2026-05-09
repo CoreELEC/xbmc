@@ -9,6 +9,7 @@
 #pragma once
 
 #include "DVDDemuxers/DVDDemux.h"
+#include "utils/BitstreamConverter.h"
 
 extern "C"
 {
@@ -24,13 +25,6 @@ extern "C"
 
 class CDemuxStream;
 struct DemuxCryptoSession;
-
-enum DOVIELType : int
-{
-  TYPE_NONE = 0,
-  TYPE_FEL,
-  TYPE_MEL
-};
 
 struct DOVIFrameMetadata
 {
@@ -62,7 +56,7 @@ struct DOVIStreamMetadata
 
 struct DOVIStreamInfo
 {
-  DOVIELType dovi_el_type = DOVIELType::TYPE_NONE;
+  ELType dovi_el_type = ELType::TYPE_NONE;
   bool has_config = false;
   bool has_header = false;
   AVDOVIDecoderConfigurationRecord dovi = {};
@@ -138,7 +132,7 @@ public:
   std::shared_ptr<AVContentLightMetadata> contentLightMetadata;
   std::string stereo_mode; // stereoscopic 3d mode
   AVDOVIDecoderConfigurationRecord dovi{};
-  DOVIELType dovi_el_type = DOVIELType::TYPE_NONE;
+  ELType dovi_el_type = ELType::TYPE_NONE;
   CDVDClock *pClock;
 
   static constexpr AVDOVIDecoderConfigurationRecord empty_dovi{}; // For comparison
