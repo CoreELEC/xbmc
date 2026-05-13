@@ -375,8 +375,10 @@ bool CPlayerGUIInfo::GetLabel(std::string& value,
 	  double video_fps_value = CServiceBroker::GetDataCacheCore().GetVideoFps();
 	  value = StringUtils::Format("{:.3f}", video_fps_value);
 
-	  while (!value.empty() && value.back() == '0')
-		value.pop_back();
+	  size_t end = value.find_last_not_of('0');
+
+	  if (end != std::string::npos)
+		value.erase(end + 1);
 
 	  if (!value.empty() && value.back() == '.')
 		value.pop_back();
