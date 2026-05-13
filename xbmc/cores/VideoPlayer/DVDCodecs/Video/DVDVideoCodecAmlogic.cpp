@@ -572,6 +572,11 @@ void CDVDVideoCodecAmlogic::Reset(void)
         m_bitstream->ResetStartDecode();
         break;
       default:
+        if (m_hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION ||
+            m_bitstream->GetDoviElType() == ELType::TYPE_FEL ||
+            m_bitstream->GetDoviElType() == ELType::TYPE_MEL)
+          m_bitstream->ResetStartDecode();
+
         break;
     }
   }
