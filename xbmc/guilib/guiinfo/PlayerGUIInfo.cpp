@@ -370,14 +370,19 @@ bool CPlayerGUIInfo::GetLabel(std::string& value,
     case PLAYER_PROCESS_PIXELFORMAT:
       value = CServiceBroker::GetDataCacheCore().GetVideoPixelFormat();
       return true;
-    case PLAYER_PROCESS_VIDEOFPS:
-    {
-      double video_fps_value = CServiceBroker::GetDataCacheCore().GetVideoFps();
-      value = (std::floor(video_fps_value) == video_fps_value) ?
-        StringUtils::Format("{}", video_fps_value) :
-        StringUtils::Format("{:.3f}", video_fps_value);
-      return true;
-    }
+	case PLAYER_PROCESS_VIDEOFPS:
+	{
+	  double video_fps_value = CServiceBroker::GetDataCacheCore().GetVideoFps();
+	  value = StringUtils::Format("{:.3f}", video_fps_value);
+
+	  while (!value.empty() && value.back() == '0')
+		value.pop_back();
+
+	  if (!value.empty() && value.back() == '.')
+		value.pop_back();
+
+	  return true;
+	}
     case PLAYER_PROCESS_VIDEODAR:
       value = StringUtils::Format("{:.2f}", CServiceBroker::GetDataCacheCore().GetVideoDAR());
       return true;
