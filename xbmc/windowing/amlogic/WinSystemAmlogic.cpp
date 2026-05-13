@@ -169,6 +169,16 @@ void CWinSystemAmlogic::MonitorStop()
 void CWinSystemAmlogic::HotplugEvent()
 {
   m_amlDisplay->aml_init_drmDevice();
+  drmModeConnection connection;
+  int mode_count = m_amlDisplay->aml_get_display_modes_count(&connection);
+  if (connection == DRM_MODE_DISCONNECTED && mode_count == 1)
+  {
+    CLog::Log(LOGWARNING,
+      "CWinSystemAmlogic - HotplugEvent ignored while HDMI DRM connector is not ready ({:d} modes)",
+      mode_count);
+    MonitorStart();
+    return;
+  }
   std::string preferred_mode = m_amlDisplay->aml_get_preferred_mode();
   RESOLUTION res = static_cast<RESOLUTION>(RES_DESKTOP);
 
@@ -320,7 +330,8 @@ bool CWinSystemAmlogic::InitWindowSystem()
   {
     if (mode_count > 1)
     {
-      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem Looks like display was hotplugged before Kodi start");
+      CLog::Log(LOGWARNING,
+        "CWinSystemAmlogic::InitWindowSystem HDMI modes are present but DRM connector is not ready, trigger hotplug");
       HotplugEvent();
     }
     else if (mode_count == 1)
