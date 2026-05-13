@@ -181,9 +181,6 @@ CAMLDRMUtils::CAMLDRMUtils()
   }
 
   aml_init_drmDevice();
-
-  if (aml_get_drmDevice_connected())
-    aml_init_drmDevice_display();
 }
 
 CAMLDRMUtils::~CAMLDRMUtils()
@@ -206,22 +203,42 @@ CAMLDRMUtils::~CAMLDRMUtils()
 void CAMLDRMUtils::CleanAndClose()
 {
   if (m_resources)
+  {
     drmModeFreeResources(m_resources);
+    m_resources = nullptr;
+  }
 
   if (m_connector)
+  {
     drmModeFreeConnector(m_connector);
+    m_connector = nullptr;
+  }
 
   if (m_encoder)
+  {
     drmModeFreeEncoder(m_encoder);
+    m_encoder = nullptr;
+  }
 
   if (m_crtc)
+  {
     drmModeFreeCrtc(m_crtc);
+    m_crtc = nullptr;
+  }
 
   if (m_orig_crtc)
+  {
     free(m_orig_crtc);
+    m_orig_crtc = nullptr;
+  }
 
   if (m_plane)
+  {
     drmModeFreePlane(m_plane);
+    m_plane = nullptr;
+  }
+
+  m_connection = DRM_MODE_DISCONNECTED;
 }
 
 void CAMLDRMUtils::aml_init_drmDevice()
@@ -292,6 +309,9 @@ void CAMLDRMUtils::aml_init_drmDevice()
     CleanAndClose();
     throw std::runtime_error("failed to get primary plane of drmDevice");
   }
+
+  if (aml_get_drmDevice_connected())
+    aml_init_drmDevice_display();
 }
 
 void CAMLDRMUtils::aml_init_drmDevice_display()
