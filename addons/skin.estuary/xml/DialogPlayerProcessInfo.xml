@@ -301,7 +301,7 @@
 				<top>-204</top>
 				<visible>Control.HasFocus(5553)</visible>
 				<control type="label">
-					<width>420</width>
+					<width>435</width>
 					<height>40</height>
 					<aligny>bottom</aligny>
 					<label>$INFO[Player.Process(amlogic.displaymode),[COLOR button_focus]$LOCALIZE[31636]:[/COLOR] ]</label>
