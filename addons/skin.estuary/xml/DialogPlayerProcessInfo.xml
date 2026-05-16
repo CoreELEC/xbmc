@@ -137,7 +137,7 @@
 					<width>420</width>
 					<height>40</height>
 					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31635]:[/COLOR] $VAR[HDRcodectypeVar]</label>
+					<label>[COLOR button_focus]$LOCALIZE[31635]:[/COLOR] $VAR[HDRcodectypeVar] $VAR[DVProfileELVar]</label>
 					<font>font12</font>
 					<shadowcolor>black</shadowcolor>
 					<visible>Player.HasVideo</visible>

@@ -1014,7 +1014,7 @@ msgstr ""
 
 #: /xml/DialogPlayerProcessInfo.xml
 msgctxt "#31635"
-msgid "Video source type"
+msgid "Video source"
 msgstr ""
 
 #: /xml/DialogPlayerProcessInfo.xml

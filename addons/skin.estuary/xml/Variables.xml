@@ -988,6 +988,7 @@
 	</variable>
 	<variable name="HDRcodectypeVar">
 		<value condition="String.Contains(VideoPlayer.HdrType,dolbyvision)">Dolby Vision</value>
+		<value condition="String.IsEqual(VideoPlayer.HdrType,hdr10plus)">HDR10+</value>
 		<value condition="String.Contains(VideoPlayer.HdrType,hdr10)">HDR10</value>
 		<value condition="String.Contains(VideoPlayer.HdrType,hlg">HLG</value>
 		<value condition="String.IsEmpty(VideoPlayer.HdrType)">SDR</value>
@@ -997,5 +998,10 @@
 		<value condition="String.IsEqual(VideoPlayer.AudioCodec,truehd_atmos)">Dolby Atmos</value>
 		<value condition="String.IsEqual(VideoPlayer.AudioCodec,dtshd_ma_x)">DTS:X</value>
 		<value condition="String.IsEqual(VideoPlayer.AudioCodec,dtshd_ma_x_imax)">DTS:X IMAX</value>
+	</variable>
+	<variable name="DVProfileELVar">
+		<value condition="String.IsEqual(VideoPlayer.HdrDetail,7MEL)">P7 [COLOR orange]MEL[/COLOR]</value>
+		<value condition="String.IsEqual(VideoPlayer.HdrDetail,7FEL)">P7 [COLOR lightgreen]FEL[/COLOR]</value>
+		<value condition="!String.IsEmpty(VideoPlayer.HdrDetail)">P$INFO[VideoPlayer.HdrDetail]</value>
 	</variable>
 </includes>
