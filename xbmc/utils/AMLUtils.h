@@ -57,3 +57,5 @@ bool aml_dolby_vision_enabled();
 bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType);
 bool aml_video_started();
 void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int view_mode);
+std::string aml_fps_info();
+std::string aml_fps_drop();

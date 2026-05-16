@@ -23,6 +23,14 @@
 
 #include <amcodec/codec.h>
 
+#include <vector>
+#include <string>
+#include <sstream>
+#include <chrono>
+#include <limits>
+#include <algorithm>
+#include <iomanip>
+
 int aml_get_cpufamily_id()
 {
   static int aml_cpufamily_id = -1;
@@ -371,4 +379,149 @@ void aml_probe_hdmi_audio()
       }
     }
   }
+}
+
+struct FpsData {
+  unsigned int input_fps;
+  unsigned int output_fps;
+  std::chrono::steady_clock::time_point timestamp;
+};
+
+struct FpsInfo {
+  unsigned int avg_input_fps;
+  unsigned int avg_output_fps;
+  unsigned int avg_drop_fps;
+};
+
+struct FormattedFpsInfo {
+  std::string basic_info;
+  std::string drop_info;
+};
+
+FpsInfo gather_fps_data() {
+
+  static std::vector<FpsData> fps_history;
+  static const std::chrono::seconds HISTORY_DURATION(1);
+  static const std::chrono::milliseconds SAMPLE_INTERVAL(100);
+  static std::chrono::steady_clock::time_point last_sample_time;
+  static bool sample_valid = false;
+  static unsigned int cached_input_fps = 0;
+  static unsigned int cached_output_fps = 0;
+
+  auto now = std::chrono::steady_clock::now();
+  bool sample_updated = false;
+
+  if (!sample_valid || (now - last_sample_time) >= SAMPLE_INTERVAL) {
+    CSysfsPath fps_info{"/sys/class/video/fps_info"};
+    if (fps_info.Exists()) {
+
+      std::string input = fps_info.Get<std::string>().value();
+      unsigned int input_fps, output_fps;
+      std::istringstream iss(input);
+
+      if ((iss.ignore(std::numeric_limits<std::streamsize>::max(), ':') && iss >> std::hex >> input_fps) &&
+          (iss.ignore(std::numeric_limits<std::streamsize>::max(), ':') && iss >> std::hex >> output_fps)) {
+        cached_input_fps = input_fps;
+        cached_output_fps = output_fps;
+        sample_valid = true;
+        sample_updated = true;
+      }
+    }
+
+    last_sample_time = now;
+  }
+
+  if (sample_valid && sample_updated) {
+    fps_history.push_back({cached_input_fps, cached_output_fps, now});
+  }
+
+  fps_history.erase(
+    std::remove_if(
+        fps_history.begin(), fps_history.end(),
+        [&now](const FpsData& data) {
+          return (now - data.timestamp) > HISTORY_DURATION;
+        }
+      ), fps_history.end()
+  );
+
+  if (!fps_history.empty()) {
+    double avg_input_fps = 0;
+    double avg_output_fps = 0;
+    double avg_drop_fps = 0;
+
+    for (const auto& data : fps_history) {
+      avg_input_fps += data.input_fps;
+      avg_output_fps += data.output_fps;
+    }
+
+    avg_input_fps /= fps_history.size();
+    avg_output_fps /= fps_history.size();
+    avg_drop_fps = avg_input_fps - avg_output_fps;
+
+    return {
+      static_cast<unsigned int>(avg_input_fps + 0.5),
+      static_cast<unsigned int>(avg_output_fps + 0.5),
+      static_cast<unsigned int>(avg_drop_fps + 0.5)
+    };
+  }
+
+  return {0, 0, 0};
+}
+
+FormattedFpsInfo format_fps_info() {
+
+  FpsInfo info = gather_fps_data();
+
+  // Format basic info
+  static int rotation_index = 0;
+  const char rotation_chars[] = {'|', '/', '-', '\\'};
+
+  static std::chrono::steady_clock::time_point last_update = std::chrono::steady_clock::now();
+  const std::chrono::milliseconds UPDATE_INTERVAL(100);
+
+  std::ostringstream basic_info;
+  basic_info << std::fixed << std::setprecision(0) << std::setfill('0')
+              << std::setw(3) << info.avg_input_fps << " - "
+              << std::setw(3) << info.avg_output_fps << " - "
+              << std::setw(3) << info.avg_drop_fps;
+
+  auto now = std::chrono::steady_clock::now();
+  if ((now - last_update) >= UPDATE_INTERVAL) {
+    rotation_index = (rotation_index + 1) % 4;
+    last_update = now;
+  }
+
+  basic_info << " " << rotation_chars[rotation_index];
+
+  // Format drop info
+  static unsigned int lowest_avg_output_fps = 0;
+  static std::chrono::steady_clock::time_point last_drop_time;
+  const std::chrono::seconds HOLD_PERIOD(3);
+  static std::string drop_info = "";
+
+  if (info.avg_output_fps < info.avg_input_fps) {
+      if (lowest_avg_output_fps == 0 || info.avg_output_fps < lowest_avg_output_fps) {
+          lowest_avg_output_fps = info.avg_output_fps;
+          last_drop_time = now;
+      } else if (now - last_drop_time >= HOLD_PERIOD) {
+          lowest_avg_output_fps = info.avg_output_fps;
+          last_drop_time = now;
+      }
+      drop_info = std::to_string(lowest_avg_output_fps);
+  } else {
+      if (lowest_avg_output_fps != 0 && now - last_drop_time >= HOLD_PERIOD) {
+          lowest_avg_output_fps = 0;
+          drop_info = "";
+      }
+  }
+
+  return {basic_info.str(), drop_info};
+}
+
+std::string aml_fps_info() {
+  return format_fps_info().basic_info;
+}
+
+std::string aml_fps_drop() {
+  return format_fps_info().drop_info;
 }

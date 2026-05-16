@@ -26,6 +26,7 @@
 #include "guilib/guiinfo/GUIInfo.h"
 #include "guilib/guiinfo/GUIInfoHelper.h"
 #include "guilib/guiinfo/GUIInfoLabels.h"
+#include "utils/AMLUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
 #include "utils/Variant.h"
@@ -408,6 +409,12 @@ bool CPlayerGUIInfo::GetLabel(std::string& value,
       return true;
     case PLAYER_PROCESS_AML_EOFT_GAMUT:
       value = GetAMLConfigInfo("EOTF") + " " + GetAMLConfigInfo("Colourimetry");
+      return true;
+    case PLAYER_PROCESS_AML_FPS_INFO:
+      value = aml_fps_info();
+      return true;
+    case PLAYER_PROCESS_AML_FPS_DROP:
+      value = aml_fps_drop();
       return true;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////

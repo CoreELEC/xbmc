@@ -1165,11 +1165,27 @@ constexpr std::array<InfoMap, 10> player_times = {{
 ///     @skinning_v17 **[New Infolabel]** \link Player_Process_aml_eoft_gamut `Player.Process(amlogic.eoft_gamut)`\endlink
 ///     <p>
 ///   }
+///   \table_row3{   <b>`Player.Process(amlogic.fps.info)`</b>,
+///                  \anchor Player_Process_aml_fps_info
+///                  _string_,
+///     @return FPS information of the current playback.
+///     <p><hr>
+///     @skinning_v17 **[New Infolabel]** \link Player_Process_aml_fps_info `Player.Process(amlogic.fps.info)`\endlink
+///     <p>
+///   }
+///   \table_row3{   <b>`Player.Process(amlogic.fps.drop)`</b>,
+///                  \anchor Player_Process_aml_fps_drop
+///                  _string_,
+///     @return Dropped frames / frame drop information of the current playback.
+///     <p><hr>
+///     @skinning_v17 **[New Infolabel]** \link Player_Process_aml_fps_drop `Player.Process(amlogic.fps.drop)`\endlink
+///     <p>
+///   }
 /// \table_end
 ///
 /// -----------------------------------------------------------------------------
 // clang-format off
-constexpr std::array<InfoMap, 17> player_process = {{
+constexpr std::array<InfoMap, 19> player_process = {{
     {"videodecoder",        PLAYER_PROCESS_VIDEODECODER},
     {"deintmethod",         PLAYER_PROCESS_DEINTMETHOD},
     {"pixformat",           PLAYER_PROCESS_PIXELFORMAT},
@@ -1186,6 +1202,8 @@ constexpr std::array<InfoMap, 17> player_process = {{
     {"amlogic.pixformat",   PLAYER_PROCESS_AML_PIXELFORMAT},
     {"amlogic.displaymode", PLAYER_PROCESS_AML_DISPLAYMODE},
     {"amlogic.eoft_gamut",  PLAYER_PROCESS_AML_EOFT_GAMUT},
+    {"amlogic.fps.info",    PLAYER_PROCESS_AML_FPS_INFO},
+    {"amlogic.fps.drop",    PLAYER_PROCESS_AML_FPS_DROP},
     {"audiochannelssink",   PLAYER_PROCESS_AUDIOCHANNELS_SINK},
 }};
 // clang-format on
