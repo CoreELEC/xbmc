@@ -213,6 +213,7 @@ protected:
   unsigned int m_orientation = 0;
   int m_NumberBuffers = 0;
   int m_lateframes = -1;
+  int m_amdv_wait_delay = -1;
   double m_presentpts = 0.0;
   EPRESENTSTEP m_presentstep = PRESENT_IDLE;
   XbmcThreads::EndTime<> m_presentTimer;
@@ -224,6 +225,7 @@ protected:
   CEvent m_initEvent;
   CDVDClock &m_dvdClock;
   IRenderMsg *m_playerPort;
+  int m_render_timeout;
 
   struct CClockSync
   {
