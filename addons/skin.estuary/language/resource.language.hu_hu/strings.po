@@ -7,8 +7,8 @@ msgstr ""
 "Project-Id-Version: KODI Main\n"
 "Report-Msgid-Bugs-To: https://github.com/xbmc/xbmc/issues/\n"
 "POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"PO-Revision-Date: 2025-05-02 21:14+0000\n"
-"Last-Translator: Frodo19 <bilbohu@gmail.com>\n"
+"PO-Revision-Date: 2026-05-16 10:14+0000\n"
+"Last-Translator: Frodo19\n"
 "Language-Team: Hungarian <https://kodi.weblate.cloud/projects/kodi-add-ons-skins/skin-estuary/hu_hu/>\n"
 "Language: hu_hu\n"
 "MIME-Version: 1.0\n"
@@ -481,6 +481,11 @@ msgctxt "#31123"
 msgid "Same director"
 msgstr "Egyazon rendező"
 
+#: /xml/Variables.xml
+msgctxt "#31124"
+msgid "Playerprocessinfo"
+msgstr "Lejátszó információ"
+
 msgctxt "#31125"
 msgid "Press up for actor info"
 msgstr "Nyomja meg a fel gombot a színész információkhoz"
@@ -792,53 +797,23 @@ msgctxt "#31612"
 msgid "channels"
 msgstr "csatornák"
 
-#~ msgctxt "#31025"
-#~ msgid "No favourites found. You can add any item from media views to this list by using the context menu."
-#~ msgstr "Nem találhatóak kedvencek. Bármely elemet hozzáadhat ehhez a listához a média nézetekből, a környezeti menü használatával."
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the subtitle decoder name
+msgctxt "#31613"
+msgid "Subtitle decoder"
+msgstr "Felirat dekóder"
 
-#~ msgctxt "#31149"
-#~ msgid "Select genre fanart pack"
-#~ msgstr "Műfaj illusztrációs csomag kiválasztása"
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the subtitle codec name
+msgctxt "#31614"
+msgid "Subtitle codec"
+msgstr "Felirat kodek"
 
-#~ msgctxt "#31112"
-#~ msgid "Toggle audio stream"
-#~ msgstr "Hangfolyam ki- és bekapcsolása"
-
-#~ msgctxt "#31115"
-#~ msgid "Toggle subtitle"
-#~ msgstr "Felirat váltás"
-
-#~ msgctxt "#31612"
-#~ msgid "Add version"
-#~ msgstr "Verzió hozzáadása"
-
-#~ msgctxt "#31613"
-#~ msgid "Add extras"
-#~ msgstr "Extrák hozzáadása"
-
-#~ msgctxt "#31614"
-#~ msgid "Set default"
-#~ msgstr "Alapállapotba állít"
-
-#~ msgctxt "#31615"
-#~ msgid "Extras"
-#~ msgstr "Extrák"
-
-#~ msgctxt "#31059"
-#~ msgid "Select + X"
-#~ msgstr "Kiválasztás + X"
-
-#~ msgctxt "#31060"
-#~ msgid "Select + Start"
-#~ msgstr "Kiválasztás + indítás"
-
-#~ msgctxt "#31137"
-#~ msgid "PVR info"
-#~ msgstr "PVR információ"
-
-#~ msgctxt "#31138"
-#~ msgid "Player process info"
-#~ msgstr "Feldolgozási információ"
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the subtitle language
+msgctxt "#31615"
+msgid "Subtitle language"
+msgstr "Feliratnyelv"
 
 #: /xml/DialogPlayerProcessInfo.xml
 msgctxt "#31630"
@@ -867,8 +842,8 @@ msgstr "Lejátszó információ"
 
 #: /xml/DialogPlayerProcessInfo.xml
 msgctxt "#31635"
-msgid "Video source type"
-msgstr "Videó forrás típus"
+msgid "Video source"
+msgstr "Videó forrás"
 
 #: /xml/DialogPlayerProcessInfo.xml
 msgctxt "#31636"
@@ -897,3 +872,9 @@ msgstr "Videó felbontás"
 msgctxt "#31640"
 msgid "Audio object base"
 msgstr "HD hang típus"
+
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show passtrough
+msgctxt "#31641"
+msgid "Passthrough"
+msgstr "Hangtovábbítás"

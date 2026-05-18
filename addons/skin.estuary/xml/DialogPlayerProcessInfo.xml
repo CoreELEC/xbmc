@@ -130,93 +130,6 @@
 				</control>
 			</control>
 			<control type="grouplist">
-				<left>900</left>
-				<top>-204</top>
-				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
-				<control type="label">
-					<width>420</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31635]:[/COLOR] $VAR[HDRcodectypeVar]</label>
-					<font>font12</font>
-					<shadowcolor>black</shadowcolor>
-					<visible>Player.HasVideo</visible>
-				</control>
-				<control type="label">
-					<width>420</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31639]: [/COLOR]$VAR[VideoResolutionTypeVar]  $VAR[VideoCodecVar]</label>
-					<font>font12</font>
-					<shadowcolor>black</shadowcolor>
-					<visible>Player.HasVideo</visible>
-				</control>
-				<control type="label">
-					<width>420</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31604]: [/COLOR]$VAR[AudioCodecVar]  $VAR[AudioChannelsVar]</label>
-					<font>font12</font>
-					<shadowcolor>black</shadowcolor>
-					<visible>!String.IsEmpty(VideoPlayer.AudioCodec)</visible>
-				</control>
-				<control type="label">
-					<width>420</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31640]: [/COLOR]$VAR[VideoplayerObjectAudioTypeVar]</label>
-					<font>font12</font>
-					<shadowcolor>black</shadowcolor>
-					<visible>[String.IsEqual(VideoPlayer.AudioCodec,eac3_ddp_atmos) | String.IsEqual(VideoPlayer.AudioCodec,truehd_atmos) | String.IsEqual(VideoPlayer.AudioCodec,dtshd_ma_x) | String.IsEqual(VideoPlayer.AudioCodec,dtshd_ma_x_imax)]</visible>
-				</control>
-				<control type="label">
-					<width>420</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[21447]: [/COLOR]$VAR[ActiveVideoPlayerAudioLanguage]</label>
-					<font>font12</font>
-					<shadowcolor>black</shadowcolor>
-					<visible>!String.IsEmpty(VideoPlayer.AudioLanguage)</visible>
-				</control>
-				<control type="label">
-					<width>420</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[21448]: [/COLOR]$VAR[ActiveVideoPlayerSubtitleLanguage]</label>
-					<font>font12</font>
-					<scroll>true</scroll>
-					<shadowcolor>black</shadowcolor>
-				</control>
-			</control>
-			<control type="grouplist">
-				<left>900</left>
-				<top>35</top>
-				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
-				<control type="label">
-					<width>870</width>
-					<height>40</height>
-					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31030]:[/COLOR] $INFO[system.memory(used)] / $INFO[system.memory(total)] - $INFO[system.memory(used.percent)]</label>
-					<font>font12</font>
-					<shadowcolor>black</shadowcolor>
-					<visible>Player.HasVideo</visible>
-				</control>
-				<control type="label">
-					<height>6</height>
-					<width>870</width>
-					<aligny>bottom</aligny>
-					<label></label>
-					<font>font8</font>
-					<shadowcolor>black</shadowcolor>
-				</control>
-				<control type="progress">
-					<description>RAM BAR</description>
-					<width>970</width>
-					<height>18</height>
-					<info>system.memory(used)</info>
-				</control>
-			</control>
-			<control type="grouplist">
 				<left>50</left>
 				<top>-204</top>
 				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
@@ -294,6 +207,93 @@
 					<width>750</width>
 					<height>18</height>
 					<info>System.CPUUsage</info>
+				</control>
+			</control>
+			<control type="grouplist">
+				<left>900</left>
+				<top>-204</top>
+				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
+				<control type="label">
+					<width>420</width>
+					<height>40</height>
+					<aligny>bottom</aligny>
+					<label>[COLOR button_focus]$LOCALIZE[31635]:[/COLOR] $VAR[HDRcodectypeVar] $VAR[DVProfileELVar]</label>
+					<font>font12</font>
+					<shadowcolor>black</shadowcolor>
+					<visible>Player.HasVideo</visible>
+				</control>
+				<control type="label">
+					<width>420</width>
+					<height>40</height>
+					<aligny>bottom</aligny>
+					<label>[COLOR button_focus]$LOCALIZE[31639]: [/COLOR]$VAR[VideoResolutionTypeVar]  $VAR[VideoCodecVar]</label>
+					<font>font12</font>
+					<shadowcolor>black</shadowcolor>
+					<visible>Player.HasVideo</visible>
+				</control>
+				<control type="label">
+					<width>420</width>
+					<height>40</height>
+					<aligny>bottom</aligny>
+					<label>[COLOR button_focus]$LOCALIZE[31604]: [/COLOR]$VAR[AudioCodecWithoutObjectVar]  $VAR[AudioChannelsVar]</label>
+					<font>font12</font>
+					<shadowcolor>black</shadowcolor>
+					<visible>!String.IsEmpty(VideoPlayer.AudioCodec)</visible>
+				</control>
+				<control type="label">
+					<width>420</width>
+					<height>40</height>
+					<aligny>bottom</aligny>
+					<label>[COLOR button_focus]$LOCALIZE[31640]: [/COLOR]$VAR[VideoplayerObjectAudioTypeVar]</label>
+					<font>font12</font>
+					<shadowcolor>black</shadowcolor>
+					<visible>[String.IsEqual(VideoPlayer.AudioCodec,eac3_ddp_atmos) | String.IsEqual(VideoPlayer.AudioCodec,truehd_atmos) | String.IsEqual(VideoPlayer.AudioCodec,dtshd_ma_x) | String.IsEqual(VideoPlayer.AudioCodec,dtshd_ma_x_imax)]</visible>
+				</control>
+				<control type="label">
+					<width>420</width>
+					<height>40</height>
+					<aligny>bottom</aligny>
+					<label>[COLOR button_focus]$LOCALIZE[21447]: [/COLOR]$VAR[ActiveVideoPlayerAudioLanguage]</label>
+					<font>font12</font>
+					<shadowcolor>black</shadowcolor>
+					<visible>!String.IsEmpty(VideoPlayer.AudioLanguage)</visible>
+				</control>
+				<control type="label">
+					<width>425</width>
+					<height>40</height>
+					<aligny>bottom</aligny>
+					<label>[COLOR button_focus]$LOCALIZE[21448]: [/COLOR]$VAR[ActiveVideoPlayerSubtitleLang]</label>
+					<font>font12</font>
+					<scroll>true</scroll>
+					<shadowcolor>black</shadowcolor>
+				</control>
+			</control>
+			<control type="grouplist">
+				<left>900</left>
+				<top>35</top>
+				<visible>String.IsEqual(Window(Home).Property(PlayerInfoDialogFocus),5553)</visible>
+				<control type="label">
+					<width>870</width>
+					<height>40</height>
+					<aligny>bottom</aligny>
+					<label>[COLOR button_focus]$LOCALIZE[31030]:[/COLOR] $INFO[system.memory(used)] / $INFO[system.memory(total)] - $INFO[system.memory(used.percent)]</label>
+					<font>font12</font>
+					<shadowcolor>black</shadowcolor>
+					<visible>Player.HasVideo</visible>
+				</control>
+				<control type="label">
+					<height>6</height>
+					<width>870</width>
+					<aligny>bottom</aligny>
+					<label></label>
+					<font>font8</font>
+					<shadowcolor>black</shadowcolor>
+				</control>
+				<control type="progress">
+					<description>RAM BAR</description>
+					<width>970</width>
+					<height>18</height>
+					<info>system.memory(used)</info>
 				</control>
 			</control>
 			<control type="grouplist">

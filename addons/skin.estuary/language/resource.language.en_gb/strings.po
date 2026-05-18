@@ -988,6 +988,24 @@ msgid "channels"
 msgstr ""
 
 #: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the subtitle decoder name
+msgctxt "#31613"
+msgid "Subtitle decoder"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the subtitle codec name
+msgctxt "#31614"
+msgid "Subtitle codec"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the subtitle language
+msgctxt "#31615"
+msgid "Subtitle language"
+msgstr ""
+
+#: /xml/DialogPlayerProcessInfo.xml
 msgctxt "#31630"
 msgid "System FPS"
 msgstr ""
@@ -1014,7 +1032,7 @@ msgstr ""
 
 #: /xml/DialogPlayerProcessInfo.xml
 msgctxt "#31635"
-msgid "Video source type"
+msgid "Video source"
 msgstr ""
 
 #: /xml/DialogPlayerProcessInfo.xml
