@@ -796,65 +796,84 @@ msgctxt "#31612"
 msgid "channels"
 msgstr "csatornák"
 
+#: /xml/DialogPlayerProcessInfo.xml
 #. Label to show the subtitle decoder name
 msgctxt "#31613"
 msgid "Subtitle decoder"
 msgstr "Felirat dekóder"
 
+#: /xml/DialogPlayerProcessInfo.xml
 #. Label to show the subtitle codec name
 msgctxt "#31614"
 msgid "Subtitle codec"
 msgstr "Felirat kodek"
 
+#: /xml/DialogPlayerProcessInfo.xml
 #. Label to show the subtitle language
 msgctxt "#31615"
 msgid "Subtitle language"
 msgstr "Feliratnyelv"
 
-#~ msgctxt "#31025"
-#~ msgid "No favourites found. You can add any item from media views to this list by using the context menu."
-#~ msgstr "Nem találhatóak kedvencek. Bármely elemet hozzáadhat ehhez a listához a média nézetekből, a környezeti menü használatával."
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31630"
+msgid "System FPS"
+msgstr "Rendszer FPS"
 
-#~ msgctxt "#31149"
-#~ msgid "Select genre fanart pack"
-#~ msgstr "Műfaj illusztrációs csomag kiválasztása"
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31631"
+msgid "CPU frequency"
+msgstr "CPU frekvencia"
 
-#~ msgctxt "#31112"
-#~ msgid "Toggle audio stream"
-#~ msgstr "Hangfolyam ki- és bekapcsolása"
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31632"
+msgid "SoC temp"
+msgstr "SoC hőmérséklet"
 
-#~ msgctxt "#31115"
-#~ msgid "Toggle subtitle"
-#~ msgstr "Felirat váltás"
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31633"
+msgid "Video stream cache"
+msgstr "Videófolyam puffer"
 
-#~ msgctxt "#31612"
-#~ msgid "Add version"
-#~ msgstr "Verzió hozzáadása"
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31634"
+msgid "Player process info"
+msgstr "Lejátszó információ"
 
-#~ msgctxt "#31613"
-#~ msgid "Add extras"
-#~ msgstr "Extrák hozzáadása"
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31635"
+msgid "Video source"
+msgstr "Videó forrás"
 
-#~ msgctxt "#31614"
-#~ msgid "Set default"
-#~ msgstr "Alapállapotba állít"
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31636"
+msgid "Display mode"
+msgstr "Kijelző mód"
 
-#~ msgctxt "#31615"
-#~ msgid "Extras"
-#~ msgstr "Extrák"
+#: /xml/DialogPlayerProcessInfo.xml
+msgctxt "#31637"
+msgid "EOTF & Gamut"
+msgstr "EOTF & Gamut"
 
-#~ msgctxt "#31059"
-#~ msgid "Select + X"
-#~ msgstr "Kiválasztás + X"
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the video pixel format
+msgctxt "#31638"
+msgid "Pixel format"
+msgstr "Színmélység"
 
-#~ msgctxt "#31060"
-#~ msgid "Select + Start"
-#~ msgstr "Kiválasztás + indítás"
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the video resolution
+msgctxt "#31639"
+msgid "Video resolution"
+msgstr "Videó felbontás"
 
-#~ msgctxt "#31137"
-#~ msgid "PVR info"
-#~ msgstr "PVR információ"
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show the Audio Object Base
+msgctxt "#31640"
+msgid "Audio object base"
+msgstr "HD hang típus"
 
-#~ msgctxt "#31138"
-#~ msgid "Player process info"
-#~ msgstr "Feldolgozási információ"
+#: /xml/DialogPlayerProcessInfo.xml
+#. Label to show passtrough
+msgctxt "#31641"
+msgid "Passthrough"
+msgstr "Hangtovábbítás"
