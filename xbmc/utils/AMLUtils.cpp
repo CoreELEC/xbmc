@@ -295,6 +295,17 @@ bool aml_video_started()
   return (StringUtils::EqualsNoCase(videostarted.Get<std::string>().value(), "0x1"));
 }
 
+int aml_amdv_wait(StreamHdrType hdrType)
+{
+  if (hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
+  {
+    CSysfsPath amdv_wait_delay{"/sys/module/aml_media/parameters/amdv_wait_delay"};
+    return amdv_wait_delay.Get<int>().value();
+  }
+  else
+    return 0;
+}
+
 void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int view_mode)
 {
   int fd;
