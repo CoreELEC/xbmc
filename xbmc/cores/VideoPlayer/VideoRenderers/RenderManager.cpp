@@ -49,6 +49,7 @@ CRenderManager::CRenderManager(CDVDClock &clock, IRenderMsg *player) :
   m_dvdClock(clock),
   m_playerPort(player)
 {
+  m_render_timeout = CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_videoDecoderTimeout;
 }
 
 CRenderManager::~CRenderManager()
@@ -92,6 +93,9 @@ void CRenderManager::SetVideoSettings(const CVideoSettings& settings)
 
 bool CRenderManager::Configure(const VideoPicture& picture, float fps, unsigned int orientation, int buffers)
 {
+
+  if (m_amdv_wait_delay == -1)
+    m_amdv_wait_delay = aml_amdv_wait(picture.hdrType);
 
   // check if something has changed
   {
@@ -162,7 +166,7 @@ bool CRenderManager::Configure(const VideoPicture& picture, float fps, unsigned 
     m_presentevent.notifyAll();
   }
 
-  if (!m_stateEvent.Wait(1000ms))
+  if (!m_stateEvent.Wait(std::chrono::seconds(m_render_timeout)))
   {
     CLog::Log(LOGWARNING, "CRenderManager::Configure - timeout waiting for configure");
     std::unique_lock lock(m_statelock);
@@ -812,7 +816,16 @@ void CRenderManager::UpdateResolution()
     if (CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenVideo() && CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenRoot())
     {
       auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - m_videostarted);
-      if (aml_video_started() || elapsed > 1000ms)
+
+      if (m_amdv_wait_delay == -1)
+        return;
+
+      if (m_amdv_wait_delay > 0)
+      {
+        m_amdv_wait_delay--;
+        return;
+      }
+      else if (aml_video_started() || elapsed > std::chrono::seconds(m_render_timeout))
       {
         const RenderStereoMode user_stereo_mode =
           CServiceBroker::GetGUI()->GetStereoscopicsManager().GetStereoModeByUser();
