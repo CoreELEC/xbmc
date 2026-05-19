@@ -235,7 +235,7 @@
 					<width>420</width>
 					<height>40</height>
 					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31604]: [/COLOR]$VAR[AudioCodecVar]  $VAR[AudioChannelsVar]</label>
+					<label>[COLOR button_focus]$LOCALIZE[31604]: [/COLOR]$VAR[AudioCodecWithoutObjectVar]  $VAR[AudioChannelsVar]</label>
 					<font>font12</font>
 					<shadowcolor>black</shadowcolor>
 					<visible>!String.IsEmpty(VideoPlayer.AudioCodec)</visible>
@@ -259,10 +259,10 @@
 					<visible>!String.IsEmpty(VideoPlayer.AudioLanguage)</visible>
 				</control>
 				<control type="label">
-					<width>420</width>
+					<width>425</width>
 					<height>40</height>
 					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[21448]: [/COLOR]$VAR[ActiveVideoPlayerSubtitleLanguage]</label>
+					<label>[COLOR button_focus]$LOCALIZE[21448]: [/COLOR]$VAR[ActiveVideoPlayerSubtitleLang]</label>
 					<font>font12</font>
 					<shadowcolor>black</shadowcolor>
 				</control>
