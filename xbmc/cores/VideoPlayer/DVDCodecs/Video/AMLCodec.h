@@ -97,7 +97,7 @@ private:
   std::string   GetVfmMap(const std::string &name);
   void          SetVfmMap(const std::string &name, const std::string &map);
   float         GetBufferLevel();
-  float         GetBufferLevel(int new_chunk, int &data_len, int &free_len);
+  float         GetBufferLevel(int new_chunk, int &data_len, int &free_len, int &size);
   int           DequeueBuffer();
   unsigned int  GetDecoderVideoRate();
   std::string   GetHDRStaticMetadata(bool dv_enable);
