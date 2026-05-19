@@ -2541,15 +2541,27 @@ void CAMLCodec::Reset()
 
 bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
 {
-  int data_len, free_len;
+  int data_len, free_len, size;
   int chunk_size = calc_chunk_size(iSize);
-  float new_buffer_level = GetBufferLevel(chunk_size, data_len, free_len);
+  float new_buffer_level = GetBufferLevel(chunk_size, data_len, free_len, size);
   bool streambuffer(am_private->gcodec.dec_mode == STREAM_TYPE_STREAM);
 
   if (!m_buffer_level_ready)
   {
     m_buffer_level_ready = (streambuffer ? (new_buffer_level > 90.0f) : (new_buffer_level > 5.0f));
     m_minimum_buffer_level = (streambuffer ? 10.0f : 5.0f);
+
+    if (streambuffer)
+    {
+      CSysfsPath pre_decode_buf_level{"/sys/module/amvdec_h265/parameters/pre_decode_buf_level"};
+      if (pre_decode_buf_level.Exists())
+      {
+        if (!m_buffer_level_ready)
+          pre_decode_buf_level.Set(static_cast<uint32_t>(size / m_minimum_buffer_level));
+        else
+          pre_decode_buf_level.Set(static_cast<uint32_t>(0x1000));
+      }
+    }
   }
 
   if (!m_opened || !pData || free_len == 0 || new_buffer_level >= 95.0f)
@@ -2733,11 +2745,11 @@ int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
 
 float CAMLCodec::GetBufferLevel()
 {
-  int new_chunk = 0, data_len, free_len;
-  return GetBufferLevel(new_chunk, data_len, free_len);
+  int new_chunk = 0, data_len, free_len, size;
+  return GetBufferLevel(new_chunk, data_len, free_len, size);
 }
 
-float CAMLCodec::GetBufferLevel(int new_chunk, int &data_len, int &free_len)
+float CAMLCodec::GetBufferLevel(int new_chunk, int &data_len, int &free_len, int &size)
 {
   struct buf_status bs;
   float level = 0.0f;
@@ -2745,6 +2757,7 @@ float CAMLCodec::GetBufferLevel(int new_chunk, int &data_len, int &free_len)
 
   data_len = bs.data_len;
   free_len = bs.free_len;
+  size = bs.size;
 
   if (bs.free_len > 0)
   {
