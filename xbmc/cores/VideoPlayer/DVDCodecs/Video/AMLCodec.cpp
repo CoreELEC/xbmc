@@ -2743,12 +2743,6 @@ int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
   return ret;
 }
 
-float CAMLCodec::GetBufferLevel()
-{
-  int new_chunk = 0, data_len, free_len, size;
-  return GetBufferLevel(new_chunk, data_len, free_len, size);
-}
-
 float CAMLCodec::GetBufferLevel(int new_chunk, int &data_len, int &free_len, int &size)
 {
   struct buf_status bs;
