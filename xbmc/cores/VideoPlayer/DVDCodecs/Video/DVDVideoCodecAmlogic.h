@@ -79,6 +79,7 @@ public:
   virtual void SetCodecControl(int flags) override;
   virtual const char* GetName(void) override { return (const char*)m_pFormatName; }
   virtual bool SupportsExtention() { return true; }
+  virtual int GetDataLevel() const override;
 
 protected:
   void            Close(void);
