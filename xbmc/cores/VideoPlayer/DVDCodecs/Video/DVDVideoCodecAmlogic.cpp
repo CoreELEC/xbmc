@@ -633,6 +633,17 @@ void CDVDVideoCodecAmlogic::SetCodecControl(int flags)
   }
 }
 
+int CDVDVideoCodecAmlogic::GetDataLevel() const
+{
+  if (m_Codec)
+  {
+    int data_len, free_len, size;
+    return static_cast<int>(m_Codec->GetBufferLevel(0, data_len, free_len, size));
+  }
+
+  return 0;
+}
+
 void CDVDVideoCodecAmlogic::SetSpeed(int iSpeed)
 {
   if (m_Codec)
