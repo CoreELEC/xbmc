@@ -78,6 +78,7 @@ public:
   void          SetVideoRate(int videoRate);
   uint64_t      GetOMXPts() const { return m_cur_pts; }
   uint32_t      GetBufferIndex() const { return m_bufferIndex; };
+  float         GetBufferLevel(int new_chunk, int &data_len, int &free_len, int &size);
   static float  OMXPtsToSeconds(int omxpts);
   static int    OMXDurationToNs(int duration);
   int           GetAmlDuration() const;
@@ -96,8 +97,6 @@ private:
   void          CloseAmlVideo();
   std::string   GetVfmMap(const std::string &name);
   void          SetVfmMap(const std::string &name, const std::string &map);
-  float         GetBufferLevel();
-  float         GetBufferLevel(int new_chunk, int &data_len, int &free_len, int &size);
   int           DequeueBuffer();
   unsigned int  GetDecoderVideoRate();
   std::string   GetHDRStaticMetadata(bool dv_enable);
