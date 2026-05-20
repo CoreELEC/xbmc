@@ -251,6 +251,16 @@ public:
   * Indicates that the decoder supports extention streams.
   */
   virtual bool SupportsExtention() { return false; }
+
+  /**
+  * Get hardware decoder buffer data size.
+  */
+  virtual int GetDataSize() const { return 0; }
+
+  /**
+  * Get hardware decoder buffer data level.
+  */
+  virtual int GetDataLevel() const { return 0; }
 protected:
   CProcessInfo &m_processInfo;
 };
