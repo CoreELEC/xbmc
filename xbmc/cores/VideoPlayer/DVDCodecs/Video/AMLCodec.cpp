@@ -1963,7 +1963,7 @@ int CAMLCodec::GetAmlDuration() const
   return am_private ? (am_private->video_rate * PTS_FREQ) / UNIT_FREQ : 0;
 };
 
-bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type)
+bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
 {
   m_speed = DVD_PLAYSPEED_NORMAL;
   m_drain = false;
@@ -2107,7 +2107,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type)
     CLog::Log(LOGINFO, "CAMLCodec::OpenDecoder DOVI: version {:d}.{:d}, profile {:d}{}",
       hints.dovi.dv_version_major, hints.dovi.dv_version_minor, hints.dovi.dv_profile,
       (hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7) ?
-     ((dovi_el_type == ELType::TYPE_FEL) ? ", full enhancement layer" : ", minimum enhancement layer") : "");
+      (doviIsFEL ? ", full enhancement layer" : ", minimum enhancement layer") : "");
 
   m_processInfo.SetVideoDAR(hints.aspect);
   CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder decoder timeout: {:d}s",
@@ -2168,7 +2168,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type)
 
     if (hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7)
     {
-      if (dovi_el_type != ELType::TYPE_MEL) // use stream path if not MEL
+      if (doviIsFEL) // use stream path if not MEL
       {
         CSysfsPath amdolby_vision_debug{"/sys/class/amdolby_vision/debug"};
         if (amdolby_vision_debug.Exists())
