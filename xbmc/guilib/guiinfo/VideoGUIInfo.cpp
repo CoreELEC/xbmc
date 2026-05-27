@@ -128,7 +128,11 @@ bool CVideoGUIInfo::GetLabel(std::string& value,
                            info.GetInfo() <= PLAYER_OFFSET_POSITION_LAST)))
     return GetPlaylistInfo(value, info);
 
-  const CVideoInfoTag* tag = item->GetVideoInfoTag();
+  const CVideoInfoTag* tag =
+      !CServiceBroker::GetGUI()->GetWindowManager().IsWindowActive(WINDOW_DIALOG_PLAYER_PROCESS_INFO, false)
+          ? item->GetVideoInfoTag()
+          : nullptr;
+
   if (tag)
   {
     switch (info.GetInfo())
