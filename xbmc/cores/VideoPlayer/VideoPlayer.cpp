@@ -5941,6 +5941,10 @@ void CVideoPlayer::GetVideoStreamInfo(int streamId, VideoStreamInfo& info) const
       if (s.dovi.dv_bl_signal_compatibility_id == 4)
         info.hdrTypeAlt = StreamHdrType::HDR_TYPE_HLG;
     }
+    else if (s.dovi.dv_profile == 7)
+    {
+      info.hdrDetail += m_processInfo->GetDoviIsFEL() ? "FEL" : "MEL";
+    }
   }
   else
   {
