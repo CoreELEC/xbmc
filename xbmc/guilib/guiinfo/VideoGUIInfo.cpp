@@ -587,19 +587,31 @@ bool CVideoGUIInfo::GetLabel(std::string& value,
         return true;
       case VIDEOPLAYER_HDR_TYPE:
       case LISTITEM_VIDEO_HDR_TYPE:
-        if (tag->m_streamDetails.GetStreamCount(CStreamDetail::VIDEO) > 1 &&
-            tag->m_streamDetails.GetVideoHdrType(2) == "dolbyvision")
-          value = "dolbyvision";
-        else
-          value = tag->m_streamDetails.GetVideoHdrType();
+        value = tag->m_streamDetails.GetVideoHdrType();
+        for (int i = 0; i < tag->m_streamDetails.GetStreamCount(CStreamDetail::VIDEO); i++)
+        {
+          if (tag->m_streamDetails.GetVideoHdrType(i) == "dolbyvision")
+          {
+            value = "dolbyvision";
+            break;
+          }
+        }
         return true;
       case VIDEOPLAYER_HDR_DETAIL:
       case LISTITEM_VIDEO_HDR_DETAIL:
-        if (tag->m_streamDetails.GetStreamCount(CStreamDetail::VIDEO) > 1 &&
-            tag->m_streamDetails.GetVideoHdrType(2) == "dolbyvision")
-          value = tag->m_streamDetails.GetVideoHdrDetail(2);
-        else
+        {
+          VideoStreamInfo info;
+          m_appPlayer->GetVideoStreamInfo(CURRENT_STREAM, info);
           value = tag->m_streamDetails.GetVideoHdrDetail();
+          for (int i = 0; i < tag->m_streamDetails.GetStreamCount(CStreamDetail::VIDEO); i++)
+          {
+            if (tag->m_streamDetails.GetVideoHdrType(i) == "dolbyvision")
+            {
+              value = info.hdrDetail;
+              break;
+            }
+          }
+        }
         return true;
       default:
         break;
