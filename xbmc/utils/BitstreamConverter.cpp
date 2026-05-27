@@ -261,7 +261,6 @@ CBitstreamConverter::CBitstreamConverter()
   m_removeDovi = false;
   m_removeHdr10Plus = false;
   m_setDoviZeroLevel5 = false;
-  m_dovi_el_type = ELType::TYPE_NONE;
 }
 
 CBitstreamConverter::~CBitstreamConverter()
@@ -1305,7 +1304,7 @@ bool CBitstreamConverter::h264_sequence_header(const uint8_t *data, const uint32
 
 #ifdef HAVE_LIBDOVI
 // Processes Dolby Vision RPU
-//   - Updates `m_dovi_el_type` according to the current header
+//   - Sets `m_doviIsFEL` flag to true when DV is profile 7 / FEL
 //   - Converts to profile 8.1 if `m_convert_dovi` is enabled
 //   - Sets level 5 metadata to 0 offsets if `m_setDoviZeroLevel5` is enabled
 //
@@ -1313,8 +1312,8 @@ bool CBitstreamConverter::h264_sequence_header(const uint8_t *data, const uint32
 // May be NULL if no processing was done or if parsing errored
 const DoviData* CBitstreamConverter::processDoviRpu(uint8_t* buf, uint32_t nalSize)
 {
-  // early exit if no processing option is enabled
-  if (!m_convert_dovi && !m_setDoviZeroLevel5)
+  // early exit if no processing option is enabled and EL type is already tested
+  if (m_doviELTested && !m_convert_dovi && !m_setDoviZeroLevel5)
     return NULL;
 
   DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(buf, nalSize);
@@ -1330,13 +1329,14 @@ const DoviData* CBitstreamConverter::processDoviRpu(uint8_t* buf, uint32_t nalSi
     return rpuData;
   }
 
-  if (m_dovi_el_type == ELType::TYPE_NONE && header->el_type &&
-      (header->guessed_profile == 4 || header->guessed_profile == 7))
+  if (!m_doviELTested)
   {
-    if (StringUtils::EqualsNoCase(header->el_type, "FEL"))
-      m_dovi_el_type = ELType::TYPE_FEL;
-    else if (StringUtils::EqualsNoCase(header->el_type, "MEL"))
-      m_dovi_el_type = ELType::TYPE_MEL;
+    if (header->el_type && (header->guessed_profile == 4 || header->guessed_profile == 7))
+    {
+      if (StringUtils::EqualsNoCase(header->el_type, "FEL"))
+        m_doviIsFEL = true;
+    }
+    m_doviELTested = true;
   }
 
   if (m_convert_dovi && header->guessed_profile == 7)
