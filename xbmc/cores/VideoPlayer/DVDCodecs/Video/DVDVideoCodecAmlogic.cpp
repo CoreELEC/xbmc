@@ -429,7 +429,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
 
   uint8_t *pData(packet.pData);
   uint32_t iSize(packet.iSize);
-  enum ELType dovi_el_type = ELType::TYPE_NONE;
+  bool doviIsFEL = false;
   int data_added = false;
   bool dual_layer_converted = false;
 
@@ -492,7 +492,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       }
       pData = m_bitstream->GetConvertBuffer();
       iSize = m_bitstream->GetConvertSize();
-      dovi_el_type = m_bitstream->GetDoviElType();
+      doviIsFEL = m_bitstream->GetDoviIsFEL();
     }
     else if (!m_has_keyframe && m_bitparser)
     {
@@ -512,7 +512,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
         m_hints.ptsinvalid = true;
 
       CLog::Log(LOGINFO, "CDVDVideoCodecAmlogic::{}: Open decoder: fps:{:d}/{:d}", __FUNCTION__, m_hints.fpsrate, m_hints.fpsscale);
-      if (m_Codec && !m_Codec->OpenDecoder(m_hints, dovi_el_type))
+      if (m_Codec && !m_Codec->OpenDecoder(m_hints, doviIsFEL))
         CLog::Log(LOGERROR, "CDVDVideoCodecAmlogic::{}: Failed to open Amlogic Codec", __FUNCTION__);
 
       m_videoBufferPool = std::shared_ptr<CAMLVideoBufferPool>(new CAMLVideoBufferPool());
