@@ -5928,6 +5928,20 @@ void CVideoPlayer::GetVideoStreamInfo(int streamId, VideoStreamInfo& info) const
   info.stereoMode = s.stereo_mode;
   info.flags = s.flags;
   info.hdrType = s.hdrType;
+
+  // handle fallback on broken Dolby Vision path
+  if (info.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
+  {
+    if (!aml_dolby_vision_enabled())
+    {
+      const CHDRCapabilities caps = CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities();
+      info.hdrType = StreamHdrType::HDR_TYPE_HDR10;
+
+      if (!caps.SupportsHDR10() || s.dovi.dv_profile == 4)
+        info.hdrType = StreamHdrType::HDR_TYPE_NONE;
+    }
+  }
+
   if (info.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
   {
     if (info.hdrDetail.length() == 0)
