@@ -78,6 +78,33 @@ std::string aml_get_cpufamily_name(int cpuid)
   return "Unknown";
 }
 
+bool aml_display_is_widescreen()
+{
+  bool is_widescreen = true;
+  CSysfsPath edid{"/sys/class/amhdmitx/amhdmitx0/edid"};
+
+  if (edid.Exists())
+  {
+    std::string valstr = edid.Get<std::string>().value();
+    size_t pos = valstr.find("Physical size(mm):");
+    if (pos != std::string::npos)
+    {
+      int width_mm = 0, height_mm = 0;
+      sscanf(valstr.c_str() + pos, "Physical size(mm): %d x %d", &width_mm, &height_mm);
+      if (width_mm > 0 && height_mm > 0)
+      {
+          float ratio = static_cast<float>(width_mm) / height_mm;
+          // 16:9 range (with some tolerance)
+          is_widescreen = (ratio > 1.65f) ? 1 : 0;
+          CLog::Log(LOGDEBUG, "AMLUtils: display {} wide screen ({}x{}mm)",
+            is_widescreen ? "is" : "is not", width_mm, height_mm);
+      }
+    }
+  }
+
+  return is_widescreen;
+}
+
 bool aml_display_support_dv()
 {
   static int support_dv = -1;
@@ -317,69 +344,5 @@ void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int vie
 
     CSysfsPath("/sys/module/aml_media/parameters/g_framepacking_support", framepacking_support ? 1 : 0);
     CSysfsPath("/sys/module/amvdec_h264mvc/parameters/view_mode", view_mode);
-  }
-}
-
-void aml_probe_hdmi_audio()
-{
-  // Audio {format, channel, freq, cce}
-  // {1, 7, 7f, 7}
-  // {7, 5, 1e, 0}
-  // {2, 5, 7, 0}
-  // {11, 7, 7e, 1}
-  // {10, 7, 6, 0}
-  // {12, 7, 7e, 0}
-
-  int fd = open("/sys/class/amhdmitx/amhdmitx0/edid", O_RDONLY);
-  if (fd >= 0)
-  {
-    char valstr[1024] = {0};
-
-    read(fd, valstr, sizeof(valstr) - 1);
-    valstr[strlen(valstr)] = '\0';
-    close(fd);
-
-    std::vector<std::string> probe_str = StringUtils::Split(valstr, "\n");
-
-    for (std::vector<std::string>::const_iterator i = probe_str.begin(); i != probe_str.end(); ++i)
-    {
-      if (i->find("Audio") == std::string::npos)
-      {
-        for (std::vector<std::string>::const_iterator j = i + 1; j != probe_str.end(); ++j)
-        {
-          if      (j->find("{1,")  != std::string::npos)
-            printf(" PCM found {1,\n");
-          else if (j->find("{2,")  != std::string::npos)
-            printf(" AC3 found {2,\n");
-          else if (j->find("{3,")  != std::string::npos)
-            printf(" MPEG1 found {3,\n");
-          else if (j->find("{4,")  != std::string::npos)
-            printf(" MP3 found {4,\n");
-          else if (j->find("{5,")  != std::string::npos)
-            printf(" MPEG2 found {5,\n");
-          else if (j->find("{6,")  != std::string::npos)
-            printf(" AAC found {6,\n");
-          else if (j->find("{7,")  != std::string::npos)
-            printf(" DTS found {7,\n");
-          else if (j->find("{8,")  != std::string::npos)
-            printf(" ATRAC found {8,\n");
-          else if (j->find("{9,")  != std::string::npos)
-            printf(" One_Bit_Audio found {9,\n");
-          else if (j->find("{10,") != std::string::npos)
-            printf(" Dolby found {10,\n");
-          else if (j->find("{11,") != std::string::npos)
-            printf(" DTS_HD found {11,\n");
-          else if (j->find("{12,") != std::string::npos)
-            printf(" MAT found {12,\n");
-          else if (j->find("{13,") != std::string::npos)
-            printf(" ATRAC found {13,\n");
-          else if (j->find("{14,") != std::string::npos)
-            printf(" WMA found {14,\n");
-          else
-            break;
-        }
-        break;
-      }
-    }
   }
 }
