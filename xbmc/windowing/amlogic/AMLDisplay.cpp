@@ -1043,6 +1043,17 @@ bool CAMLDisplay::aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
   res->bFullScreen   = true;
   res->iSubtitles    = (int)(0.965 * res->iHeight);
   res->fPixelRatio   = 1.0f;
+  // 720x480 / 720x576 are anamorphic SD; the kernel signals them as 16:9
+  // by default so the sink stretches the surface. Reflect that here.
+  if (res->iScreenWidth == 720 &&
+      (res->iScreenHeight == 480 || res->iScreenHeight == 576))
+  {
+    const float pictureAspect = 16.0f / 9.0f;
+    const float rasterAspect = static_cast<float>(res->iScreenWidth) /
+                               static_cast<float>(res->iScreenHeight);
+    res->fPixelRatio = pictureAspect / rasterAspect;
+  }
+
   res->strId         = fromMode;
   res->strMode       = StringUtils::Format("{:d}x{:d} @ {:.2f}{} - Full Screen", res->iScreenWidth, res->iScreenHeight, res->fRefreshRate,
     res->dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "");
