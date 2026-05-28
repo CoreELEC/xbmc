@@ -40,6 +40,7 @@ enum AML_DISPLAY_DV_LED
 
 int  aml_get_cpufamily_id();
 std::string aml_get_cpufamily_name(int cpuid = -1);
+bool aml_display_is_widescreen();
 bool aml_display_support_dv();
 bool aml_display_support_3d();
 bool aml_support_hevc();
