@@ -16,11 +16,13 @@
 #include "AMLCodec.h"
 #include "ServiceBroker.h"
 #include "utils/AMLUtils.h"
+#include "utils/HDRCapabilities.h"
 #include "utils/log.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "threads/Thread.h"
+#include "windowing/WinSystem.h"
 
 extern "C"
 {
@@ -389,6 +391,16 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
   m_processInfo.SetVideoDAR(m_hints.aspect);
 
   m_has_keyframe = false;
+
+  if (m_bitstream)
+  {
+    const CHDRCapabilities caps = CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities();
+    if (!caps.SupportsHDR10Plus())
+      m_bitstream->SetRemoveHdr10Plus(true);
+    if (caps.SupportsDolbyVision() == DolbyVisionFormat::DOLBYVISION_TYPE_NONE &&
+        m_hints.dovi.dv_profile != 5)
+      m_bitstream->SetRemoveDovi(true);
+  }
 
   CLog::Log(LOGINFO, "{}: Opened Amlogic Codec", __MODULE_NAME__);
   return true;
