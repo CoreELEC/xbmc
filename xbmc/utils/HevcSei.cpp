@@ -150,37 +150,45 @@ std::optional<const CHevcSei*> CHevcSei::FindHdr10PlusSeiMessage(
   return {};
 }
 
-std::pair<bool, const std::vector<uint8_t>> CHevcSei::RemoveHdr10PlusFromSeiNalu(
-    const uint8_t* inData, const size_t inDataLen)
+std::optional<std::tuple<std::vector<uint8_t>, std::vector<CHevcSei>, const CHevcSei*>>
+CHevcSei::FindHdr10Plus(const uint8_t* inData, const size_t inDataLen)
 {
-  bool containsHdr10Plus{false};
-
   std::vector<uint8_t> buf;
   std::vector<CHevcSei> messages = CHevcSei::ParseSeiRbspUnclearedEmulation(inData, inDataLen, buf);
 
-  if (auto res = CHevcSei::FindHdr10PlusSeiMessage(buf, messages))
-  {
-    auto msg = *res;
+  const auto found = CHevcSei::FindHdr10PlusSeiMessage(buf, messages);
+  if (!found)
+    return {};
 
-    containsHdr10Plus = true;
-    if (messages.size() > 1)
-    {
-      // Multiple SEI messages in NALU, remove only the HDR10+ one
-      buf.erase(std::next(buf.begin(), msg->m_msgOffset),
-                std::next(buf.begin(), msg->m_payloadOffset + msg->m_payloadSize));
-      HevcAddStartCodeEmulationPrevention3Byte(buf);
-    }
-    else
-    {
-      // Single SEI message in NALU
-      buf.clear();
-    }
+  return std::make_tuple(std::move(buf), std::move(messages), *found);
+}
+
+bool CHevcSei::ContainsHdr10Plus(const uint8_t* inData, const size_t inDataLen)
+{
+  return CHevcSei::FindHdr10Plus(inData, inDataLen).has_value();
+}
+
+std::vector<uint8_t> CHevcSei::RemoveHdr10PlusFromSeiNalu(
+    const uint8_t* inData, const size_t inDataLen)
+{
+  auto res = CHevcSei::FindHdr10Plus(inData, inDataLen);
+  if (!res)
+    return {};
+
+  auto& [buf, messages, msg] = *res;
+
+  if (messages.size() > 1)
+  {
+    // Multiple SEI messages in NALU, remove only the HDR10+ one
+    buf.erase(std::next(buf.begin(), msg->m_msgOffset),
+              std::next(buf.begin(), msg->m_payloadOffset + msg->m_payloadSize));
+    HevcAddStartCodeEmulationPrevention3Byte(buf);
   }
   else
   {
-    // No HDR10+
+    // Single SEI message in NALU
     buf.clear();
   }
 
-  return std::make_pair(containsHdr10Plus, buf);
+  return std::move(buf);
 }
