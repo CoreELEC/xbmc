@@ -5960,6 +5960,11 @@ void CVideoPlayer::GetVideoStreamInfo(int streamId, VideoStreamInfo& info) const
       info.hdrDetail += m_processInfo->GetDoviIsFEL() ? "FEL" : "MEL";
     }
   }
+  else if (info.hdrType == StreamHdrType::HDR_TYPE_HDR10)
+  {
+    if (m_processInfo->GetIsHdr10Plus())
+      info.hdrType = StreamHdrType::HDR_TYPE_HDR10PLUS;
+  }
   else
   {
     info.hdrDetail = "";
