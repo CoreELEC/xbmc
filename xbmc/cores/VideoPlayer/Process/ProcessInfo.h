@@ -58,6 +58,8 @@ public:
   bool GetVideoInterlaced();
   void SetDoviIsFEL(bool isFEL);
   bool GetDoviIsFEL();
+  void SetIsHdr10Plus(bool isHdr10Plus);
+  bool GetIsHdr10Plus();
   virtual EINTERLACEMETHOD GetFallbackDeintMethod();
   virtual void SetSwDeinterlacingMethods();
   void UpdateDeinterlacingMethods(std::list<EINTERLACEMETHOD> &methods);
@@ -160,6 +162,7 @@ protected:
   int m_videoQueueDataLevel = 0;
   bool m_videoIsInterlaced;
   bool m_doviIsFEL;
+  bool m_IsHdr10Plus;
   std::list<EINTERLACEMETHOD> m_deintMethods;
   EINTERLACEMETHOD m_deintMethodDefault;
   mutable CCriticalSection m_videoCodecSection;
