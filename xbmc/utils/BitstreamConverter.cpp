@@ -752,12 +752,15 @@ bool CBitstreamConverter::ProcessAnnexB(uint8_t* data, int size)
       writeBuffer = false;
 
     // Try removing HDR10+ only if the NAL is big enough, optimization
-    if (m_removeHdr10Plus && unitType == HEVC_NAL_SEI_PREFIX && nalSize >= 7)
+    if ((m_removeHdr10Plus || !m_Hdr10PlusTested) && unitType == HEVC_NAL_SEI_PREFIX &&
+        nalSize >= 7)
     {
       std::tie(containsHdr10Plus, finalPrefixSeiNalu) =
           CHevcSei::RemoveHdr10PlusFromSeiNalu(nalStart, nalSize);
-
       if (containsHdr10Plus)
+        m_IsHdr10Plus = true;
+
+      if (containsHdr10Plus && m_removeHdr10Plus)
       {
         if (!finalPrefixSeiNalu.empty())
         {
@@ -825,6 +828,8 @@ bool CBitstreamConverter::ProcessAnnexB(uint8_t* data, int size)
 
     nalStart = nalEnd;
   }
+
+  m_Hdr10PlusTested = true;
 
   const uint8_t* outputData{rewrite ? output.data() : data};
   const size_t outputSize{rewrite ? output.size() : static_cast<size_t>(size)};
