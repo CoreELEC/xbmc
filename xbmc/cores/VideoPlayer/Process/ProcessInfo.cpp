@@ -311,6 +311,20 @@ bool CProcessInfo::GetDoviIsFEL()
   return m_doviIsFEL;
 }
 
+void CProcessInfo::SetIsHdr10Plus(bool isHdr10Plus)
+{
+  std::unique_lock lock(m_videoCodecSection);
+
+  m_IsHdr10Plus = isHdr10Plus;
+}
+
+bool CProcessInfo::GetIsHdr10Plus()
+{
+  std::unique_lock lock(m_videoCodecSection);
+
+  return m_IsHdr10Plus;
+}
+
 EINTERLACEMETHOD CProcessInfo::GetFallbackDeintMethod()
 {
   return VS_INTERLACEMETHOD_DEINTERLACE;
