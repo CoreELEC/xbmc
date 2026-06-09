@@ -1392,8 +1392,6 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData,
       const uint8_t* buf_to_write = buf;
       int32_t final_nal_size = nal_size;
 
-      bool containsHdr10Plus{false};
-
       if (!m_sps_pps_context.first_idr && IsSlice(unit_type))
       {
         m_sps_pps_context.first_idr = 1;
@@ -1404,13 +1402,15 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData,
         write_buf = false;
 
       // Try removing HDR10+ only if the NAL is big enough, optimization
-      if (m_removeHdr10Plus && unit_type == HEVC_NAL_SEI_PREFIX && nal_size >= 7)
+      if (unit_type == HEVC_NAL_SEI_PREFIX && nal_size >= 7)
       {
-        std::tie(containsHdr10Plus, finalPrefixSeiNalu) =
-            CHevcSei::RemoveHdr10PlusFromSeiNalu(buf, nal_size);
+        if (!m_Hdr10PlusTested && !m_removeHdr10Plus && !m_IsHdr10Plus)
+          m_IsHdr10Plus = CHevcSei::ContainsHdr10Plus(buf, nal_size);
 
-        if (containsHdr10Plus)
+        if (m_removeHdr10Plus)
         {
+          finalPrefixSeiNalu = CHevcSei::RemoveHdr10PlusFromSeiNalu(buf, nal_size);
+
           if (!finalPrefixSeiNalu.empty())
           {
             buf_to_write = finalPrefixSeiNalu.data();
@@ -1456,13 +1456,15 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData,
       }
 #endif
 
-      if (containsHdr10Plus && !finalPrefixSeiNalu.empty())
+      if (m_IsHdr10Plus && !finalPrefixSeiNalu.empty())
         finalPrefixSeiNalu.clear();
     }
 
     buf += nal_size;
     cumul_size += nal_size + m_sps_pps_context.length_size;
   } while (cumul_size < buf_size);
+
+  m_Hdr10PlusTested = true;
 
   return true;
 
