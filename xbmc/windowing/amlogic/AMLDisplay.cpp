@@ -518,14 +518,14 @@ std::string CAMLDRMUtils::aml_get_drmDevice_modes(void)
 
 // set mode of drmDevice
 bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::string mode,
-  std::string framebuffer_name, bool force_mode_switch)
+  const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch)
 {
   bool ret = false;
 
   m_width = res.iWidth;
   m_height = res.iHeight;
   m_ScreenWidth = res.iScreenWidth;
-  m_ScreenHeight = res.iScreenHeight;
+  m_ScreenHeight = stereo_mode == RenderStereoMode::HARDWAREBASED ? res.iHeight : res.iScreenHeight;
 
   if (force_mode_switch)
   {
@@ -547,7 +547,7 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
     return ret;
   }
 
-  ret = aml_set_drmDevice_active(mode, true);
+  ret = aml_set_drmDevice_active(mode, stereo_mode, true);
 
   if (ret)
   {
@@ -752,10 +752,11 @@ std::string CAMLDRMUtils::aml_get_drmDevice_preferred_mode()
   return mode;
 }
 
-bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, bool active)
+bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, const RenderStereoMode stereo_mode, bool active)
 {
   bool ret = false;
   drmModeModeInfoPtr drmDevicemode = NULL;
+  drmModeModeInfo syntheticMode = {};
 
   if (!StringUtils::EqualsNoCase(aml_get_drmDevice_mode(), mode))
   {
@@ -769,6 +770,17 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, bool active)
         break;
       }
     }
+  }
+
+  if (drmDevicemode && stereo_mode == RenderStereoMode::HARDWAREBASED)
+  {
+    syntheticMode = *drmDevicemode;
+    syntheticMode.clock       *= 2;
+    syntheticMode.vdisplay    += syntheticMode.vtotal;
+    syntheticMode.vsync_start += syntheticMode.vtotal;
+    syntheticMode.vsync_end   += syntheticMode.vtotal;
+    syntheticMode.vtotal      *= 2;
+    drmDevicemode = &syntheticMode;
   }
 
   if (drmDevicemode != NULL)
@@ -856,6 +868,7 @@ void CAMLDRMUtils::FlipPage(uint32_t fb_id)
 
 CAMLDisplay::CAMLDisplay()
 :  m_amlDRMUtils(new CAMLDRMUtils)
+,  m_stereo_mode(RenderStereoMode::UNDEFINED)
 {
 }
 
@@ -887,16 +900,14 @@ bool CAMLDisplay::set_native_resolution(const RESOLUTION_INFO &res, std::string 
 
 void CAMLDisplay::handle_display_stereo_mode(const RenderStereoMode stereo_mode)
 {
-  static RenderStereoMode kernel_stereo_mode = RenderStereoMode::UNDEFINED;
-
-  if (kernel_stereo_mode == RenderStereoMode::UNDEFINED)
+  if (m_stereo_mode == RenderStereoMode::UNDEFINED)
   {
     CSysfsPath _kernel_stereo_mode{"/sys/class/amhdmitx/amhdmitx0/stereo_mode"};
     if (_kernel_stereo_mode.Exists())
-      kernel_stereo_mode = static_cast<RenderStereoMode>(_kernel_stereo_mode.Get<int>().value());
+      m_stereo_mode = static_cast<RenderStereoMode>(_kernel_stereo_mode.Get<int>().value());
   }
 
-  if (kernel_stereo_mode != stereo_mode)
+  if (m_stereo_mode != stereo_mode)
   {
     std::string command = "3doff";
     switch (stereo_mode)
@@ -917,7 +928,7 @@ void CAMLDisplay::handle_display_stereo_mode(const RenderStereoMode stereo_mode)
 
     CLog::Log(LOGDEBUG, "CAMLDisplay::{} setting new mode: {}", __FUNCTION__, command);
     CSysfsPath("/sys/class/amhdmitx/amhdmitx0/config", command);
-    kernel_stereo_mode = stereo_mode;
+    m_stereo_mode = stereo_mode;
   }
 }
 
@@ -949,7 +960,7 @@ bool CAMLDisplay::set_display_resolution(const RESOLUTION_INFO &res, std::string
   if (m_amlDRMUtils->aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR) != fractional_rate)
     m_amlDRMUtils->aml_set_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR, fractional_rate);
 
-  m_amlDRMUtils->aml_set_drmDevice_mode(res, mode, framebuffer_name, force_mode_switch);
+  m_amlDRMUtils->aml_set_drmDevice_mode(res, mode, m_stereo_mode, framebuffer_name, force_mode_switch);
 
   return true;
 }
