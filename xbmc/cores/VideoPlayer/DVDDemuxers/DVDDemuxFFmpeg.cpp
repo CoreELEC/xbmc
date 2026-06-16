@@ -1509,9 +1509,19 @@ double CDVDDemuxFFmpeg::SelectAspect(AVStream* st, bool& forced)
     if (entry)
     {
       if (strcmp(entry->value, "left_right") == 0 || strcmp(entry->value, "right_left") == 0)
-        dar /= (st->codecpar->width / 1920.0);
+      {
+        if (st->codecpar->width > 1920)
+          dar /= (st->codecpar->width / 1920.0);
+        else
+          dar /= 2;
+      }
       else if (strcmp(entry->value, "top_bottom") == 0 || strcmp(entry->value, "bottom_top") == 0)
-        dar *= (st->codecpar->height / 1080.0);
+      {
+        if (st->codecpar->height > 1080)
+          dar *= (st->codecpar->height / 1080.0);
+        else
+          dar *= 2;
+      }
     }
     return dar;
   }
