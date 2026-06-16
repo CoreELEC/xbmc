@@ -274,8 +274,8 @@ bool convert_quad(ASS_Image* images, SQuads& quads, int max_x)
 
 int GetStereoscopicDepth(bool isPgs, int subtitleDepth)
 {
-  if (CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode() != RenderStereoMode::MONO &&
-      CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode() != RenderStereoMode::OFF)
+  if (CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode() == RenderStereoMode::MONO ||
+      CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode() == RenderStereoMode::OFF)
   {
     // 2D display, so there's no subtitle depth
     return 0;

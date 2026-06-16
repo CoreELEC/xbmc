@@ -593,6 +593,11 @@ void CVideoPlayerVideo::Process()
       DemuxPacket* pPacket = std::static_pointer_cast<CDVDMsgDemuxerPacket>(pMsg)->GetPacket();
       bool bPacketDrop = std::static_pointer_cast<CDVDMsgDemuxerPacket>(pMsg)->GetPacketDrop();
 
+      // Carry 3D MVC subtitle depth (ss_offset_sequence_id from MPLS) into
+      // the video picture so ProcessOverlays can apply the correct stereo
+      // depth offset to PGS subtitles via CDVDOverlay::m_3dSubtitleDepth.
+      m_iSubtitlePlane = pPacket->subtitlePlane;
+
       if (m_stalled)
       {
         CLog::Log(LOGDEBUG, "CVideoPlayerVideo - Stillframe left, switching to normal playback");
@@ -695,6 +700,7 @@ void CVideoPlayerVideo::UpdatePlayerInfo()
 bool CVideoPlayerVideo::ProcessDecoderOutput(double &frametime, double &pts)
 {
   CDVDVideoCodec::VCReturn decoderState = m_pVideoCodec->GetPicture(&m_picture);
+  m_picture.m_3dSubtitleDepth = m_iSubtitlePlane;
 
   if (decoderState == CDVDVideoCodec::VC_BUFFER)
   {

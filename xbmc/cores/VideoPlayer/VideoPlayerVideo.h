@@ -138,6 +138,7 @@ protected:
   CDVDMessageQueue m_messageQueue;
   CDVDMessageQueue& m_messageParent;
   CDVDStreamInfo m_hints;
+  int            m_iSubtitlePlane{0}; ///< 3D MVC subtitle depth plane (ss_offset_sequence_id)
   std::unique_ptr<CDVDVideoCodec> m_pVideoCodec;
   CPtsTracker m_ptsTracker;
   std::list<DVDMessageListItem> m_packets;
