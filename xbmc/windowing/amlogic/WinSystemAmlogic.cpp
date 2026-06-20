@@ -47,8 +47,7 @@ using namespace KODI;
 std::unique_ptr<CAMLDisplay> CWinSystemAmlogic::m_amlDisplay = nullptr;
 
 CWinSystemAmlogic::CWinSystemAmlogic()
-:  m_nativeWindow(NULL)
-,  m_libinput(new CLibInputHandler)
+:  m_libinput(new CLibInputHandler)
 ,  m_force_mode_switch(false)
 ,  m_fdMonitorId(-1)
 ,  m_udev(NULL)
@@ -57,15 +56,7 @@ CWinSystemAmlogic::CWinSystemAmlogic()
   const char *env_framebuffer = getenv("FRAMEBUFFER");
 
   m_amlDisplay = std::make_unique<CAMLDisplay>();
-
-  DllMali *m_dll = new DllMali;
-  if((m_dll->Load()))
-  {
-    CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem is a GBM system");
-    m_dll->Unload();
-    m_amlGBMUtils = std::make_unique<CAMLGBMUtils>(m_amlDisplay->aml_get_Device_handle());
-  }
-  delete m_dll, m_dll = NULL;
+  m_amlGBMUtils = std::make_unique<CAMLGBMUtils>(m_amlDisplay->aml_get_Device_handle());
 
   // default to framebuffer 0
   m_framebuffer_name = "fb0";
@@ -379,12 +370,6 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
 
 bool CWinSystemAmlogic::DestroyWindow()
 {
-  if (m_nativeWindow != NULL)
-  {
-    delete(m_nativeWindow);
-    m_nativeWindow = NULL;
-  }
-
   m_bWindowCreated = false;
   return true;
 }
