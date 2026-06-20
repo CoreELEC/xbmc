@@ -44,21 +44,10 @@ bool CWinSystemAmlogicGLESContext::InitWindowSystem()
     return false;
   }
 
-  if (m_amlGBMUtils)
+  if (!m_pGLContext->CreatePlatformDisplay(m_amlGBMUtils->GetDevice(), m_amlGBMUtils->GetDevice()))
   {
-    if (!m_pGLContext->CreatePlatformDisplay(m_amlGBMUtils->GetDevice(), m_amlGBMUtils->GetDevice()))
-    {
-      m_pGLContext->Destroy();
-      return false;
-    }
-  }
-  else
-  {
-    if (!m_pGLContext->CreateDisplay(m_nativeDisplay))
-    {
-      m_pGLContext->Destroy();
-      return false;
-    }
+    m_pGLContext->Destroy();
+    return false;
   }
 
   if (!m_pGLContext->InitializeDisplay(EGL_OPENGL_ES_API))
@@ -98,8 +87,7 @@ bool CWinSystemAmlogicGLESContext::InitWindowSystem()
 
 bool CWinSystemAmlogicGLESContext::DestroyWindowSystem()
 {
-  if (m_amlGBMUtils && m_amlDisplay->aml_get_display_connected())
-    m_amlDisplay->aml_set_drmDevice_active(false);
+  m_amlDisplay->aml_set_drmDevice_active(false);
 
   m_pGLContext->DestroyContext();
   m_pGLContext->Destroy();
@@ -198,35 +186,19 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
     return false;
   }
 
-  if (m_amlGBMUtils)
+  uint32_t format = m_pGLContext->GetConfigAttrib(EGL_NATIVE_VISUAL_ID);
+  if (!m_amlGBMUtils->CreateSurface(res.iWidth, res.iHeight, format))
   {
-    uint32_t format = m_pGLContext->GetConfigAttrib(EGL_NATIVE_VISUAL_ID);
-    if (!m_amlGBMUtils->CreateSurface(res.iWidth, res.iHeight, format))
-    {
-      CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create GBM surface", __FUNCTION__);
-      return false;
-    }
-
-    if (!m_pGLContext->CreatePlatformSurface(
-            m_amlGBMUtils->GetSurface(),
-            reinterpret_cast<EGLNativeWindowType>(m_amlGBMUtils->GetSurface())))
-    {
-      CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create CreatePlatformSurface", __FUNCTION__);
-      return false;
-    }
+    CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create GBM surface", __FUNCTION__);
+    return false;
   }
-  else
+
+  if (!m_pGLContext->CreatePlatformSurface(
+          m_amlGBMUtils->GetSurface(),
+          reinterpret_cast<EGLNativeWindowType>(m_amlGBMUtils->GetSurface())))
   {
-    if (m_nativeWindow == NULL)
-      m_nativeWindow = new fbdev_window;
-
-    m_nativeWindow->width = res.iWidth;
-    m_nativeWindow->height = res.iHeight;
-
-    if (!m_pGLContext->CreateSurface(static_cast<EGLNativeWindowType>(m_nativeWindow)))
-    {
-      return false;
-    }
+    CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create CreatePlatformSurface", __FUNCTION__);
+    return false;
   }
 
   if (!m_pGLContext->BindContext())
