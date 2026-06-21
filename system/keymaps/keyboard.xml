@@ -415,9 +415,11 @@
       <return>OSD</return>
       <enter>OSD</enter>
       <ok>OSD</ok>
+      <select>OSD</select>
       <return mod="longpress">PlayPause</return>
       <enter mod="longpress">PlayPause</enter>
       <ok mod="longpress">PlayPause</ok>
+      <select mod="longpress">PlayPause</select>
       <m>OSD</m>
       <menu>OSD</menu>
       <i>Info</i>
@@ -473,6 +475,7 @@
       <return>OSD</return>
       <enter>OSD</enter>
       <ok>OSD</ok>
+      <select>OSD</select>
       <m>OSD</m>
       <menu>OSD</menu>
       <i>Info</i>
@@ -543,6 +546,8 @@
       <enter mod="longpress">PlayPause</enter>
       <ok>OSD</ok>
       <ok mod="longpress">PlayPause</ok>
+      <select>OSD</select>
+      <select mod="longpress">PlayPause</select>
       <m>OSD</m>
       <menu>OSD</menu>
       <i>Info</i>
@@ -613,6 +618,7 @@
       <return>Rotate</return>
       <enter>Rotate</enter>
       <ok>Rotate</ok>
+      <select>Rotate</select>
       <r>Rotate</r>
       <backspace mod="longpress">ActivateWindow(Home)</backspace>
     </keyboard>
@@ -622,6 +628,7 @@
       <return>NextCalibration</return>
       <enter>NextCalibration</enter>
       <ok>NextCalibration</ok>
+      <select>NextCalibration</select>
       <d>ResetCalibration</d>
       <r>NextResolution</r>
     </keyboard>
@@ -631,6 +638,7 @@
       <return>NextCalibration</return>
       <enter>NextCalibration</enter>
       <ok>NextCalibration</ok>
+      <select>NextCalibration</select>
       <d>ResetCalibration</d>
     </keyboard>
   </ScreenCalibration>
@@ -771,11 +779,13 @@
       <return>OSD</return>
       <enter>OSD</enter>
       <ok>OSD</ok>
+      <select>OSD</select>
       <g>ActivateWindow(PVRChannelGuide)</g>
       <c>ActivateWindow(PVROSDChannels)</c>
       <return mod="longpress">ActivateWindow(PVROSDChannels)</return>
       <enter mod="longpress">ActivateWindow(PVROSDChannels)</enter>
       <ok mod="longpress">ActivateWindow(PVROSDChannels)</ok>
+      <select mod="longpress">ActivateWindow(PVROSDChannels)</select>
       <leftquote>DialogSelectAudio</leftquote>
       <pageup>ChannelUp</pageup>
       <pagedown>ChannelDown</pagedown>
@@ -794,11 +804,13 @@
       <return>OSD</return>
       <enter>OSD</enter>
       <ok>OSD</ok>
+      <select>OSD</select>
       <g>ActivateWindow(PVRChannelGuide)</g>
       <c>ActivateWindow(PVROSDChannels)</c>
       <return mod="longpress">ActivateWindow(PVROSDChannels)</return>
       <enter mod="longpress">ActivateWindow(PVROSDChannels)</enter>
       <ok mod="longpress">ActivateWindow(PVROSDChannels)</ok>
+      <select mod="longpress">ActivateWindow(PVROSDChannels)</select>
       <pageup>ChannelUp</pageup>
       <pagedown>ChannelDown</pagedown>
       <channel_up>ChannelUp</channel_up>
