@@ -192,3 +192,71 @@ std::vector<uint8_t> CHevcSei::RemoveHdr10PlusFromSeiNalu(
 
   return std::move(buf);
 }
+
+std::optional<const CHevcSei*> CHevcSei::FindHdrVividSeiMessage(
+    const std::vector<uint8_t>& buf, const std::vector<CHevcSei>& messages)
+{
+  for (const CHevcSei& sei : messages)
+  {
+    // User Data Registered ITU-T T.35
+    if (sei.m_payloadType == 4 && sei.m_payloadSize >= 7)
+    {
+      CBitstreamReader br(buf.data() + sei.m_payloadOffset, sei.m_payloadSize);
+      const auto itu_t_t35_country_code = br.ReadBits(8);
+      const auto itu_t_t35_terminal_provider_code = br.ReadBits(16);
+      const auto itu_t_t35_terminal_provider_oriented_code = br.ReadBits(16);
+
+      // China, T/UWA 005 (HDR Vivid)
+      if (itu_t_t35_country_code == 0x26 && itu_t_t35_terminal_provider_code == 0x0004 &&
+          itu_t_t35_terminal_provider_oriented_code == 0x0005)
+      {
+        return &sei;
+      }
+    }
+  }
+
+  return {};
+}
+
+std::optional<std::tuple<std::vector<uint8_t>, std::vector<CHevcSei>, const CHevcSei*>>
+CHevcSei::FindHdrVivid(const uint8_t* inData, const size_t inDataLen)
+{
+  std::vector<uint8_t> buf;
+  std::vector<CHevcSei> messages = CHevcSei::ParseSeiRbspUnclearedEmulation(inData, inDataLen, buf);
+
+  const auto found = CHevcSei::FindHdrVividSeiMessage(buf, messages);
+  if (!found)
+    return {};
+
+  return std::make_tuple(std::move(buf), std::move(messages), *found);
+}
+
+bool CHevcSei::ContainsHdrVivid(const uint8_t* inData, const size_t inDataLen)
+{
+  return CHevcSei::FindHdrVivid(inData, inDataLen).has_value();
+}
+
+std::vector<uint8_t> CHevcSei::RemoveHdrVividFromSeiNalu(
+    const uint8_t* inData, const size_t inDataLen)
+{
+  auto res = CHevcSei::FindHdrVivid(inData, inDataLen);
+  if (!res)
+    return {};
+
+  auto& [buf, messages, msg] = *res;
+
+  if (messages.size() > 1)
+  {
+    // Multiple SEI messages in NALU, remove only the HDR Vivid one
+    buf.erase(std::next(buf.begin(), msg->m_msgOffset),
+              std::next(buf.begin(), msg->m_payloadOffset + msg->m_payloadSize));
+    HevcAddStartCodeEmulationPrevention3Byte(buf);
+  }
+  else
+  {
+    // Single SEI message in NALU
+    buf.clear();
+  }
+
+  return std::move(buf);
+}

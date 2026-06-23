@@ -220,6 +220,9 @@ extern "C"
 
     /// @brief HDR10+ (SMPTE ST 2094-40 dynamic metadata)
     VIDEOCODEC_HDR_TYPE_HDR10PLUS,
+
+    /// @brief HDR Vivid (T/UWA 005)
+    VIDEOCODEC_HDR_TYPE_HDRVIVID,
   };
   //----------------------------------------------------------------------------
 

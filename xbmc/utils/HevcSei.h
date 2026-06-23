@@ -59,6 +59,20 @@ public:
   static std::vector<uint8_t> RemoveHdr10PlusFromSeiNalu(
       const uint8_t* inData, const size_t inDataLen);
 
+  // Returns a HDR Vivid SEI message if present in the list
+  static std::optional<const CHevcSei*> FindHdrVividSeiMessage(
+      const std::vector<uint8_t>& buf, const std::vector<CHevcSei>& messages);
+
+  // Returns true if NALU SEI payload contains a HDR Vivid SEI message.
+  static bool ContainsHdrVivid(
+      const uint8_t* inData, const size_t inDataLen);
+
+  // Returns a vector of bytes:
+  //      When not empty: the new NALU containing all but the HDR Vivid SEI message.
+  //      Otherwise: the NALU contained only one HDR Vivid SEI and can be discarded.
+  static std::vector<uint8_t> RemoveHdrVividFromSeiNalu(
+      const uint8_t* inData, const size_t inDataLen);
+
 private:
   // Parses single SEI message from the reader and pushes it to the list
   static int ParseSeiMessage(CBitstreamReader& br, std::vector<CHevcSei>& messages);
@@ -67,4 +81,7 @@ private:
 
   static std::optional<std::tuple<std::vector<uint8_t>, std::vector<CHevcSei>, const CHevcSei*>>
       FindHdr10Plus(const uint8_t* inData, const size_t inDataLen);
+
+  static std::optional<std::tuple<std::vector<uint8_t>, std::vector<CHevcSei>, const CHevcSei*>>
+      FindHdrVivid(const uint8_t* inData, const size_t inDataLen);
 };

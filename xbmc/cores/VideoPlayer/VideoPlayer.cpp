@@ -5964,6 +5964,8 @@ void CVideoPlayer::GetVideoStreamInfo(int streamId, VideoStreamInfo& info) const
   {
     if (m_processInfo->GetIsHdr10Plus())
       info.hdrType = StreamHdrType::HDR_TYPE_HDR10PLUS;
+    else if (m_processInfo->GetIsHdrVivid())
+      info.hdrType = StreamHdrType::HDR_TYPE_HDRVIVID;
   }
   else
   {

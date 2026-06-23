@@ -1407,6 +1407,9 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData,
         if (!m_Hdr10PlusTested && !m_removeHdr10Plus && !m_IsHdr10Plus)
           m_IsHdr10Plus = CHevcSei::ContainsHdr10Plus(buf, nal_size);
 
+        if (!m_HdrVividTested && !m_IsHdrVivid)
+          m_IsHdrVivid = CHevcSei::ContainsHdrVivid(buf, nal_size);
+
         if (m_removeHdr10Plus)
         {
           finalPrefixSeiNalu = CHevcSei::RemoveHdr10PlusFromSeiNalu(buf, nal_size);
@@ -1465,6 +1468,7 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData,
   } while (cumul_size < buf_size);
 
   m_Hdr10PlusTested = true;
+  m_HdrVividTested = true;
 
   return true;
 

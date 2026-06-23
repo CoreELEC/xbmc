@@ -119,6 +119,7 @@ public:
   void SetDoviZeroLevel5(bool value) { m_setDoviZeroLevel5 = value; }
   bool GetDoviIsFEL() const { return m_doviIsFEL; }
   bool GetIsHdrPlus() const { return m_IsHdr10Plus; }
+  bool GetIsHdrVivid() const { return m_IsHdrVivid; }
 
   static bool mpeg2_sequence_header(const uint8_t* data,
                                     const uint32_t size,
@@ -187,4 +188,6 @@ protected:
   bool m_doviELTested{false};
   bool m_IsHdr10Plus{false};
   bool m_Hdr10PlusTested{false};
+  bool m_IsHdrVivid{false};
+  bool m_HdrVividTested{false};
 };

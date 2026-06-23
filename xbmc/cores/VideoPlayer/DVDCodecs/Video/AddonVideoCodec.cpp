@@ -99,6 +99,8 @@ StreamHdrType ConvertHdrType(const VIDEOCODEC_HDR_TYPE type)
       return StreamHdrType::HDR_TYPE_HLG;
     case VIDEOCODEC_HDR_TYPE_HDR10PLUS:
       return StreamHdrType::HDR_TYPE_HDR10PLUS;
+    case VIDEOCODEC_HDR_TYPE_HDRVIVID:
+      return StreamHdrType::HDR_TYPE_HDRVIVID;
     case VIDEOCODEC_HDR_TYPE_NONE:
       return StreamHdrType::HDR_TYPE_NONE;
   }

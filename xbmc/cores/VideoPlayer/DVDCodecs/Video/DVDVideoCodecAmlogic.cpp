@@ -439,6 +439,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
   uint32_t iSize(packet.iSize);
   bool doviIsFEL = false;
   bool IsHdr10Plus = false;
+  bool IsHdrVivid = false;
   int data_added = false;
   bool dual_layer_converted = false;
 
@@ -503,6 +504,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       iSize = m_bitstream->GetConvertSize();
       doviIsFEL = m_bitstream->GetDoviIsFEL();
       IsHdr10Plus = m_bitstream->GetIsHdrPlus();
+      IsHdrVivid = m_bitstream->GetIsHdrVivid();
     }
     else if (!m_has_keyframe && m_bitparser)
     {
@@ -523,6 +525,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
 
       m_processInfo.SetDoviIsFEL(doviIsFEL);
       m_processInfo.SetIsHdr10Plus(IsHdr10Plus);
+      m_processInfo.SetIsHdrVivid(IsHdrVivid);
 
       CLog::Log(LOGINFO, "CDVDVideoCodecAmlogic::{}: Open decoder: fps:{:d}/{:d}", __FUNCTION__, m_hints.fpsrate, m_hints.fpsscale);
       if (m_Codec && !m_Codec->OpenDecoder(m_hints, doviIsFEL))

@@ -325,6 +325,20 @@ bool CProcessInfo::GetIsHdr10Plus()
   return m_IsHdr10Plus;
 }
 
+void CProcessInfo::SetIsHdrVivid(bool isHdrVivid)
+{
+  std::unique_lock lock(m_videoCodecSection);
+
+  m_IsHdrVivid = isHdrVivid;
+}
+
+bool CProcessInfo::GetIsHdrVivid()
+{
+  std::unique_lock lock(m_videoCodecSection);
+
+  return m_IsHdrVivid;
+}
+
 EINTERLACEMETHOD CProcessInfo::GetFallbackDeintMethod()
 {
   return VS_INTERLACEMETHOD_DEINTERLACE;
