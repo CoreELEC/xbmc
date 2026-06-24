@@ -751,7 +751,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
       PresentSingle(clear, flags, alpha);
   }
 
-  if (gui)
+  if (gui || m_renderDebug)
   {
     if (!m_pRenderer->IsGuiLayer())
       m_pRenderer->Update();
