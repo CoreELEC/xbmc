@@ -650,7 +650,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
   if (presented)
     ServiceVideoCaptures();
 
-  if (gui)
+  if (gui || m_renderDebug)
   {
     if (!m_pRenderer->IsGuiLayer())
       m_pRenderer->Update();
