@@ -2825,7 +2825,12 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
     if (m_last_pts == DVD_NOPTS_VALUE)
       pVideoPicture->iDuration = static_cast<double>(am_private->video_rate * DVD_TIME_BASE) / UNIT_FREQ;
     else
-      pVideoPicture->iDuration = static_cast<double>(m_cur_pts - m_last_pts);
+    {
+      int64_t delta = static_cast<int64_t>(m_cur_pts - m_last_pts);
+      pVideoPicture->iDuration = (delta > 0)
+        ? static_cast<double>(delta)
+        : static_cast<double>(am_private->video_rate * DVD_TIME_BASE) / UNIT_FREQ;
+    }
 
     pVideoPicture->dts = DVD_NOPTS_VALUE;
     pVideoPicture->pts = static_cast<double>(m_cur_pts);
