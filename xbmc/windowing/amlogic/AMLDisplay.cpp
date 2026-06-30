@@ -59,6 +59,9 @@ CAMLGBMUtils::CAMLGBMUtils(int fd)
 
 bool CAMLGBMUtils::CreateSurface(int width, int height, uint32_t format)
 {
+  m_buffer.reset();
+  m_drm_fb = nullptr;
+
   uint64_t modifier = DRM_FORMAT_MOD_LINEAR;
 
   // First try modifier-aware surface
