@@ -171,7 +171,8 @@ void CRendererAML::Reset()
 
 bool CRendererAML::Flush(bool saveBuffers)
 {
-  Reset();
+  if (!saveBuffers)
+    Reset();
   return saveBuffers;
 };
 
