@@ -1332,7 +1332,7 @@ int vp9_update_frame_header(am_packet_t *pkt)
   pkt->avpkt.data = pkt->data;
   pkt->avpkt.size = pkt->data_size;
 
-  if (buf == NULL)
+  if (buf == NULL || dsize <= 0)
     return PLAYER_SUCCESS; /*something error. skip add header*/
 
   marker = buf[dsize - 1];
@@ -1345,6 +1345,8 @@ int vp9_update_frame_header(am_packet_t *pkt)
     CLog::Log(LOGDEBUG, " frame_number : {:d}, mag : {:d}; index_sz : {:d}", frame_number, mag, index_sz);
     offset[0] = 0;
     mag_ptr = dsize - mag * frame_number - 2;
+    if (mag_ptr < 0)
+      return PLAYER_SUCCESS; /*superframe index doesn't fit in packet, skip add header*/
     if (buf[mag_ptr] != marker)
     {
       CLog::Log(LOGDEBUG, " Wrong marker2 : 0x{:X} --> 0x{:X}", marker, buf[mag_ptr]);
