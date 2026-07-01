@@ -548,10 +548,7 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
   if (!ret && force_mode_switch)
     set_drmProp(m_connector->connector_id, "UPDATE", DRM_MODE_OBJECT_CONNECTOR, 1, NULL);
 
-  if (!CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING))
-    aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name, !ret);
-  else
-    aml_set_framebuffer_resolution(res.iScreenWidth, res.iScreenHeight, framebuffer_name, !ret);
+  aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name, !ret);
 
   CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - finished set drmDevice mode", __FUNCTION__);
 
@@ -1053,8 +1050,8 @@ bool CAMLDisplay::aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     return false;
   }
 
-  res->iWidth = nativeGui ? width : std::min(width, 1920);
-  res->iHeight= nativeGui ? height : std::min(height, 1080);
+  res->iWidth  = std::min(nativeGui ? width  : (width  <= 1920 ? width  : width  / 2), 3840);
+  res->iHeight = std::min(nativeGui ? height : (height <= 1080 ? height : height / 2), 2160);
   res->iScreenWidth = width;
   res->iScreenHeight = height;
   res->dwFlags = (*smode == 'p') ? D3DPRESENTFLAG_PROGRESSIVE : D3DPRESENTFLAG_INTERLACED;
