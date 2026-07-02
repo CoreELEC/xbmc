@@ -2092,7 +2092,13 @@ void CVideoPlayer::ProcessSubData(CDemuxStream* pStream, DemuxPacket* pPacket)
 {
   CheckStreamChanges(m_CurrentSubtitle, pStream);
 
+  bool checkcont = CheckContinuity(m_CurrentSubtitle, pPacket);
   UpdateTimestamps(m_CurrentSubtitle, pPacket);
+
+  if (checkcont) {
+    m_CurrentVideo.avsync = CCurrentStream::AV_SYNC_NONE;
+    m_CurrentAudio.avsync = CCurrentStream::AV_SYNC_NONE;
+  }
 
   bool drop = false;
   if (CheckPlayerInit(m_CurrentSubtitle))
@@ -2666,8 +2672,10 @@ bool CVideoPlayer::CheckContinuity(CCurrentStream& current, DemuxPacket* pPacket
   double mindts = DVD_NOPTS_VALUE, maxdts = DVD_NOPTS_VALUE;
   UpdateLimits(mindts, maxdts, m_CurrentAudio.dts);
   UpdateLimits(mindts, maxdts, m_CurrentVideo.dts);
+  UpdateLimits(mindts, maxdts, m_CurrentSubtitle.dts);
   UpdateLimits(mindts, maxdts, m_CurrentAudio.dts_end());
   UpdateLimits(mindts, maxdts, m_CurrentVideo.dts_end());
+  UpdateLimits(mindts, maxdts, m_CurrentSubtitle.dts_end());
 
   /* if we don't have max and min, we can't do anything more */
   if( mindts == DVD_NOPTS_VALUE || maxdts == DVD_NOPTS_VALUE )
@@ -2707,6 +2715,7 @@ bool CVideoPlayer::CheckContinuity(CCurrentStream& current, DemuxPacket* pPacket
         current.type == StreamType::AUDIO ? m_CurrentVideo.lastdts : m_CurrentAudio.lastdts;
 
     if (m_CurrentAudio.id == -1 || m_CurrentVideo.id == -1 ||
+       current.type == StreamType::SUBTITLE ||
        current.lastdts == DVD_NOPTS_VALUE ||
        fabs(this_dts - that_dts) < DVD_MSEC_TO_TIME(1000))
     {
