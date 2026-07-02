@@ -170,6 +170,10 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
       m_force_mode_switch = true;
   }
 
+  if ((current_resolution.dwFlags & D3DPRESENTFLAG_MODE3DFP) !=
+      (res.dwFlags & D3DPRESENTFLAG_MODE3DFP))
+    m_force_mode_switch = true;
+
   if (m_force_mode_switch)
     CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: force mode switch", __FUNCTION__);
 
