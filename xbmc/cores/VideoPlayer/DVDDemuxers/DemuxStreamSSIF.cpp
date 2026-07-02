@@ -60,7 +60,7 @@ void CDemuxStreamSSIF::Flush()
   while (!m_MVCqueue.empty())
   {
     CDVDDemuxUtils::FreeDemuxPacket(m_MVCqueue.front());
-    m_MVCqueue.pop();
+    m_MVCqueue.pop_front();
   }
 }
 
@@ -103,7 +103,7 @@ DemuxPacket* CDemuxStreamSSIF::GetMVCPacket()
     if (tsH264 == tsMVC)
     {
       m_H264queue.pop();
-      m_MVCqueue.pop();
+      m_MVCqueue.pop_front();
 
       while (!m_H264queue.empty())
       {
@@ -120,22 +120,6 @@ DemuxPacket* CDemuxStreamSSIF::GetMVCPacket()
         else
           break;
       }
-      while (!m_MVCqueue.empty())
-      {
-        DemuxPacket* pkt = m_MVCqueue.front();
-        double ts = (pkt->dts != DVD_NOPTS_VALUE ? pkt->dts : pkt->pts);
-        if (ts == DVD_NOPTS_VALUE)
-        {
-#if defined(DEBUG_VERBOSE)
-          CLog::Log(LOGDEBUG, ">>> MVC merge mvc fragment: {:6}+{:6}, pts({:.3f}/{:.3f}) dts({:.3f}/{:.3f})", mvcpkt->iSize, pkt->iSize, mvcpkt->pts*1e-6, pkt->pts*1e-6, mvcpkt->dts*1e-6, pkt->dts*1e-6);
-#endif
-          mvcpkt = MergePacket(mvcpkt, pkt);
-          m_MVCqueue.pop();
-        }
-        else
-          break;
-      }
-
 #if defined(DEBUG_VERBOSE)
       CLog::Log(LOGDEBUG, ">>> MVC merge packet: {:6}+{:6}, pts({:.3f}/{:.3f}) dts({:.3f}/{:.3f})", h264pkt->iSize, mvcpkt->iSize, h264pkt->pts*1e-6, mvcpkt->pts*1e-6, h264pkt->dts*1e-6, mvcpkt->dts*1e-6);
 #endif
@@ -147,7 +131,7 @@ DemuxPacket* CDemuxStreamSSIF::GetMVCPacket()
       CLog::Log(LOGDEBUG, ">>> MVC discard  mvc: {:6}, pts({:.3f}) dts({:.3f})", mvcpkt->iSize, mvcpkt->pts*1e-6, mvcpkt->dts*1e-6);
 #endif
       CDVDDemuxUtils::FreeDemuxPacket(mvcpkt);
-      m_MVCqueue.pop();
+      m_MVCqueue.pop_front();
     }
     else
     {
@@ -167,10 +151,45 @@ DemuxPacket* CDemuxStreamSSIF::GetMVCPacket()
 
 void CDemuxStreamSSIF::AddMVCExtPacket(DemuxPacket* &mvcExtPkt)
 {
+  // Detect continuation fragments of MVC access units split at the SSIF interleave
+  // boundary.  In SSIF, when a dependent-view MVC AU exceeds the interleave unit
+  // size (~200KB), the remainder is carried in a new PES packet whose PTS is assigned
+  // by the transport-stream muxer — typically the PTS of the NEXT B-frame time slot.
+  // Without pre-merging, the continuation would be paired with the wrong base-view
+  // frame (the B-frame), corrupting both the IDR (truncated MVC) and the B-frame
+  // (oversized, wrong MVC data).
+  //
+  // Detection: Every genuine MVC access unit starts with a NAL start code
+  // (00 00 00 01 or 00 00 01) because the MPEG-TS demuxer outputs H.264 byte-stream
+  // format.  A continuation fragment, produced by a PES-level split in the middle of
+  // a NAL unit, does NOT start with a start code.  This is a reliable, disc-independent
+  // signal that doesn't depend on fragile size thresholds.
+
+  if (!m_MVCqueue.empty() && mvcExtPkt->iSize > 0)
+  {
+    bool startsWithStartCode = (mvcExtPkt->iSize >= 4 &&
+      mvcExtPkt->pData[0] == 0x00 && mvcExtPkt->pData[1] == 0x00 &&
+      (mvcExtPkt->pData[2] == 0x01 ||
+       (mvcExtPkt->pData[2] == 0x00 && mvcExtPkt->pData[3] == 0x01)));
+
+    if (!startsWithStartCode)
+    {
+      DemuxPacket* prevPkt = m_MVCqueue.back();
+      m_MVCqueue.pop_back();
+#if defined(DEBUG_VERBOSE)
+      CLog::Log(LOGDEBUG, ">>> MVC pre-merge continuation (no startcode): {:6}+{:6}, prev_pts({:.3f}) cont_pts({:.3f})",
+                prevPkt->iSize, mvcExtPkt->iSize, prevPkt->pts*1e-6, mvcExtPkt->pts*1e-6);
+#endif
+      DemuxPacket* merged = MergePacket(prevPkt, mvcExtPkt);
+      m_MVCqueue.push_back(merged);
+      return;
+    }
+  }
+
 #if defined(DEBUG_VERBOSE)
     CLog::Log(LOGDEBUG, ">>> MVC add mvc  packet: pts: {:.3f} dts: {:.3f}", mvcExtPkt->pts*1e-6, mvcExtPkt->dts*1e-6);
 #endif
-  m_MVCqueue.push(mvcExtPkt);
+  m_MVCqueue.push_back(mvcExtPkt);
 }
 
 bool CDemuxStreamSSIF::FillMVCQueue(double dtsBase)
