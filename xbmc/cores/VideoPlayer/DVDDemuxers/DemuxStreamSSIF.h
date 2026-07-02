@@ -24,6 +24,7 @@
 #include "DVDInputStreams/DVDInputStreamBluray.h"
 #endif
 #include "DVDInputStreams/DVDInputStream.h"
+#include <deque>
 #include <queue>
 
 extern "C" {
@@ -53,7 +54,9 @@ private:
 
   std::shared_ptr<CDVDInputStream::IExtentionStream> m_bluRay = nullptr;
   std::queue<DemuxPacket*> m_H264queue;
-  std::queue<DemuxPacket*> m_MVCqueue;
+  // deque so we can peek the second element (m_MVCqueue[1]) when reassembling a split
+  // dependent access unit, and splice a reassembled packet back onto the front.
+  std::deque<DemuxPacket*> m_MVCqueue;
   int m_h264StreamId = -1;
   int m_mvcStreamId = -1;
 };
