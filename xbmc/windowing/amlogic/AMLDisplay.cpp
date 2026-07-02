@@ -745,18 +745,23 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, const RenderStereo
   drmModeModeInfoPtr drmDevicemode = NULL;
   drmModeModeInfo syntheticMode = {};
 
-  if (!StringUtils::EqualsNoCase(aml_get_drmDevice_mode(), mode))
+  for (int i = 0; i < m_connector->count_modes; i++)
   {
-    for (int i = 0; i < m_connector->count_modes; i++)
+    std::string connector_mode = static_cast<std::string>(m_connector->modes[i].name);
+    if (StringUtils::EqualsNoCase(connector_mode, mode))
     {
-      std::string connector_mode = static_cast<std::string>(m_connector->modes[i].name);
-      if (StringUtils::EqualsNoCase(connector_mode, mode))
-      {
-        CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - use mode[{:d}]: {}", __FUNCTION__, i, connector_mode);
-        drmDevicemode = &m_connector->modes[i];
-        break;
-      }
+      CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - use mode[{:d}]: {}", __FUNCTION__, i, connector_mode);
+      drmDevicemode = &m_connector->modes[i];
     }
+  }
+
+  if (drmDevicemode &&
+      StringUtils::EqualsNoCase(aml_get_drmDevice_mode(), mode) &&
+      m_crtc && m_crtc->mode.vdisplay == m_ScreenHeight)
+  {
+    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - mode {} already set with correct vdisplay",
+              __FUNCTION__, mode);
+    drmDevicemode = NULL; // nothing to do
   }
 
   if (drmDevicemode && stereo_mode == RenderStereoMode::HARDWAREBASED)
