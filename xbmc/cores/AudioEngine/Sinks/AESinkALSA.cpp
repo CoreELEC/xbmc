@@ -778,7 +778,8 @@ bool CAESinkALSA::Initialize(AEAudioFormat &format, std::string &device)
   std::string AESParams;
   /* digital interfaces should have AESx set, though in practice most
    * receivers don't care */
-  if (m_passthrough || devType == AE_DEVTYPE_HDMI || devType == AE_DEVTYPE_IEC958)
+  if ((m_passthrough || devType == AE_DEVTYPE_HDMI || devType == AE_DEVTYPE_IEC958) &&
+      (device.substr(0, device.find(':')) != "surround71"))
     GetAESParams(format, AESParams);
 
   // set codec before opening the device
