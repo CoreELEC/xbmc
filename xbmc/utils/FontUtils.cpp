@@ -212,13 +212,13 @@ std::string GetFontFamily(std::vector<uint8_t>& buffer)
       if (familyName.empty())
         CLog::LogF(LOGERROR, "Family name missing in the font");
     }
+    FT_Done_Face(face);
   }
   else
   {
     CLog::LogF(LOGERROR, "Failed to process font memory buffer");
   }
 
-  FT_Done_Face(face);
   FT_Done_FreeType(m_library);
   return familyName;
 }
