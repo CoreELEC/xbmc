@@ -151,8 +151,6 @@ void CWinSystemGbmGLESContext::PresentRender(bool rendered, bool videoLayer)
           m_eglFence->CreateKMSFence(fd);
           m_eglFence->WaitSyncGPU();
         }
-
-        m_eglFence->CreateGPUFence();
       }
 #endif
 
@@ -165,6 +163,8 @@ void CWinSystemGbmGLESContext::PresentRender(bool rendered, bool videoLayer)
 #if defined(EGL_ANDROID_native_fence_sync) && defined(EGL_KHR_fence_sync)
       if (async)
       {
+        m_eglFence->CreateGPUFence();
+
         int fd = m_eglFence->FlushFence();
         m_DRM->SetInFenceFd(fd);
 
