@@ -179,7 +179,7 @@ std::string GetFontFamily(std::vector<uint8_t>& buffer)
   }
 
   // Load the font face
-  FT_Face face;
+  FT_Face face{nullptr};
   std::string familyName;
   if (FT_New_Memory_Face(m_library, reinterpret_cast<const FT_Byte*>(buffer.data()), buffer.size(),
                          0, &face) == 0)
@@ -194,13 +194,13 @@ std::string GetFontFamily(std::vector<uint8_t>& buffer)
       if (familyName.empty())
         CLog::LogF(LOGERROR, "Family name missing in the font");
     }
+    FT_Done_Face(face);
   }
   else
   {
     CLog::LogF(LOGERROR, "Failed to process font memory buffer");
   }
 
-  FT_Done_Face(face);
   FT_Done_FreeType(m_library);
   return familyName;
 }
