@@ -617,6 +617,8 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoP
 
   if (retVal == VC_PICTURE)
   {
+    if (pVideoPicture->videoBuffer)
+      pVideoPicture->videoBuffer->Release();
     pVideoPicture->videoBuffer = nullptr;
     pVideoPicture->SetParams(m_videobuffer);
 
