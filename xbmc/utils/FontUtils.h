@@ -13,6 +13,12 @@
 #include <string>
 #include <vector>
 
+#include <ft2build.h>
+
+#include FT_FREETYPE_H
+#include FT_SFNT_NAMES_H
+#include FT_TRUETYPE_IDS_H
+
 namespace KODI::UTILS::FONT
 {
 constexpr const char* SUPPORTED_EXTENSIONS_MASK = ".ttf|.ttc|.otf";
@@ -71,6 +77,17 @@ std::string GetFontFamily(std::vector<uint8_t>& buffer);
  *  \return The font family name, otherwise empty if fails
  */
 std::string GetFontFamily(const std::string& filepath);
+
+/*!
+ *  \brief Check if ttf binary data is a valid font.
+ *  \param binary data of the font file, pointer to family name if need
+ *  \return True if it is a valid font
+ */
+bool ValidateTTF(const std::vector<uint8_t>& buffer,
+                 std::string* familyName = nullptr,
+                 FT_Long idx = 0,
+                 FT_Long* num_faces = nullptr,
+                 FT_Long* style_flags = nullptr);
 
 /*!
  *  \brief Check if a filename have a supported font extension.
