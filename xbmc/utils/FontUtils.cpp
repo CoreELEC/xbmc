@@ -18,11 +18,7 @@
 #include "utils/CharsetConverter.h"
 #include "utils/log.h"
 
-#include <ft2build.h>
 
-#include FT_FREETYPE_H
-#include FT_SFNT_NAMES_H
-#include FT_TRUETYPE_IDS_H
 
 using namespace XFILE;
 
@@ -86,19 +82,6 @@ std::string GetFamilyNameFromSfnt(FT_Face face)
 
 bool GetFontFamilyNames(const std::vector<uint8_t>& buffer, std::set<std::string>& familyNames)
 {
-  FT_Library m_library{nullptr};
-  FT_Init_FreeType(&m_library);
-  if (!m_library)
-  {
-    CLog::LogF(LOGERROR, "Unable to initialize freetype library");
-    return false;
-  }
-
-  FT_Open_Args args{};
-  args.flags = FT_OPEN_MEMORY;
-  args.memory_base = reinterpret_cast<const FT_Byte*>(buffer.data());
-  args.memory_size = static_cast<FT_Long>(buffer.size());
-
   FT_Long numFaces{0};
   FT_Long numInstances{0};
   FT_Long faceIndex{0};
@@ -108,60 +91,31 @@ bool GetFontFamilyNames(const std::vector<uint8_t>& buffer, std::set<std::string
   do
   {
     FT_Long idx = (instanceIndex << 16) + faceIndex;
-    FT_Face face{nullptr};
+    FT_Long num_faces{0};
+    FT_Long style_flags{0};
+    std::string familyName;
 
-    FT_Error error = FT_Open_Face(m_library, &args, idx, &face);
-    if (error)
+    if (ValidateTTF(buffer, &familyName, idx, &num_faces, &style_flags) &&
+        !familyName.empty())
     {
-      CLog::LogF(LOGERROR, "Failed to open font face at index {} error code {}", idx, error);
-      break;
-    }
+      // We use the "set" container to avoid duplicate names that can happens
+      // for example when a font have each style on different files
+      familyNames.insert(familyName);
 
-    std::string familyName = GetFamilyNameFromSfnt(face);
-    if (familyName.empty())
-    {
-      if (!face->family_name)
-      {
-        CLog::LogF(LOGERROR, "Family name missing in the font");
-        FT_Done_Face(face);
-        FT_Done_FreeType(m_library);
-        return false;
-      }
+      numFaces = num_faces;
+      numInstances = style_flags >> 16;
 
-      CLog::LogF(LOGWARNING, "Failed to get the unicode family name for \"{}\", fallback to ASCII",
-                 face->family_name);
-      // ASCII font family name may differ from the unicode one, use this as fallback only
-      familyName = std::string{face->family_name};
-      if (familyName.empty())
+      if (instanceIndex < numInstances)
+        instanceIndex++;
+      else
       {
-        CLog::LogF(LOGERROR, "Family name missing in the font");
-        FT_Done_Face(face);
-        FT_Done_FreeType(m_library);
-        return false;
+        faceIndex++;
+        instanceIndex = 0;
       }
     }
-
-    // We use the "set" container to avoid duplicate names that can happens
-    // for example when a font have each style on different files
-    familyNames.insert(familyName);
-
-    numFaces = face->num_faces;
-    numInstances = face->style_flags >> 16;
-
-    FT_Done_Face(face);
-
-    if (instanceIndex < numInstances)
-      instanceIndex++;
-    else
-    {
-      faceIndex++;
-      instanceIndex = 0;
-    }
-
   } while (faceIndex < numFaces);
 
-  FT_Done_FreeType(m_library);
-  return true;
+  return familyNames.size() > 0;
 }
 
 bool GetFontFamilyNames(const std::string& filepath, std::set<std::string>& familyNames)
@@ -180,46 +134,9 @@ bool GetFontFamilyNames(const std::string& filepath, std::set<std::string>& fami
 
 std::string GetFontFamily(std::vector<uint8_t>& buffer)
 {
-  FT_Library m_library{nullptr};
-  FT_Init_FreeType(&m_library);
-  if (!m_library)
-  {
-    CLog::LogF(LOGERROR, "Unable to initialize freetype library");
-    return "";
-  }
-
-  // Load the font face
-  FT_Face face{nullptr};
   std::string familyName;
-  if (FT_New_Memory_Face(m_library, reinterpret_cast<const FT_Byte*>(buffer.data()), buffer.size(),
-                         0, &face) == 0)
-  {
-    familyName = GetFamilyNameFromSfnt(face);
-    if (familyName.empty())
-    {
-      if (!face->family_name)
-      {
-        CLog::LogF(LOGERROR, "Family name missing in the font");
-        FT_Done_Face(face);
-        FT_Done_FreeType(m_library);
-        return "";
-      }
-
-      CLog::LogF(LOGWARNING, "Failed to get the unicode family name for \"{}\", fallback to ASCII",
-                 face->family_name);
-      // ASCII font family name may differ from the unicode one, use this as fallback only
-      familyName = std::string{face->family_name};
-      if (familyName.empty())
-        CLog::LogF(LOGERROR, "Family name missing in the font");
-    }
-    FT_Done_Face(face);
-  }
-  else
-  {
+  if (!ValidateTTF(buffer, &familyName))
     CLog::LogF(LOGERROR, "Failed to process font memory buffer");
-  }
-
-  FT_Done_FreeType(m_library);
   return familyName;
 }
 
@@ -234,6 +151,56 @@ std::string GetFontFamily(const std::string& filepath)
     return "";
   }
   return GetFontFamily(buffer);
+}
+
+bool ValidateTTF(const std::vector<uint8_t>& buffer, std::string* familyName,
+  FT_Long idx, FT_Long* num_faces, FT_Long* style_flags)
+{
+  if (buffer.size() < 32) // minimal SFNT header size
+    return false;
+
+  FT_Library m_library{nullptr};
+  FT_Init_FreeType(&m_library);
+  if (!m_library)
+  {
+    CLog::LogF(LOGERROR, "Unable to initialize freetype library");
+    return false;
+  }
+
+  FT_Face face{nullptr};
+  if (FT_New_Memory_Face(m_library, reinterpret_cast<const FT_Byte*>(buffer.data()), buffer.size(),
+                         idx, &face) != 0)
+  {
+    FT_Done_FreeType(m_library);
+    return false; // invalid TTF/OTF/SFNT
+  }
+
+  if (familyName)
+  {
+    *familyName = GetFamilyNameFromSfnt(face);
+    if (familyName->empty())
+    {
+      if (face->family_name)
+      {
+        CLog::LogF(LOGWARNING, "Failed to get the unicode family name for \"{}\", fallback to ASCII",
+                   face->family_name);
+        // ASCII font family name may differ from the unicode one, use this as fallback only
+        *familyName = std::string{face->family_name};
+      }
+      if (familyName->empty())
+        CLog::LogF(LOGERROR, "Family name missing in the font");
+    }
+  }
+
+  if (num_faces)
+    *num_faces = face->num_faces;
+
+  if (style_flags)
+    *style_flags = face->style_flags;
+
+  FT_Done_Face(face);
+  FT_Done_FreeType(m_library);
+  return true; // valid TTF/OTF/SFNT
 }
 
 bool IsSupportedFontExtension(const std::string& filepath)

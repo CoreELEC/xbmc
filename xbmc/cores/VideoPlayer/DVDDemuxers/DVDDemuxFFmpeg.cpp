@@ -67,6 +67,7 @@ extern "C"
 #include <libavutil/pixdesc.h>
 }
 
+using namespace KODI;
 using namespace std::chrono_literals;
 
 struct StereoModeConversionMap
@@ -2010,8 +2011,11 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         AVDictionaryEntry* attachmentMimetype =
             av_dict_get(pStream->metadata, "mimetype", nullptr, 0);
 
-        if (pStream->codecpar->codec_id == AV_CODEC_ID_TTF ||
-            pStream->codecpar->codec_id == AV_CODEC_ID_OTF || AttachmentIsFont(attachmentMimetype))
+        if ((pStream->codecpar->codec_id == AV_CODEC_ID_TTF ||
+            pStream->codecpar->codec_id == AV_CODEC_ID_OTF || AttachmentIsFont(attachmentMimetype)) &&
+            UTILS::FONT::ValidateTTF(std::vector<uint8_t>(
+                    pStream->codecpar->extradata,
+                    pStream->codecpar->extradata + pStream->codecpar->extradata_size)))
         {
           // Temporary fonts are extracted to the temporary fonts path
           //! @todo: temporary font file management should be completely
