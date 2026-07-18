@@ -845,6 +845,36 @@ void CAMLDRMUtils::FlipPage(uint32_t fb_id)
   drmModeAtomicFree(req);
 }
 
+void CAMLDRMUtils::aml_recommit_colour_attr()
+{
+  constexpr unsigned int HDMI_COLORSPACE_RESERVED6 = 6;
+
+  if (!aml_get_drmDevice_connected() || !m_crtc || !m_connector)
+    return;
+
+  drmModeModeInfo mode = m_crtc->mode;
+  drmModeAtomicReqPtr req = drmModeAtomicAlloc();
+
+  if (req)
+  {
+    uint32_t mode_blobid = 0;
+
+    drmModeCreatePropertyBlob(m_fd, &mode, sizeof(mode), &mode_blobid);
+
+    set_drmProp(m_connector->connector_id, "color_space", DRM_MODE_OBJECT_CONNECTOR, HDMI_COLORSPACE_RESERVED6, req);
+    set_drmProp(m_connector->connector_id, "UPDATE", DRM_MODE_OBJECT_CONNECTOR, 1, req);
+    set_drmProp(m_connector->connector_id, "CRTC_ID", DRM_MODE_OBJECT_CONNECTOR, m_crtc->crtc_id, req);
+    set_drmProp(m_crtc->crtc_id, "MODE_ID", DRM_MODE_OBJECT_CRTC, mode_blobid, req);
+    set_drmProp(m_crtc->crtc_id, "ACTIVE", DRM_MODE_OBJECT_CRTC, 1, req);
+
+    if (drmModeAtomicCommit(m_fd, req, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL))
+      CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to recommit colour attr", __FUNCTION__);
+
+    drmModeAtomicFree(req);
+    drmModeDestroyPropertyBlob(m_fd, mode_blobid);
+  }
+}
+
 CAMLDisplay::CAMLDisplay()
 :  m_amlDRMUtils(new CAMLDRMUtils)
 ,  m_stereo_mode(RenderStereoMode::UNDEFINED)

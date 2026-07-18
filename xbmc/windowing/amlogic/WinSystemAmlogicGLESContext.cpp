@@ -251,6 +251,22 @@ void CWinSystemAmlogicGLESContext::SetVSyncImpl(bool enable)
 void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
 {
   SetVSync(true);
+
+  if (videoLayer || m_dvColourActive)
+  {
+    bool dvActive = m_dvColourActive;
+    std::optional<std::string> dv =
+      CSysfsPath{"/sys/module/aml_media/parameters/dolby_vision_enable"}.Get<std::string>();
+    if (dv && !dv->empty())
+      dvActive = (dv->front() == 'Y');
+
+    if (dvActive != m_dvColourActive)
+    {
+      m_amlDisplay->aml_recommit_colour_attr();
+      m_dvColourActive = dvActive;
+    }
+  }
+
   if (rendered)
   {
 #if defined(EGL_ANDROID_native_fence_sync) && defined(EGL_KHR_fence_sync)
