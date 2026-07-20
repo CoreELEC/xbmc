@@ -543,7 +543,8 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
     return ret;
   }
 
-  ret = aml_set_drmDevice_active(mode, stereo_mode, true);
+  int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
+  ret = aml_set_drmDevice_active(mode, fractional_rate, stereo_mode, force_mode_switch, true);
 
   if (!ret && force_mode_switch)
     set_drmProp(m_connector->connector_id, "UPDATE", DRM_MODE_OBJECT_CONNECTOR, 1, NULL);
@@ -674,34 +675,6 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name, unsigned int obj_type)
   return ret;
 }
 
-// set a property
-void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, unsigned int value)
-{
-  unsigned int id;
-
-  if (!aml_get_drmDevice_connected())
-  {
-    CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - connector of drmDevice is not connected", __FUNCTION__);
-    return;
-  }
-
-  switch (obj_type) {
-    case DRM_MODE_OBJECT_CRTC:
-      id = m_crtc->crtc_id;
-      break;
-    case DRM_MODE_OBJECT_CONNECTOR:
-      id = m_connector->connector_id;
-      break;
-    case DRM_MODE_OBJECT_ENCODER:
-      id = m_encoder->encoder_id;
-      break;
-    default:
-      return;
-  }
-
-  set_drmProp(id, name, obj_type, value, NULL);
-}
-
 // get modes count and status if current device is connected
 int CAMLDRMUtils::aml_get_drmDevice_modes_count(drmModeConnection *connection)
 {
@@ -739,13 +712,14 @@ std::string CAMLDRMUtils::aml_get_drmDevice_preferred_mode()
   return mode;
 }
 
-bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, const RenderStereoMode stereo_mode, bool active)
+bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rate,
+  const RenderStereoMode stereo_mode, bool force_mode_switch, bool active)
 {
   bool ret = false;
   drmModeModeInfoPtr drmDevicemode = NULL;
   drmModeModeInfo syntheticMode = {};
 
-  if (!StringUtils::EqualsNoCase(aml_get_drmDevice_mode(), mode))
+  if (force_mode_switch || !StringUtils::EqualsNoCase(aml_get_drmDevice_mode(), mode))
   {
     for (int i = 0; i < m_connector->count_modes; i++)
     {
@@ -778,6 +752,7 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, const RenderStereo
     if (req)
     {
       set_drmProp(m_connector->connector_id, "CRTC_ID", DRM_MODE_OBJECT_CONNECTOR, m_crtc->crtc_id, req);
+      set_drmProp(m_connector->connector_id, "FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR, fractional_rate, req);
 
       drmModeCreatePropertyBlob(m_fd, drmDevicemode, sizeof(*drmDevicemode), &mode_blobid);
 
@@ -933,11 +908,6 @@ bool CAMLDisplay::set_display_resolution(const RESOLUTION_INFO &res, std::string
   }
   else
     CLog::Log(LOGDEBUG, "CAMLDisplay::{}: try to set mode: {}", __FUNCTION__, mode.c_str());
-
-  int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
-
-  if (m_amlDRMUtils->aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR) != fractional_rate)
-    m_amlDRMUtils->aml_set_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR, fractional_rate);
 
   m_amlDRMUtils->aml_set_drmDevice_mode(res, mode, m_stereo_mode, framebuffer_name, force_mode_switch);
 
