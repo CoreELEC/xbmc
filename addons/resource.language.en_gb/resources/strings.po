@@ -8599,7 +8599,12 @@ msgctxt "#14128"
 msgid "Allow double refresh rates"
 msgstr ""
 
-#empty strings from id 14129 to 14186
+#: system/settings/settings.xml
+msgctxt "#14129"
+msgid "Allow whole-number frame repeat"
+msgstr ""
+
+#empty strings from id 14130 to 14186
 
 #: system/settings/settings.xml
 msgctxt "#14187"
@@ -22568,7 +22573,11 @@ msgctxt "#36448"
 msgid "Video files only: display order in the stream selection dialogs. [Media] stream order in the media, [Sorted] sorted using the stream attributes[CR]"
 msgstr ""
 
-#empty string with id 36449
+#. Description of setting with label #14129 "Whitelist"
+#: system/settings/settings.xml
+msgctxt "#36449"
+msgid "Select this option to allow using whole-number repeat rate (playing 24 FPS video on a 120 Hz monitor or playing 30 FPS video on a 120 Hz monitor)."
+msgstr ""
 
 #. Description of setting with label #13438 "Allow hardware acceleration (amcodec)"
 #: system/settings/settings.xml
