@@ -8592,6 +8592,11 @@ msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14128"
+msgid "Allow whole-number frame repeat"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14129"
 msgid "Allow double refresh rates"
 msgstr ""
 
@@ -21948,6 +21953,12 @@ msgstr ""
 #. Description of setting with label #14128 "Whitelist"
 #: system/settings/settings.xml
 msgctxt "#36445"
+msgid "Select this option to allow using whole-number repeat rate (playing 24 FPS video on a 120 Hz monitor or playing 30 FPS video on a 120 Hz monitor)."
+msgstr ""
+
+#. Description of setting with label #14129 "Whitelist"
+#: system/settings/settings.xml
+msgctxt "#36446"
 msgid "Select this option to allow using double refresh rates (playing 29.97 FPS video on a 59.94 Hz monitor or playing 30 FPS video on a 60 Hz monitor). You may want to use this option if your monitor doesn't have a 29.97 Hz or 30 Hz mode."
 msgstr ""
 
