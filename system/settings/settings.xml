@@ -3268,7 +3268,7 @@
       </setting>
       </group>
       <group id="3" label="14126">
-        <setting id="videoscreen.whitelist" type="list[string]" parent="videoscreen.screen" label="14126" help="36443">
+        <setting id="videoscreen.whitelist" type="list[string]" label="14126" help="36443">
           <level>3</level>
           <default></default>
           <constraints>
@@ -3280,20 +3280,14 @@
             <multiselect>true</multiselect>
           </control>
         </setting>
-        <setting id="videoscreen.whitelistpulldown" type="boolean" parent="videoscreen.whitelist" label="14127" help="36444">
+        <setting id="videoscreen.whitelistpulldown" type="boolean" label="14127" help="36444">
           <level>3</level>
-          <default>false</default>
-          <dependencies>
-            <dependency type="enable" setting="videoscreen.whitelist" operator="!is"></dependency>
-          </dependencies>
+          <default>true</default>
           <control type="toggle" />
         </setting>
-        <setting id="videoscreen.whitelistdoublerefreshrate" type="boolean" parent="videoscreen.whitelist" label="14128" help="36445">
+        <setting id="videoscreen.whitelistdoublerefreshrate" type="boolean" label="14128" help="36445">
           <level>3</level>
-          <default>false</default>
-          <dependencies>
-            <dependency type="enable" setting="videoscreen.whitelist" operator="!is"></dependency>
-          </dependencies>
+          <default>true</default>
           <control type="toggle" />
         </setting>
       </group>
