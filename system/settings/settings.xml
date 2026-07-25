@@ -3285,6 +3285,11 @@
           <default>true</default>
           <control type="toggle" />
         </setting>
+        <setting id="videoscreen.whitelistwholenumber" type="boolean" label="14129" help="36449">
+          <level>3</level>
+          <default>true</default>
+          <control type="toggle" />
+        </setting>
         <setting id="videoscreen.whitelistdoublerefreshrate" type="boolean" label="14128" help="36445">
           <level>3</level>
           <default>true</default>
