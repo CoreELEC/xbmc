@@ -20,8 +20,8 @@
 #include "windowing/GraphicContext.h"
 #include "windowing/Resolution.h"
 #include "platform/linux/powermanagement/LinuxPowerSyscall.h"
-#include "platform/linux/ScreenshotSurfaceAML.h"
 #include "platform/linux/FDEventMonitor.h"
+#include "rendering/gles/ScreenshotSurfaceGLES.h"
 #include "resources/LocalizeStrings.h"
 #include "resources/ResourcesComponent.h"
 #include "settings/DisplaySettings.h"
@@ -302,7 +302,7 @@ bool CWinSystemAmlogic::InitWindowSystem()
   RETRO::CRPProcessInfoAmlogic::Register();
   RETRO::CRPProcessInfoAmlogic::RegisterRendererFactory(new RETRO::CRendererFactoryOpenGLES);
   CRendererAML::Register();
-  CScreenshotSurfaceAML::Register();
+  CScreenshotSurfaceGLES::Register();
 
   auto setting = settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK);
   if (setting)
