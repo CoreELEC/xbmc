@@ -10,7 +10,6 @@
 
 #include "cores/VideoPlayer/DVDCodecs/Video/AMLCodec.h"
 #include "cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecAmlogic.h"
-#include "cores/VideoPlayer/VideoRenderers/RenderCapture.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
 #include "ServiceBroker.h"
@@ -89,14 +88,6 @@ CRenderInfo CRendererAML::GetRenderInfo()
   info.max_buffer_size = m_numRenderBuffers;
   info.opaque_pointer = (void *)this;
   return info;
-}
-
-bool CRendererAML::RenderCapture(int index, CRenderCapture* capture)
-{
-  capture->BeginRender();
-  capture->EndRender();
-  CScreenshotAML::CaptureVideoFrame((unsigned char *)capture->GetRenderBuffer(), capture->GetWidth(), capture->GetHeight());
-  return true;
 }
 
 void CRendererAML::AddVideoPicture(const VideoPicture &picture, int index)
