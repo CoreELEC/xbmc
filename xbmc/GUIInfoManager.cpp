@@ -17,6 +17,7 @@
 #include "cores/DataCacheCore.h"
 #include "filesystem/File.h"
 #include "games/tags/GameInfoTag.h"
+#include "guilib/guiinfo/CEGUIInfoRegistry.h"
 #include "guilib/guiinfo/GUIInfo.h"
 #include "guilib/guiinfo/GUIInfoHelper.h"
 #include "guilib/guiinfo/GUIInfoLabels.h"
@@ -11673,6 +11674,10 @@ int CGUIInfoManager::TranslateSingleString(const std::string& strCondition, bool
       }
     }
   }
+
+  // CoreELEC label registry
+  if (const uint32_t ceId = CE::GUIINFO::CLabelRegistry::GetInstance().Resolve(strTest))
+    return ceId;
 
   return 0;
 }
