@@ -13,6 +13,7 @@
 #include "guilib/GUIComponent.h"
 #include "guilib/GUIMessage.h"
 #include "guilib/WindowIDs.h"
+#include "guilib/guiinfo/CEGUIInfoRegistry.h"
 #include "guilib/guiinfo/GUIInfoLabels.h"
 #include "pvr/PVRManager.h"
 #include "rendering/RenderSystem.h"
@@ -122,6 +123,7 @@ void CGUIWindowSystemInfo::FrameMove()
     SetControlLabel(i++, "{}: {}", 150, NETWORK_IP_ADDRESS);
     SetControlLabel(i++, "{} {}", 13287, SYSTEM_SCREEN_RESOLUTION);
     SetControlLabel(i++, "{} {}", 13283, SYSTEM_OS_VERSION_INFO);
+    SetControlLabel(i++, "{}: {}", 12399, CE::GUIINFO::CE_SYSTEM_LINUX_VER);
     SetControlLabel(i++, "{}: {}", 144, SYSTEM_BUILD_VERSION);
     SetControlLabel(i++, "{}: {}", 174, SYSTEM_BUILD_DATE);
     SetControlLabel(i++, "{}: {}", 12390, SYSTEM_UPTIME);
