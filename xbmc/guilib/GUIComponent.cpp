@@ -19,6 +19,7 @@
 #include "TextureManager.h"
 #include "URL.h"
 #include "dialogs/GUIDialogYesNo.h"
+#include "guilib/guiinfo/CEGUIInfoProviders.h"
 #include "handlers/GUIAnnouncementHandlerContainer.h"
 
 #include <memory>
@@ -50,6 +51,7 @@ void CGUIComponent::Init()
   m_pWindowManager->Initialize();
   m_stereoscopicsManager->Initialize();
   m_guiInfoManager->Initialize();
+  CE::GUIINFO::Register(*m_guiInfoManager);
 
   CServiceBroker::RegisterGUI(this);
 }
