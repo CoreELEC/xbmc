@@ -6337,7 +6337,12 @@ msgctxt "#12398"
 msgid "kodi.tv/donate"
 msgstr ""
 
-#empty strings from id 12399 to 12599
+#: xbmc/windows/GUIWindowSystemInfo.cpp
+msgctxt "#12399"
+msgid "Linux version"
+msgstr ""
+
+#empty strings from id 12400 to 12599
 
 #: xbmc/guilib/WindowIDs.h
 msgctxt "#12600"
