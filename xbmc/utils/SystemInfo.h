@@ -52,7 +52,7 @@ public:
   std::string gatewayAddress;
   std::string networkLinkState;
   std::vector<std::string> dnsServers;
-  std::string linuxver;
+  std::string batteryLevel;
 };
 
 class CSysInfoJob : public CJob
@@ -73,6 +73,7 @@ private:
   static std::string GetGatewayAddress();
   static std::string GetNetworkLinkState();
   static std::string GetVideoEncoder();
+  static std::string GetBatteryLevel();
   static std::vector<std::string> GetDNSServers();
 
   CSysData m_info;
@@ -184,3 +185,4 @@ private:
 };
 
 extern CSysInfo g_sysinfo;
+
