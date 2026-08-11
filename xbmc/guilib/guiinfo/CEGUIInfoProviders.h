@@ -10,6 +10,7 @@
 #include "GUIInfoManager.h"
 #include "ServiceBroker.h"
 #include "cores/DataCacheCore.h"
+#include "cores/VideoPlayer/DVDCodecs/Video/AMLFrameMetadata.h"
 #include "guilib/guiinfo/CEGUIInfoRegistry.h"
 #include "guilib/guiinfo/GUIInfo.h"
 #include "guilib/guiinfo/GUIInfoProvider.h"
@@ -132,6 +133,39 @@ private:
   }
 };
 
+// raw side data payloads located by the Amlogic codec, answered from its
+// snapshot store (AMLFrameMetadata.h)
+class CAMLFrameMetadataGUIInfo : public KODI::GUILIB::GUIINFO::CGUIInfoProvider
+{
+public:
+  bool InitCurrentItem(CFileItem* item) override { return false; }
+
+  bool GetLabel(std::string& value,
+                const CFileItem* item,
+                int contextWindow,
+                const KODI::GUILIB::GUIINFO::CGUIInfo& info,
+                std::string* fallback) const override
+  {
+    return AMLFrameMetadataGetLabel(value, info.GetInfo());
+  }
+
+  bool GetInt(int& value,
+              const CGUIListItem* item,
+              int contextWindow,
+              const KODI::GUILIB::GUIINFO::CGUIInfo& info) const override
+  {
+    return false;
+  }
+
+  bool GetBool(bool& value,
+               const CGUIListItem* item,
+               int contextWindow,
+               const KODI::GUILIB::GUIINFO::CGUIInfo& info) const override
+  {
+    return false;
+  }
+};
+
 // providers are deliberately leaked because they must outlive GUI teardown
 inline void Register(CGUIInfoManager& infoManager)
 {
@@ -145,10 +179,12 @@ inline void Register(CGUIInfoManager& infoManager)
   registry.Add("player.process(amlogic.displaymode)", CE_PLAYER_PROCESS_AML_DISPLAYMODE);
   registry.Add("player.process(amlogic.eoft_gamut)", CE_PLAYER_PROCESS_AML_EOFT_GAMUT);
   registry.Add("player.process(audiochannelssink)", CE_PLAYER_PROCESS_AUDIOCHANNELS_SINK);
+  registry.Add("player.process(video.sidedata)", CE_PLAYER_PROCESS_VIDEO_SIDEDATA);
   registry.Add("system.linuxver", CE_SYSTEM_LINUX_VER);
 
   std::unique_lock lock(CServiceBroker::GetWinSystem()->GetGfxContext());
   infoManager.GetInfoProviders().RegisterProvider(new CCEPlatformGUIInfo, true);
+  infoManager.GetInfoProviders().RegisterProvider(new CAMLFrameMetadataGUIInfo, true);
 }
 
 } // namespace CE::GUIINFO
