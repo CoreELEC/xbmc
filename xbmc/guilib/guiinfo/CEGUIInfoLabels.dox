@@ -46,5 +46,28 @@ CoreELEC specific info labels, registered through the CoreELEC label registry
     @skinning_v22 **[New Infolabel]** \link System_linuxver `System.linuxver`\endlink
     <p>
   }
+  \table_row3{   <b>`Player.Process(video.sidedata)`</b>,
+                 \anchor Player_Process_video_sidedata
+                 _string_,
+    @return The raw DV/HDR metadata of the frame on screen as one JSON object\,
+    empty when the stream carries none. Each present payload is a key with its
+    bytes base64 encoded: `dovi.config` (the 24 byte dvcC/dvvC configuration
+    record)\, `dovi.rpu` (HEVC: the escaped NAL unit 62 including its two
+    header bytes; AV1: the ITU-T T.35 payload from the country code)\,
+    `hdr10plus` (the ST 2094-40 ITU-T T.35 payload from the country code)\,
+    `mdcv` and `cll` (the mastering display colour volume and content light
+    level SEI payloads). A frame without a payload holds the last carried one\,
+    and the statics persist for the stream once seen\, in-band values winning
+    over container ones. `flags` is a JSON array of string tokens naming what
+    this device changed before the display sees the stream: `converted`\,
+    `rpu-removed`\, `hdr10plus-removed` and `l5-zeroed`. `structure` names how a
+    dual layer stream is packaged\, `st-dl` when the enhancement layer rides in
+    the same track and `dt-dl` when a second track carries it\, absent for
+    single layer streams. Meant for add-ons that parse the payloads\, not for
+    direct display.
+    <p><hr>
+    @skinning_v22 **[New Infolabel]** \link Player_Process_video_sidedata `Player.Process(video.sidedata)`\endlink
+    <p>
+  }
 \table_end
 */
