@@ -62,7 +62,7 @@ bool CGUIWindowSystemInfo::OnMessage(CGUIMessage& message)
     case GUI_MSG_WINDOW_INIT:
     {
       CGUIWindow::OnMessage(message);
-      SET_CONTROL_LABEL(52, CSysInfo::GetAppName() + " " + CSysInfo::GetVersion());
+      SET_CONTROL_LABEL(52, "AMLogic running " + CSysInfo::GetAppName() + " " + CSysInfo::GetVersion());
       SET_CONTROL_LABEL(53, CSysInfo::GetBuildDate());
       CONTROL_ENABLE_ON_CONDITION(CONTROL_BT_PVR, CServiceBroker::GetPVRManager().IsStarted());
       return true;
@@ -222,10 +222,6 @@ void CGUIWindowSystemInfo::FrameMove()
       if (!model.empty())
         SET_CONTROL_LABEL(i++, "CPU: " + model);
 
-      static std::string mips = cpuInfo->GetCPUBogoMips();
-      if (!mips.empty())
-        SET_CONTROL_LABEL(i++, "BogoMips: " + mips);
-
       static std::string soc = cpuInfo->GetCPUSoC();
       if (!soc.empty())
         SET_CONTROL_LABEL(i++, "SoC: " + soc);
@@ -233,10 +229,6 @@ void CGUIWindowSystemInfo::FrameMove()
       static std::string hardware = cpuInfo->GetCPUHardware();
       if (!hardware.empty())
         SET_CONTROL_LABEL(i++, "Hardware: " + hardware);
-
-      static std::string revision = cpuInfo->GetCPURevision();
-      if (!revision.empty())
-        SET_CONTROL_LABEL(i++, "Revision: " + revision);
 
       static std::string serial = cpuInfo->GetCPUSerial();
       if (!serial.empty())
