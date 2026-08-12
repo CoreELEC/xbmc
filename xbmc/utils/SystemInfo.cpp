@@ -287,7 +287,7 @@ bool CSysInfoJob::DoWork()
   m_info.videoEncoder      = GetVideoEncoder();
   m_info.cpuFrequency =
       StringUtils::Format("{:4.0f} MHz", CServiceBroker::GetCPUInfo()->GetCPUFrequency());
-  m_info.osVersionInfo     = CSysInfo::GetOsPrettyNameWithVersion() + " (kernel: " + CSysInfo::GetKernelName() + " " + CSysInfo::GetKernelVersionFull() + ")";
+  m_info.osVersionInfo     = CSysInfo::GetOsPrettyNameWithVersion();
   m_info.macAddress        = GetMACAddress();
   m_info.batteryLevel      = GetBatteryLevel();
   m_info.ipAddress = GetIPAddress();
@@ -843,7 +843,7 @@ std::string CSysInfo::GetOsPrettyNameWithVersion(void)
   }
 
   if (osNameVer.find(GetOsVersion()) == std::string::npos)
-    osNameVer += " " + GetOsVersion();
+    osNameVer += " (" + GetOsVersion() + ")";
 #endif // defined(TARGET_LINUX)
 
   if (osNameVer.empty())
