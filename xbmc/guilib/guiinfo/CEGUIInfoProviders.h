@@ -12,12 +12,16 @@
 #include "guilib/guiinfo/CEGUIInfoRegistry.h"
 #include "guilib/guiinfo/GUIInfo.h"
 #include "guilib/guiinfo/GUIInfoProvider.h"
+#include "platform/linux/SysfsPath.h"
 #include "utils/SystemInfo.h"
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
 
+#include <cmath>
+#include <fmt/format.h>
 #include <mutex>
 #include <string>
+#include <vector>
 
 // CE providers append at the BACK of the provider list so upstream answers
 // first. CGUIInfoManager::RegisterInfoProvider would front-insert
@@ -40,6 +44,15 @@ public:
   {
     switch (info.GetInfo())
     {
+      case CE_PLAYER_PROCESS_AML_PIXELFORMAT:
+        value = GetAMLConfigInfo("Colour depth") + ", " + GetAMLConfigInfo("Colourspace");
+        return true;
+      case CE_PLAYER_PROCESS_AML_DISPLAYMODE:
+        value = GetAMLConfigInfo("VIC");
+        return true;
+      case CE_PLAYER_PROCESS_AML_EOFT_GAMUT:
+        value = GetAMLConfigInfo("EOTF") + " " + GetAMLConfigInfo("Colourimetry");
+        return true;
       case CE_SYSTEM_LINUX_VER:
         value = CSysInfo::GetKernelVersionFull();
         return true;
@@ -63,6 +76,56 @@ public:
   {
     return false;
   }
+
+private:
+  static std::string GetAMLConfigInfo(const std::string& item)
+  {
+    std::string aml_config = "";
+    std::string item_value = "unknown";
+    std::vector<std::string> aml_config_lines;
+    std::vector<std::string> aml_config_item;
+    std::vector<std::string>::iterator i;
+
+    CSysfsPath config{"/sys/class/amhdmitx/amhdmitx0/config"};
+    if (config.Exists())
+      aml_config = config.Get<std::string>().value();
+
+    aml_config_lines = StringUtils::Split(aml_config, "\n");
+    for (i = aml_config_lines.begin(); i < aml_config_lines.end(); i++)
+    {
+      if (StringUtils::StartsWithNoCase(*i, item))
+      {
+        aml_config_item = StringUtils::Split(*i, ": ");
+        if (aml_config_item.size() > 1)
+        {
+          if (StringUtils::EqualsNoCase(item, "VIC"))
+          {
+            std::vector<std::string> sub_items = StringUtils::Split(aml_config_item.at(1), " ");
+
+            if (sub_items.size() > 1)
+            {
+              double fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
+              item_value = StringUtils::Left(sub_items.at(1), sub_items.at(1).length() - 4) + " ";
+
+              if (fps != floor(fps))
+              {
+                float refreshrate = static_cast<float>(atof(StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2).c_str())) / 1.001f;
+                float refreshrate_rounded = std::round(refreshrate * 1000.0f) / 1000.0f;
+                item_value += fmt::format("{:.6g}Hz", refreshrate_rounded);
+              }
+              else
+                item_value += StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2) + "Hz";
+            }
+          }
+          else
+            item_value = aml_config_item.at(1);
+          break;
+        }
+      }
+    }
+
+    return item_value;
+  }
 };
 
 // providers are deliberately leaked because they must outlive GUI teardown
@@ -74,6 +137,9 @@ inline void Register(CGUIInfoManager& infoManager)
   registered = true;
 
   CLabelRegistry& registry = CLabelRegistry::GetInstance();
+  registry.Add("player.process(amlogic.pixformat)", CE_PLAYER_PROCESS_AML_PIXELFORMAT);
+  registry.Add("player.process(amlogic.displaymode)", CE_PLAYER_PROCESS_AML_DISPLAYMODE);
+  registry.Add("player.process(amlogic.eoft_gamut)", CE_PLAYER_PROCESS_AML_EOFT_GAMUT);
   registry.Add("system.linuxver", CE_SYSTEM_LINUX_VER);
 
   std::unique_lock lock(CServiceBroker::GetWinSystem()->GetGfxContext());
