@@ -76,7 +76,6 @@ public:
   std::string GetAudioDecoderName();
   void SetAudioChannels(const std::string &channels);
   std::string GetAudioChannels();
-  std::string GetAudioChannelsSink();
   void SetAudioSampleRate(int sampleRate);
   int GetAudioSampleRate();
   void SetAudioBitsPerSample(int bitsPerSample);
