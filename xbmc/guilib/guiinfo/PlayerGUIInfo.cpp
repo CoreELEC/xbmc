@@ -34,12 +34,9 @@
 #include "utils/log.h"
 #include "windowing/WinSystem.h"
 
-#include "platform/linux/SysfsPath.h"
-
 #include <charconv>
 #include <chrono>
 #include <cmath>
-#include <fmt/format.h>
 #include <memory>
 
 using namespace KODI::GUILIB::GUIINFO;
@@ -55,55 +52,6 @@ CPlayerGUIInfo::~CPlayerGUIInfo() = default;
 int CPlayerGUIInfo::GetTotalPlayTime() const
 {
   return std::lrint(g_application.GetTotalTime());
-}
-
-std::string CPlayerGUIInfo::GetAMLConfigInfo(std::string item) const
-{
-  std::string aml_config = "";
-  std::string item_value = "unknown";
-  std::vector<std::string> aml_config_lines;
-  std::vector<std::string> aml_config_item;
-  std::vector<std::string>::iterator i;
-
-  CSysfsPath config{"/sys/class/amhdmitx/amhdmitx0/config"};
-  if (config.Exists())
-    aml_config = config.Get<std::string>().value();
-
-  aml_config_lines = StringUtils::Split(aml_config, "\n");
-  for (i = aml_config_lines.begin(); i < aml_config_lines.end(); i++)
-  {
-    if (StringUtils::StartsWithNoCase(*i, item))
-    {
-      aml_config_item = StringUtils::Split(*i, ": ");
-      if (aml_config_item.size() > 1)
-      {
-        if (StringUtils::EqualsNoCase(item, "VIC"))
-        {
-          std::vector<std::string> sub_items = StringUtils::Split(aml_config_item.at(1), " ");
-
-          if (sub_items.size() > 1)
-          {
-            double fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
-            item_value = StringUtils::Left(sub_items.at(1), sub_items.at(1).length() - 4) + " ";
-
-            if (fps != floor(fps))
-            {
-              float refreshrate = static_cast<float>(atof(StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2).c_str())) / 1.001f;
-              float refreshrate_rounded = std::round(refreshrate * 1000.0f) / 1000.0f;
-              item_value += fmt::format("{:.6g}Hz", refreshrate_rounded);
-            }
-            else
-              item_value += StringUtils::Mid(sub_items.at(1), sub_items.at(1).length() - 4, 2) + "Hz";
-          }
-        }
-        else
-          item_value = aml_config_item.at(1);
-        break;
-      }
-    }
-  }
-
-  return item_value;
 }
 
 int CPlayerGUIInfo::GetPlayTime() const
@@ -375,11 +323,7 @@ bool CPlayerGUIInfo::GetLabel(std::string& value,
       value = CServiceBroker::GetDataCacheCore().GetVideoPixelFormat();
       return true;
     case PLAYER_PROCESS_VIDEOFPS:
-      {
-        float video_fps_value = static_cast<float>(CServiceBroker::GetDataCacheCore().GetVideoFps());
-        float video_fps_rounded = std::round(video_fps_value * 1000.0f) / 1000.0f;
-        value = StringUtils::Format("{:.6g}", video_fps_rounded);
-      }
+      value = StringUtils::Format("{:.3f}", CServiceBroker::GetDataCacheCore().GetVideoFps());
       return true;
     case PLAYER_PROCESS_VIDEODAR:
       value = StringUtils::Format("{:.2f}", CServiceBroker::GetDataCacheCore().GetVideoDAR());
@@ -432,15 +376,6 @@ bool CPlayerGUIInfo::GetLabel(std::string& value,
       return true;
     case PLAYER_PROCESS_VIDEO_QUEUE_DATA_LEVEL:
       value = std::to_string(CServiceBroker::GetDataCacheCore().GetVideoQueueDataLevel());
-      return true;
-    case PLAYER_PROCESS_AML_PIXELFORMAT:
-      value = GetAMLConfigInfo("Colour depth") + ", " + GetAMLConfigInfo("Colourspace");
-      return true;
-    case PLAYER_PROCESS_AML_DISPLAYMODE:
-      value =  GetAMLConfigInfo("VIC");
-      return true;
-    case PLAYER_PROCESS_AML_EOFT_GAMUT:
-      value = GetAMLConfigInfo("EOTF") + " " + GetAMLConfigInfo("Colourimetry");
       return true;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
