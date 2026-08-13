@@ -30,6 +30,14 @@ CoreELEC specific info labels, registered through the CoreELEC label registry
     @skinning_v22 **[New Infolabel]** \link Player_Process_aml_eoft_gamut `Player.Process(amlogic.eoft_gamut)`\endlink
     <p>
   }
+  \table_row3{   <b>`Player.Process(audiochannelssink)`</b>,
+                 \anchor Player_Process_audiochannelssink
+                 _string_,
+    @return The channel layout the audio sink is opened with.
+    <p><hr>
+    @skinning_v22 **[New Infolabel]** \link Player_Process_audiochannelssink `Player.Process(audiochannelssink)`\endlink
+    <p>
+  }
   \table_row3{   <b>`System.linuxver`</b>,
                  \anchor System_linuxver
                  _string_,
