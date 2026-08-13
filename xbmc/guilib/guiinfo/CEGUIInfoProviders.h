@@ -9,6 +9,7 @@
 
 #include "GUIInfoManager.h"
 #include "ServiceBroker.h"
+#include "cores/DataCacheCore.h"
 #include "guilib/guiinfo/CEGUIInfoRegistry.h"
 #include "guilib/guiinfo/GUIInfo.h"
 #include "guilib/guiinfo/GUIInfoProvider.h"
@@ -52,6 +53,9 @@ public:
         return true;
       case CE_PLAYER_PROCESS_AML_EOFT_GAMUT:
         value = GetAMLConfigInfo("EOTF") + " " + GetAMLConfigInfo("Colourimetry");
+        return true;
+      case CE_PLAYER_PROCESS_AUDIOCHANNELS_SINK:
+        value = CServiceBroker::GetDataCacheCore().GetAudioChannelsSink();
         return true;
       case CE_SYSTEM_LINUX_VER:
         value = CSysInfo::GetKernelVersionFull();
@@ -140,6 +144,7 @@ inline void Register(CGUIInfoManager& infoManager)
   registry.Add("player.process(amlogic.pixformat)", CE_PLAYER_PROCESS_AML_PIXELFORMAT);
   registry.Add("player.process(amlogic.displaymode)", CE_PLAYER_PROCESS_AML_DISPLAYMODE);
   registry.Add("player.process(amlogic.eoft_gamut)", CE_PLAYER_PROCESS_AML_EOFT_GAMUT);
+  registry.Add("player.process(audiochannelssink)", CE_PLAYER_PROCESS_AUDIOCHANNELS_SINK);
   registry.Add("system.linuxver", CE_SYSTEM_LINUX_VER);
 
   std::unique_lock lock(CServiceBroker::GetWinSystem()->GetGfxContext());
