@@ -2313,7 +2313,13 @@ msgctxt "#482"
 msgid "About Kodi"
 msgstr ""
 
-#empty strings from id 483 to 484
+msgctxt "#483"
+msgid "Input layout"
+msgstr ""
+
+msgctxt "#484"
+msgid "Output layout"
+msgstr ""
 
 msgctxt "#485"
 msgid "Delete album"
