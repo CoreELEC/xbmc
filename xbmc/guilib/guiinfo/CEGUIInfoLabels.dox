@@ -1,0 +1,42 @@
+/*!
+\page ce__infolabels CoreELEC Info Labels
+
+CoreELEC specific info labels, registered through the CoreELEC label registry
+(CEGUIInfoRegistry.h) instead of the upstream label tables.
+
+\table_start
+  \table_h3{ Labels, Type, Description }
+  \table_row3{   <b>`Player.Process(amlogic.pixformat)`</b>,
+                 \anchor Player_Process_aml_pixformat
+                 _string_,
+    @return The pixel format of the current display mode.
+    <p><hr>
+    @skinning_v22 **[New Infolabel]** \link Player_Process_aml_pixformat `Player.Process(amlogic.pixformat)`\endlink
+    <p>
+  }
+  \table_row3{   <b>`Player.Process(amlogic.displaymode)`</b>,
+                 \anchor Player_Process_aml_displaymode
+                 _string_,
+    @return The current display resolution and refresh rate.
+    <p><hr>
+    @skinning_v22 **[New Infolabel]** \link Player_Process_aml_displaymode `Player.Process(amlogic.displaymode)`\endlink
+    <p>
+  }
+  \table_row3{   <b>`Player.Process(amlogic.eoft_gamut)`</b>,
+                 \anchor Player_Process_aml_eoft_gamut
+                 _string_,
+    @return EOFT and Colourimetry of the current display mode.
+    <p><hr>
+    @skinning_v22 **[New Infolabel]** \link Player_Process_aml_eoft_gamut `Player.Process(amlogic.eoft_gamut)`\endlink
+    <p>
+  }
+  \table_row3{   <b>`System.linuxver`</b>,
+                 \anchor System_linuxver
+                 _string_,
+    @return The full kernel version of the running system.
+    <p><hr>
+    @skinning_v22 **[New Infolabel]** \link System_linuxver `System.linuxver`\endlink
+    <p>
+  }
+\table_end
+*/
