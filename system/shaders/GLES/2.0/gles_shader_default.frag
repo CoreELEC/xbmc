@@ -37,6 +37,11 @@ void main ()
 
 #if defined(KODI_TRANSFER_PQ)
   rgb.rgb *= m_sdrPeak;
+#elif defined(AML_TRANSFER_PQ)
+  // BT.709 -> BT.2020 gamut; transfer (sRGB -> PQ) done by the OSD HDR core.
+  const mat3 bt709_to_bt2020 = mat3(0.6274, 0.0691, 0.0164, 0.3293, 0.9195, 0.0880,
+                                    0.0433, 0.0114, 0.8956);
+  rgb.rgb = bt709_to_bt2020 * rgb.rgb;
 #endif
 
   gl_FragColor = rgb;

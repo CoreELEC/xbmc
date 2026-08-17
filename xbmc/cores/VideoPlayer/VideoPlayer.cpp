@@ -4323,6 +4323,9 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
       }
       break;
     case StreamType::SUBTITLE:
+      // Set by the video stream (opened first): tells the subtitle codec
+      // whether this is HDR-authored PGS (BT.2020/PQ) for UHD-BD playback.
+      hint.hdrType = m_CurrentVideo.hint.hdrType;
       res = OpenSubtitleStream(hint);
       break;
     case StreamType::TELETEXT:

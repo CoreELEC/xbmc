@@ -145,6 +145,7 @@ std::shared_ptr<COverlay> COverlay::Create(const CDVDOverlayImage& o, CRect& rSo
 
 COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSource)
 {
+  m_isHdrPqAuthored = o.m_isHdrPq;
   glGenTextures(1, &m_texture);
   glBindTexture(GL_TEXTURE_2D, m_texture);
 
@@ -163,7 +164,16 @@ COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSour
   {
     std::vector<uint32_t> rgba(o.width * o.height);
     m_pma = !!USE_PREMULTIPLIED_ALPHA;
-    convert_rgba(o, m_pma, rgba);
+
+    if (o.m_isHdrPq)
+    {
+      // Pre-bake PQ BT.2020 palette to sRGB BT.2020 once (256 entries only).
+      const auto bakedPalette = OVERLAY::prebake_hdr_pgs_palette(o.palette);
+      OVERLAY::convert_rgba(o, bakedPalette, m_pma, rgba);
+    }
+    else
+      OVERLAY::convert_rgba(o, m_pma, rgba);
+
     LoadTexture(GL_TEXTURE_2D, o.width, o.height, o.width * 4, &m_u, &m_v, false, rgba.data());
   }
 
@@ -459,7 +469,10 @@ void COverlayTextureGLES::Render(SRenderState& state)
 
   CRenderSystemGLES* renderSystem =
       dynamic_cast<CRenderSystemGLES*>(CServiceBroker::GetRenderSystem());
-  renderSystem->EnableGUIShader(ShaderMethodGLES::SM_TEXTURE_NOBLEND);
+  // Pre-baked HDR PGS is sRGB BT.2020: render without the PQ transfer path.
+  const auto method = m_isHdrPqAuthored ? ShaderMethodGLES::SM_TEXTURE_NOBLEND_NO_PQ
+                                        : ShaderMethodGLES::SM_TEXTURE_NOBLEND;
+  renderSystem->EnableGUIShader(method);
   GLint posLoc = renderSystem->GUIShaderGetPos();
   GLint tex0Loc = renderSystem->GUIShaderGetCoord0();
   GLint depthLoc = renderSystem->GUIShaderGetDepth();

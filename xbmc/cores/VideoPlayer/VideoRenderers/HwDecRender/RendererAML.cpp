@@ -23,6 +23,8 @@
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
 
+#include "platform/linux/SysfsPath.h"
+
 CRendererAML::CRendererAML()
  : m_prevVPts(DVD_NOPTS_VALUE)
  , m_bConfigured(false)
@@ -76,6 +78,11 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
     user_dv_disable ? "disabled" : "enabled", dv_is_used ? "enabled" : "disabled", hdr_is_used ? "used" : "not used");
 
   CServiceBroker::GetWinSystem()->GetGfxContext().SetTransferPQ(dv_is_used | hdr_is_used);
+
+  // OSD is pre-converted to BT.2020 in userspace; skip the kernel's second
+  // 709->2020 gamut in the SDR_HDR path when outputting HDR.
+  const bool hdrOutput = dv_is_used | hdr_is_used;
+  CSysfsPath("/sys/module/aml_media/parameters/osd_gamut_bypass", hdrOutput ? "1" : "0");
 
   m_bConfigured = true;
 

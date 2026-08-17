@@ -30,6 +30,26 @@ CDVDOverlayCodecFFmpeg::CDVDOverlayCodecFFmpeg() : CDVDOverlayCodec("FFmpeg Subt
   memset(&m_Subtitle, 0, sizeof(m_Subtitle));
 }
 
+namespace
+{
+// UHD-BD HDR PGS is BT.2020/PQ; only HDMV PGS on HDR video carries PQ.
+bool PgsIsPqAuthored(const CDVDStreamInfo& hints)
+{
+  if (hints.codec != AV_CODEC_ID_HDMV_PGS_SUBTITLE)
+    return false;
+
+  switch (hints.hdrType)
+  {
+    case StreamHdrType::HDR_TYPE_HDR10:
+    case StreamHdrType::HDR_TYPE_HDR10PLUS:
+    case StreamHdrType::HDR_TYPE_DOLBYVISION:
+      return true;
+    default:
+      return false;
+  }
+}
+} // namespace
+
 CDVDOverlayCodecFFmpeg::~CDVDOverlayCodecFFmpeg()
 {
   avsubtitle_free(&m_Subtitle);
@@ -116,6 +136,9 @@ bool CDVDOverlayCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &optio
 
   if (pCodec->name != nullptr)
     SetName("ff-" + std::string(pCodec->name));
+
+  // FFmpeg PGS decoder hardcodes BT.709; compensate at texture time.
+  m_pgsIsPqAuthored = PgsIsPqAuthored(hints);
 
   return true;
 }
@@ -270,6 +293,7 @@ std::shared_ptr<CDVDOverlay> CDVDOverlayCodecFFmpeg::GetOverlay()
     overlay->iPTSStartTime = m_StartTime;
     overlay->iPTSStopTime = m_StopTime;
     overlay->replace = true;
+    overlay->m_isHdrPq = m_pgsIsPqAuthored;
     overlay->linesize = rect.w;
     overlay->pixels.resize(rect.w * rect.h);
     overlay->palette.resize(rect.nb_colors);

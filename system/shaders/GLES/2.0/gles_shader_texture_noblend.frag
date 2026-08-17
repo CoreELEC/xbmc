@@ -39,6 +39,8 @@ void main ()
 
 #if defined(KODI_TRANSFER_PQ)
   rgb.rgb *= m_sdrPeak;
+#elif defined(AML_TRANSFER_PQ)
+  rgb.rgb *= m_sdrPeak;
 #endif
 
   gl_FragColor = rgb;

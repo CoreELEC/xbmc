@@ -38,4 +38,7 @@ private:
 
   int             m_width;
   int             m_height;
+
+  // HDR-authored PGS (UHD-BD), decided at Open() from video hdrType.
+  bool m_pgsIsPqAuthored{false};
 };

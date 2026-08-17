@@ -459,6 +459,12 @@ void CRenderSystemGLES::InitialiseShaders()
   {
     defines += "#define KODI_TRANSFER_PQ 1\n";
   }
+  else if (CServiceBroker::GetWinSystem()->IsHdrComposite())
+  {
+    // Amlogic kernel OSD HDR core handles the sRGB -> PQ transfer, but
+    // the GUI is drawn in sRGB BT.709 and needs gamut remapping to BT.2020.
+    defines += "#define AML_TRANSFER_PQ 1\n";
+  }
 
   m_pShader[ShaderMethodGLES::SM_DEFAULT] =
       std::make_unique<CGLESShader>("gles_shader.vert", "gles_shader_default.frag", defines);
@@ -531,6 +537,25 @@ void CRenderSystemGLES::InitialiseShaders()
     m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND]->Free();
     m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND].reset();
     CLog::Log(LOGERROR, "GUI Shader gles_shader_texture_noblend.frag - compile and link failed");
+  }
+
+  // Pre-baked HDR PGS is sRGB BT.2020; skip the PQ/AML transfer path.
+  std::string definesNoPQ = defines;
+  auto stripDefine = [&](const std::string& def) {
+    const auto pos = definesNoPQ.find(def);
+    if (pos != std::string::npos)
+      definesNoPQ.erase(pos, def.size());
+  };
+  stripDefine("#define KODI_TRANSFER_PQ 1\n");
+  stripDefine("#define AML_TRANSFER_PQ 1\n");
+  m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND_NO_PQ] =
+      std::make_unique<CGLESShader>("gles_shader_texture_noblend.frag", definesNoPQ);
+  if (!m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND_NO_PQ]->CompileAndLink())
+  {
+    m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND_NO_PQ]->Free();
+    m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND_NO_PQ].reset();
+    CLog::Log(LOGERROR, "GUI Shader gles_shader_texture_noblend.frag (no PQ) - compile and "
+                        "link failed");
   }
 
   m_pShader[ShaderMethodGLES::SM_MULTI_BLENDCOLOR] =
@@ -654,6 +679,10 @@ void CRenderSystemGLES::ReleaseShaders()
   if (m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND])
     m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND]->Free();
   m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND].reset();
+
+  if (m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND_NO_PQ])
+    m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND_NO_PQ]->Free();
+  m_pShader[ShaderMethodGLES::SM_TEXTURE_NOBLEND_NO_PQ].reset();
 
   if (m_pShader[ShaderMethodGLES::SM_MULTI_BLENDCOLOR])
     m_pShader[ShaderMethodGLES::SM_MULTI_BLENDCOLOR]->Free();

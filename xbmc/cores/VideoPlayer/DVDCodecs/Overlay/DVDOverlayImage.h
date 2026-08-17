@@ -25,6 +25,8 @@ public:
   CDVDOverlayImage(const CDVDOverlayImage& src, int sub_x, int sub_y, int sub_w, int sub_h)
   : CDVDOverlay(src)
   {
+    m_isHdrPq = src.m_isHdrPq;
+
     int bpp;
     if (!src.palette.empty())
     {
@@ -75,6 +77,9 @@ public:
 
   std::vector<uint8_t> pixels;
   std::vector<uint32_t> palette;
+
+  // HDR-authored PGS (UHD-BD, BT.2020/PQ); palette RGB is PQ-encoded BT.2020.
+  bool m_isHdrPq{false};
 
   int linesize{0};
   int x{0};
