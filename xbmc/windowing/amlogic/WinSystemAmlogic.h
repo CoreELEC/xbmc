@@ -55,6 +55,8 @@ public:
   void MonitorStop();
 protected:
   std::string m_framebuffer_name;
+  bool IsHotplugPending() const { return m_hotplugPending.load(); }
+
   EGLDisplay m_nativeDisplay;
 
   RenderStereoMode m_stereo_mode;
