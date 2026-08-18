@@ -17,6 +17,8 @@
 #include "system_egl.h"
 #include "utils/EGLFence.h"
 #include "utils/EGLUtils.h"
+
+#include <atomic>
 #include <gbm.h>
 
 class IDispResource;
@@ -35,6 +37,7 @@ public:
                        RESOLUTION_INFO& res) override;
 
   bool DestroyWindow() override;
+  bool MessagePump() override;
   void UpdateResolutions() override;
   bool IsHDRDisplay() override;
   CHDRCapabilities GetDisplayHDRCapabilities() const override;
@@ -84,4 +87,5 @@ private:
 
   struct udev *m_udev;
   struct callback_data m_callback_data;
+  std::atomic<bool> m_hotplugPending{false};
 };
