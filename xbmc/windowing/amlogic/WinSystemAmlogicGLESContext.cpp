@@ -15,6 +15,7 @@
 #include "settings/SettingsComponent.h"
 #include "utils/AMLUtils.h"
 #include "utils/MathUtils.h"
+#include "utils/XTimeUtils.h"
 #include "utils/log.h"
 #include "threads/SingleLock.h"
 #include "windowing/GraphicContext.h"
@@ -22,6 +23,7 @@
 
 using namespace KODI;
 using namespace KODI::WINDOWING::AML;
+using namespace std::chrono_literals;
 
 CWinSystemAmlogicGLESContext::CWinSystemAmlogicGLESContext()
 : m_pGLContext(new CEGLContextUtils(EGL_PLATFORM_GBM_MESA, "EGL_EXT_platform_base"))
@@ -247,6 +249,12 @@ void CWinSystemAmlogicGLESContext::SetVSyncImpl(bool enable)
 
 void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
 {
+  if (!m_amlDisplay->aml_get_display_connected() || IsHotplugPending())
+  {
+    KODI::TIME::Sleep(10ms);
+    return;
+  }
+
   SetVSync(true);
   if (rendered)
   {
