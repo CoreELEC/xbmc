@@ -142,19 +142,37 @@ void CWinSystemAmlogic::MonitorStart()
   return;
 
 err_unref_udev:
-  udev_unref(m_udev);
-  m_udev = NULL;
+  MonitorStop();
 }
 
 void CWinSystemAmlogic::MonitorStop()
 {
-  if (m_udev && m_fdMonitorId != -1)
+  if (m_fdMonitorId != -1)
   {
     const auto eventMonitor = CServiceBroker::GetPlatform().GetService<CFDEventMonitor>();
     eventMonitor->RemoveFD(m_fdMonitorId);
-    udev_unref(m_udev);
     m_fdMonitorId = -1;
   }
+
+  if (m_callback_data.udevMonitor)
+  {
+    udev_monitor_unref(m_callback_data.udevMonitor);
+    m_callback_data.udevMonitor = NULL;
+  }
+
+  if (m_udev)
+  {
+    udev_unref(m_udev);
+    m_udev = NULL;
+  }
+}
+
+bool CWinSystemAmlogic::MessagePump()
+{
+  if (m_hotplugPending.exchange(false))
+    HotplugEvent();
+
+  return false;
 }
 
 void CWinSystemAmlogic::HotplugEvent()
@@ -167,7 +185,6 @@ void CWinSystemAmlogic::HotplugEvent()
     CLog::Log(LOGWARNING,
       "CWinSystemAmlogic - HotplugEvent ignored while HDMI DRM connector is not ready ({:d} modes)",
       mode_count);
-    MonitorStart();
     return;
   }
   std::string preferred_mode = m_amlDisplay->aml_get_preferred_mode();
@@ -202,21 +219,30 @@ void CWinSystemAmlogic::HotplugEvent()
 
 void CWinSystemAmlogic::FDEventCallback(int id, int fd, short revents, void *data)
 {
-  struct udev_monitor *udevMonitor = ((struct callback_data *)data)->udevMonitor;
-  CWinSystemAmlogic *_this = ((struct callback_data *)data)->object;
+  struct callback_data *callbackData = (struct callback_data *)data;
+  if (!callbackData || !callbackData->udevMonitor || !callbackData->object)
+    return;
+
+  struct udev_monitor *udevMonitor = callbackData->udevMonitor;
+  CWinSystemAmlogic *winSystem = callbackData->object;
   struct udev_device *device;
 
   while ((device = udev_monitor_receive_device(udevMonitor)) != NULL)
   {
     const char* action = udev_device_get_action(device);
+    const char* syspath = udev_device_get_syspath(device);
+    const char* devpath = udev_device_get_devpath(device);
+    const char* hotplug = udev_device_get_property_value(device, "HOTPLUG");
     CLog::Log(LOGDEBUG, "CWinSystemAmlogic - FDEventCallback (\"{}\", \"{}\"), action: {}",
-      udev_device_get_syspath(device), udev_device_get_devpath(device), action);
+      syspath ? syspath : "<null>", devpath ? devpath : "<null>", action ? action : "<null>");
 
-    if (StringUtils::EqualsNoCase(action, "change"))
-    {
-      _this->MonitorStop();
-      _this->HotplugEvent();
-    }
+    const bool isHotplug = action && hotplug && StringUtils::EqualsNoCase(action, "change") &&
+                           strcmp(hotplug, "1") == 0;
+
+    udev_device_unref(device);
+
+    if (isHotplug)
+      winSystem->m_hotplugPending.store(true);
   }
 }
 
@@ -328,9 +354,10 @@ bool CWinSystemAmlogic::InitWindowSystem()
     else if (mode_count == 1)
     {
       CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem Looks like no display is connected, wait for hotplug");
-      MonitorStart();
     }
   }
+
+  MonitorStart();
 
   // kill a running animation
   CLog::Log(LOGDEBUG,"CWinSystemAmlogic: Sending SIGUSR1 to 'splash-image'");
