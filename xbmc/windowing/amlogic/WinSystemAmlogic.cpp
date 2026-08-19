@@ -178,6 +178,7 @@ bool CWinSystemAmlogic::MessagePump()
 
 void CWinSystemAmlogic::HotplugEvent()
 {
+  SetPresentationReady(false);
   m_amlDisplay->aml_init_drmDevice();
   drmModeConnection connection;
   int mode_count = m_amlDisplay->aml_get_display_modes_count(&connection);
@@ -378,6 +379,7 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
 {
   bool ret;
 
+  SetPresentationReady(false);
   m_nWidth        = res.iWidth;
   m_nHeight       = res.iHeight;
   m_fRefreshRate  = res.fRefreshRate;
@@ -411,6 +413,7 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
 
 bool CWinSystemAmlogic::DestroyWindow()
 {
+  SetPresentationReady(false);
   m_bWindowCreated = false;
   return true;
 }

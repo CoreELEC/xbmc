@@ -56,6 +56,8 @@ public:
 protected:
   std::string m_framebuffer_name;
   bool IsHotplugPending() const { return m_hotplugPending.load(); }
+  bool IsPresentationReady() const { return m_presentationReady; }
+  void SetPresentationReady(bool ready) { m_presentationReady = ready; }
 
   EGLDisplay m_nativeDisplay;
 
@@ -71,6 +73,7 @@ protected:
   bool m_hdr_caps_initialized;
   bool m_force_mode_switch;
   bool m_hotplug_mode_switch{false};
+  bool m_presentationReady{false};
   bool m_nativeGUI;
   static std::unique_ptr<CAMLDisplay> m_amlDisplay;
   std::unique_ptr<CAMLGBMUtils> m_amlGBMUtils{nullptr};
