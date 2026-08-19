@@ -376,6 +376,8 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
                                     bool fullScreen,
                                     RESOLUTION_INFO& res)
 {
+  bool ret;
+
   m_nWidth        = res.iWidth;
   m_nHeight       = res.iHeight;
   m_fRefreshRate  = res.fRefreshRate;
@@ -395,13 +397,16 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
     }
   }
 
-  m_amlDisplay->set_native_resolution(res, m_framebuffer_name, m_stereo_mode, m_force_mode_switch);
-  // reset force mode switch
-  m_force_mode_switch = false;
+  if ((ret = m_amlDisplay->set_native_resolution(res, m_framebuffer_name, m_stereo_mode,
+                                           m_force_mode_switch, m_hotplug_mode_switch)))
+  {
+    m_hdr_caps_initialized = false;
+    m_bWindowCreated = true;
+  }
 
-  m_hdr_caps_initialized = false;
-  m_bWindowCreated = true;
-  return true;
+  m_force_mode_switch = false;
+  m_hotplug_mode_switch = false;
+  return ret;
 }
 
 bool CWinSystemAmlogic::DestroyWindow()
