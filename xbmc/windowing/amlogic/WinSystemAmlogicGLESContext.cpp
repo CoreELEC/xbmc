@@ -163,6 +163,7 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
   if (force_mode_switch_by_hotplug)
   {
     m_force_mode_switch = true;
+    m_hotplug_mode_switch = true;
   }
   else
   if (current_resolution.iWidth == res.iWidth && current_resolution.iHeight == res.iHeight &&
