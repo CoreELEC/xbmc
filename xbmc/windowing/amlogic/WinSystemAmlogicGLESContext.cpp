@@ -89,7 +89,11 @@ bool CWinSystemAmlogicGLESContext::InitWindowSystem()
 
 bool CWinSystemAmlogicGLESContext::DestroyWindowSystem()
 {
-  m_amlDisplay->aml_set_drmDevice_active(false);
+  if (IsPresentationReady())
+  {
+    SetPresentationReady(false);
+    m_amlDisplay->aml_set_drmDevice_active(false);
+  }
 
   m_pGLContext->DestroyContext();
   m_pGLContext->Destroy();
@@ -118,6 +122,7 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
   if (!m_amlDisplay->aml_get_native_resolution(&current_resolution))
   {
     CLog::Log(LOGERROR, "CWinSystemAmlogicGLESContext::{}: failed to receive current resolution", __FUNCTION__);
+    SetPresentationReady(false);
     return false;
   }
 
@@ -193,6 +198,7 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
   if (!m_amlGBMUtils->CreateSurface(res.iWidth, res.iHeight, format))
   {
     CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create GBM surface", __FUNCTION__);
+    DestroyWindow();
     return false;
   }
 
@@ -201,11 +207,13 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
           reinterpret_cast<EGLNativeWindowType>(m_amlGBMUtils->GetSurface())))
   {
     CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create CreatePlatformSurface", __FUNCTION__);
+    DestroyWindow();
     return false;
   }
 
   if (!m_pGLContext->BindContext())
   {
+    DestroyWindow();
     return false;
   }
 
@@ -216,6 +224,9 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
     for (std::vector<IDispResource *>::iterator i = m_resources.begin(); i != m_resources.end(); ++i)
       (*i)->OnResetDisplay();
   }
+
+  if (m_amlDisplay->aml_get_display_connected())
+    SetPresentationReady(true);
 
   return true;
 }
@@ -234,7 +245,9 @@ bool CWinSystemAmlogicGLESContext::ResizeWindow(int newWidth, int newHeight, int
 
 bool CWinSystemAmlogicGLESContext::SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool blankOtherDisplays)
 {
-  CreateNewWindow("", fullScreen, res);
+  if (!CreateNewWindow("", fullScreen, res))
+    return false;
+
   CRenderSystemGLES::ResetRenderSystem(res.iWidth, res.iHeight);
   return true;
 }
@@ -249,7 +262,7 @@ void CWinSystemAmlogicGLESContext::SetVSyncImpl(bool enable)
 
 void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
 {
-  if (!m_amlDisplay->aml_get_display_connected() || IsHotplugPending())
+  if (IsHotplugPending() || !IsPresentationReady())
   {
     KODI::TIME::Sleep(10ms);
     return;
