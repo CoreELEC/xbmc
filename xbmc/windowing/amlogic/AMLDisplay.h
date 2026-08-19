@@ -87,7 +87,8 @@ public:
   std::string aml_get_drmDevice_mode();
   std::string aml_get_drmDevice_modes();
   bool aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::string mode,
-    const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch);
+    const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch,
+    bool hotplug_mode_switch);
   int aml_get_drmProperty(std::string name, unsigned int obj_type);
   int aml_get_drmDevice_modes_count(drmModeConnection *connection);
   std::string aml_get_drmDevice_preferred_mode();
@@ -140,10 +141,10 @@ public:
   void aml_drmDevice_vsync() { m_amlDRMUtils->aml_drmDevice_vsync(); };
   bool aml_get_display_connected() const { return m_amlDRMUtils->aml_get_drmDevice_connected(); }
   bool set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
-    const RenderStereoMode stereo_mode, bool force_mode_switch);
+    const RenderStereoMode stereo_mode, bool force_mode_switch, bool hotplug_mode_switch);
   void handle_display_stereo_mode(const RenderStereoMode stereo_mode);
   bool set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
-    bool force_mode_switch);
+    bool force_mode_switch, bool hotplug_mode_switch);
   int aml_get_display_modes_count(drmModeConnection *connection) const
     { return m_amlDRMUtils->aml_get_drmDevice_modes_count(connection); }
   std::string aml_get_preferred_mode();

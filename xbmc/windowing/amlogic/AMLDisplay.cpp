@@ -514,7 +514,8 @@ std::string CAMLDRMUtils::aml_get_drmDevice_modes(void)
 
 // set mode of drmDevice
 bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::string mode,
-  const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch)
+  const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch,
+  bool hotplug_mode_switch)
 {
   bool ret = false;
 
@@ -525,22 +526,32 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
 
   if (force_mode_switch)
   {
-    // force connected
-    m_connection = DRM_MODE_CONNECTED;
-
-    if (!m_crtc)
-      m_crtc = drmModeGetCrtc(m_fd, m_resources->crtcs[0]);
-
     CLog::Log(LOGDEBUG, "CAMLDRMUtils::{}: try to set mode: {} (forced mode switch)", __FUNCTION__, mode.c_str());
   }
   else
     CLog::Log(LOGDEBUG, "CAMLDisplay::{}: try to set mode: {}", __FUNCTION__, mode.c_str());
 
-  if (!aml_get_drmDevice_connected())
+  const bool hotplug_recovery = hotplug_mode_switch && m_connector && m_connector->count_modes > 1;
+  if (!aml_get_drmDevice_connected() && !hotplug_recovery)
   {
     CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - connector of drmDevice is not connected", __FUNCTION__);
     ret = true;
     return ret;
+  }
+
+  if (!m_crtc && (force_mode_switch || hotplug_recovery))
+  {
+    if (m_resources && m_resources->count_crtcs > 0)
+      m_crtc = drmModeGetCrtc(m_fd, m_resources->crtcs[0]);
+
+    if (!m_crtc)
+    {
+      CLog::Log(LOGERROR, "CAMLDRMUtils::{} - failed to get CRTC for forced mode switch", __FUNCTION__);
+      if (force_mode_switch)
+        set_drmProp(m_connector->connector_id, "UPDATE", DRM_MODE_OBJECT_CONNECTOR, 1, NULL);
+      aml_set_framebuffer_resolution(res.iWidth, res.iHeight, framebuffer_name, true);
+      return false;
+    }
   }
 
   int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
@@ -718,8 +729,10 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rat
   bool ret = false;
   drmModeModeInfoPtr drmDevicemode = NULL;
   drmModeModeInfo syntheticMode = {};
+  const bool mode_switch_required =
+      force_mode_switch || !StringUtils::EqualsNoCase(aml_get_drmDevice_mode(), mode);
 
-  if (force_mode_switch || !StringUtils::EqualsNoCase(aml_get_drmDevice_mode(), mode))
+  if (mode_switch_required)
   {
     for (int i = 0; i < m_connector->count_modes; i++)
     {
@@ -744,6 +757,12 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rat
     drmDevicemode = &syntheticMode;
   }
 
+  if (!mode_switch_required)
+  {
+    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - mode {} is already set", __FUNCTION__, mode);
+    return true;
+  }
+
   if (drmDevicemode != NULL)
   {
     uint32_t mode_blobid = 0;
@@ -754,7 +773,12 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rat
       set_drmProp(m_connector->connector_id, "CRTC_ID", DRM_MODE_OBJECT_CONNECTOR, m_crtc->crtc_id, req);
       set_drmProp(m_connector->connector_id, "FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR, fractional_rate, req);
 
-      drmModeCreatePropertyBlob(m_fd, drmDevicemode, sizeof(*drmDevicemode), &mode_blobid);
+      if (drmModeCreatePropertyBlob(m_fd, drmDevicemode, sizeof(*drmDevicemode), &mode_blobid))
+      {
+        CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to create mode property blob", __FUNCTION__);
+        drmModeAtomicFree(req);
+        return false;
+      }
 
       set_drmProp(m_crtc->crtc_id, "MODE_ID", DRM_MODE_OBJECT_CRTC, mode_blobid, req);
       set_drmProp(m_crtc->crtc_id, "ACTIVE", DRM_MODE_OBJECT_CRTC, active ? 1 : 0, req);
@@ -768,9 +792,11 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rat
       drmModeAtomicFree(req);
       drmModeDestroyPropertyBlob(m_fd, mode_blobid);
     }
+    else
+      CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to allocate atomic request", __FUNCTION__);
   }
   else
-    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - mode {} is already set", __FUNCTION__, mode);
+    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to find mode {}", __FUNCTION__, mode);
 
   return ret;
 }
@@ -827,14 +853,14 @@ CAMLDisplay::CAMLDisplay()
 }
 
 bool CAMLDisplay::set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
-  const RenderStereoMode stereo_mode, bool force_mode_switch)
+  const RenderStereoMode stereo_mode, bool force_mode_switch, bool hotplug_mode_switch)
 {
   bool result = false;
 
   if (aml_get_cpufamily_id() < AML_T7)
   {
     handle_display_stereo_mode(stereo_mode);
-    result = set_display_resolution(res, framebuffer_name, force_mode_switch);
+    result = set_display_resolution(res, framebuffer_name, force_mode_switch, hotplug_mode_switch);
     if (stereo_mode != RenderStereoMode::OFF)
       CSysfsPath("/sys/class/amhdmitx/amhdmitx0/phy", 1);
   }
@@ -843,7 +869,7 @@ bool CAMLDisplay::set_native_resolution(const RESOLUTION_INFO &res, std::string 
     if (stereo_mode == RenderStereoMode::HARDWAREBASED ||
         stereo_mode == RenderStereoMode::OFF)
       handle_display_stereo_mode(stereo_mode);
-    result = set_display_resolution(res, framebuffer_name, force_mode_switch);
+    result = set_display_resolution(res, framebuffer_name, force_mode_switch, hotplug_mode_switch);
     if (stereo_mode != RenderStereoMode::HARDWAREBASED &&
         stereo_mode != RenderStereoMode::OFF)
       handle_display_stereo_mode(stereo_mode);
@@ -887,7 +913,7 @@ void CAMLDisplay::handle_display_stereo_mode(const RenderStereoMode stereo_mode)
 }
 
 bool CAMLDisplay::set_display_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
-  bool force_mode_switch)
+  bool force_mode_switch, bool hotplug_mode_switch)
 {
   std::string mode = res.strId.c_str();
   std::vector<std::string> _mode = StringUtils::Split(mode, ' ');
@@ -909,9 +935,8 @@ bool CAMLDisplay::set_display_resolution(const RESOLUTION_INFO &res, std::string
   else
     CLog::Log(LOGDEBUG, "CAMLDisplay::{}: try to set mode: {}", __FUNCTION__, mode.c_str());
 
-  m_amlDRMUtils->aml_set_drmDevice_mode(res, mode, m_stereo_mode, framebuffer_name, force_mode_switch);
-
-  return true;
+  return m_amlDRMUtils->aml_set_drmDevice_mode(
+      res, mode, m_stereo_mode, framebuffer_name, force_mode_switch, hotplug_mode_switch);
 }
 
 std::string CAMLDisplay::aml_get_preferred_mode()

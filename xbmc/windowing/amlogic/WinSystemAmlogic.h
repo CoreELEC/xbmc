@@ -71,6 +71,7 @@ protected:
   std::unique_ptr<CLibInputHandler> m_libinput;
   CHDRCapabilities m_hdr_caps;
   bool m_force_mode_switch;
+  bool m_hotplug_mode_switch{false};
   bool m_nativeGUI;
   static std::unique_ptr<CAMLDisplay> m_amlDisplay;
   std::unique_ptr<CAMLGBMUtils> m_amlGBMUtils{nullptr};
