@@ -256,7 +256,8 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
     return;
 
   if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
-          SETTING_VIDEOSCREEN_WHITELIST_PULLDOWN))
+          SETTING_VIDEOSCREEN_WHITELIST_PULLDOWN) ||
+      stereo_mode == RenderStereoMode::SPLIT_VERTICAL)
   {
     CLog::Log(LOGDEBUG,
               "[WHITELIST] Searching for an exact resolution with a 3:2 pulldown refresh rate");
@@ -402,7 +403,8 @@ void CResolutionUtils::FindResolutionFromWhitelist(float fps, int width, int hei
   }
 
   if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
-          SETTING_VIDEOSCREEN_WHITELIST_PULLDOWN))
+          SETTING_VIDEOSCREEN_WHITELIST_PULLDOWN) ||
+      stereo_mode == RenderStereoMode::SPLIT_VERTICAL)
   {
     CLog::Log(LOGDEBUG,
               "[WHITELIST] Searching for a desktop resolution with a 3:2 pulldown refresh rate");
