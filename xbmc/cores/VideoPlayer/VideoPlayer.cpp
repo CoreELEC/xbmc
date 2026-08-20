@@ -1077,6 +1077,14 @@ void CVideoPlayer::OpenDefaultStreams(bool reset)
   PredicateVideoFilter vf(m_processInfo->GetVideoSettings().m_VideoStream);
   for (const auto& stream : m_SelectionStreams.Get(StreamType::VIDEO, vf))
   {
+    // choose video base layer as default if dual layer stream
+    if (m_pDemuxer)
+    {
+      CDemuxStreamVideo* vstream = static_cast<CDemuxStreamVideo*>(m_pDemuxer->GetStream(stream.demuxerId, stream.id));
+      if (vstream->isDualStream && vstream->isELStream)
+        continue;
+    }
+
     if (OpenStream(m_CurrentVideo, stream.demuxerId, stream.id, stream.source, reset))
     {
       valid = true;
