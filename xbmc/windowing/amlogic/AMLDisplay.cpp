@@ -557,6 +557,16 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
   int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
   ret = aml_set_drmDevice_active(mode, fractional_rate, stereo_mode, force_mode_switch, true);
 
+  if (ret && hotplug_recovery)
+  {
+    drmModeConnectorPtr connector = drmModeGetConnector(m_fd, m_connector->connector_id);
+    if (connector)
+    {
+      m_connection = connector->encoder_id ? DRM_MODE_CONNECTED : DRM_MODE_DISCONNECTED;
+      drmModeFreeConnector(connector);
+    }
+  }
+
   if (!ret && force_mode_switch)
     set_drmProp(m_connector->connector_id, "UPDATE", DRM_MODE_OBJECT_CONNECTOR, 1, NULL);
 
