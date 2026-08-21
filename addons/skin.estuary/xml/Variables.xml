@@ -1035,4 +1035,8 @@
 		<value condition="String.IsEqual(VideoPlayer.HdrDetail,7FEL)">P7 [COLOR lightgreen]FEL[/COLOR]</value>
 		<value condition="!String.IsEmpty(VideoPlayer.HdrDetail)">P$INFO[VideoPlayer.HdrDetail]</value>
 	</variable>
+	<variable name="audiostats">
+		<value condition="!String.IsEqual(Player.Process(audiobitspersample),0)">$INFO[Player.Process(audiodecoder)]$INFO[Player.Process(audiobitspersample),$COMMA , bits]$INFO[Player.Process(audiosamplerate),$COMMA , Hz]$INFO[Player.Process(audiolivebitrate),$COMMA ,]</value>
+		<value condition="String.IsEqual(Player.Process(audiobitspersample),0)">$INFO[Player.Process(audiodecoder)]$INFO[Player.Process(audiosamplerate),$COMMA , Hz]$INFO[Player.Process(audiolivebitrate),$COMMA ,]</value>
+	</variable>
 </includes>

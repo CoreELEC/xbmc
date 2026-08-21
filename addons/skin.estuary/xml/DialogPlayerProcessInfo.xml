@@ -171,7 +171,7 @@
 					<width>900</width>
 					<height>40</height>
 					<aligny>bottom</aligny>
-					<label>[COLOR button_focus]$LOCALIZE[31606]:[/COLOR] $INFO[Player.Process(audiodecoder)]$INFO[Player.Process(audiobitspersample),$COMMA , bits]$INFO[Player.Process(audiosamplerate),$COMMA , Hz]$INFO[Player.Process(audiolivebitrate),$COMMA ,]</label>
+					<label>[COLOR button_focus]$LOCALIZE[31606]:[/COLOR] $VAR[audiostats]</label>
 					<font>font12</font>
 					<shadowcolor>black</shadowcolor>
 				</control>
