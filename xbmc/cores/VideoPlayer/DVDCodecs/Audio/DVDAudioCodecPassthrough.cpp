@@ -9,7 +9,6 @@
 #include "DVDAudioCodecPassthrough.h"
 
 #include "DVDCodecs/DVDCodecs.h"
-#include "DVDStreamInfo.h"
 #include "cores/AudioEngine/Utils/PackerMAT.h"
 #include "utils/log.h"
 
@@ -47,6 +46,7 @@ CDVDAudioCodecPassthrough::~CDVDAudioCodecPassthrough(void)
 
 bool CDVDAudioCodecPassthrough::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
 {
+  m_hints = hints;
   m_parser.SetCoreOnly(false);
   switch (m_format.m_streamInfo.m_type)
   {
@@ -248,7 +248,7 @@ void CDVDAudioCodecPassthrough::GetData(DVDAudioFrame &frame)
   frame.passthrough = true;
   frame.format = m_format;
   frame.planes = 1;
-  frame.bits_per_sample = 8;
+  frame.bits_per_sample = m_hints.bitspersample;
   frame.duration = DVD_MSEC_TO_TIME(frame.format.m_streamInfo.GetDuration());
   frame.pts = m_currentPts;
   m_currentPts = DVD_NOPTS_VALUE;
