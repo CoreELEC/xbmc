@@ -350,8 +350,8 @@ bool CWinSystemAmlogic::InitWindowSystem()
     if (mode_count > 1)
     {
       CLog::Log(LOGWARNING,
-        "CWinSystemAmlogic::InitWindowSystem HDMI modes are present but DRM connector is not ready, trigger hotplug");
-      HotplugEvent();
+        "CWinSystemAmlogic::InitWindowSystem HDMI modes are present but DRM connector is not ready, defer hotplug");
+      m_hotplugPending.store(true);
     }
     else if (mode_count == 1)
     {
