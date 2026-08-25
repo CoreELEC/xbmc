@@ -215,6 +215,7 @@ void CWinSystemAmlogic::HotplugEvent()
     CLog::Log(LOGDEBUG, "CWinSystemAmlogic - HotplugEvent, preferred mode: {}, display mode: {}",
       preferred_mode, CDisplaySettings::GetInstance().GetResolutionInfo(res).strId);
   }
+  else
     CLog::Log(LOGWARNING, "CWinSystemAmlogic - HotplugEvent, no preferred mode defined, use display mode: {}",
       CDisplaySettings::GetInstance().GetResolutionInfo(res).strId);
 
