@@ -86,15 +86,34 @@ void CWinSystemAmlogic::SettingOptionsComponentsFiller(const SettingConstPtr& se
                                                  std::vector<IntegerSettingOption>& list,
                                                  int& current)
 {
-  int dv_cap = m_amlDisplay->aml_get_drmProperty("dv_cap", DRM_MODE_OBJECT_CONNECTOR);
+  if (m_amlDisplay->aml_display_support_dv())
+  {
+    const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+    CHDRCapabilities dv_cap = m_amlDisplay->GetHDRCaps();
 
-  if ((dv_cap & DV_RGB_444_8BIT) != 0)
-    list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(14426),
-                      AML_DV_TV_LED);
+    if (dv_cap.SupportsDVTVLED())
+      list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(14426),
+                        AML_DV_TV_LED);
 
-  if ((dv_cap & LL_YCbCr_422_12BIT) != 0)
-    list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(14427),
-                      AML_DV_PLAYER_LED);
+    if (dv_cap.SupportsDVPlayerLED())
+      list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(14427),
+                        AML_DV_PLAYER_LED);
+
+    AML_DISPLAY_DV_LED old_value = static_cast<AML_DISPLAY_DV_LED>(
+      settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED));
+    AML_DISPLAY_DV_LED new_value = old_value;
+
+    if (old_value == AML_DV_TV_LED && !dv_cap.SupportsDVTVLED())
+      new_value = static_cast<AML_DISPLAY_DV_LED>(dv_cap.SupportsDVPlayerLED() ? AML_DV_PLAYER_LED : -1);
+
+    if (old_value == AML_DV_PLAYER_LED && !dv_cap.SupportsDVPlayerLED())
+      new_value = static_cast<AML_DISPLAY_DV_LED>(dv_cap.SupportsDVTVLED()? AML_DV_TV_LED : -1);
+
+    // a sink offering neither mode leaves the stored value alone, the framework
+    // would persist -1 with nothing selectable to correct it
+    if (new_value != -1)
+      current = new_value;
+  }
 }
 
 void CWinSystemAmlogic::MonitorStart()
@@ -257,76 +276,33 @@ bool CWinSystemAmlogic::InitWindowSystem()
 {
   const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
 
+  RefreshDisplayCapabilities();
+
   if (settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_NOISEREDUCTION))
   {
      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem -- disabling noise reduction");
      CSysfsPath("/sys/module/aml_media/parameters/nr2_en", 0);
   }
 
-  int sdr2hdr = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
-  if (sdr2hdr)
+  if (!IsHDRDisplay())
   {
-    CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem -- setting sdr2hdr mode to {:d}", sdr2hdr);
-    CSysfsPath("/sys/module/aml_media/parameters/sdr_mode", 1);
-    CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", 0);
-    CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 0);
-  }
-
-  int hdr2sdr = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
-  if (hdr2sdr)
-  {
-    CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem -- setting hdr2sdr mode to {:d}", hdr2sdr);
-    CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", 1);
+    CSysfsPath("/sys/module/aml_media/parameters/sdr_mode", 0);
+    CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", 0);
+    CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", 1);
+    CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 1);
   }
 
   if (!aml_support_dolby_vision())
   {
-    auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
-    if (setting)
-    {
-      setting->SetVisible(false);
-      settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE, false);
-      setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV);
-      setting->SetVisible(false);
-      settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV, false);
-      setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV);
-      setting->SetVisible(false);
-      settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV, false);
-    }
-
-    setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED);
-    if (setting)
-    {
-      setting->SetVisible(false);
-      settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED, AML_DV_TV_LED);
-    }
-
-    setting = settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5);
-    if (setting)
-    {
-      setting->SetVisible(false);
-      settings->SetBool(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5, true);
-    }
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE, false);
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV, false);
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV, false);
+    settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED, AML_DV_TV_LED);
+    settings->SetBool(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5, true);
   }
-  else
-  {
-    CServiceBroker::GetSettingsComponent()->GetSettings()->
-      GetSettingsManager()->RegisterSettingOptionsFiller("dv_led_modes", SettingOptionsComponentsFiller);
 
-    int dv_cap = m_amlDisplay->aml_get_drmProperty("dv_cap", DRM_MODE_OBJECT_CONNECTOR);
-    AML_DISPLAY_DV_LED old_value = static_cast<AML_DISPLAY_DV_LED>(
-      settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED));
-    AML_DISPLAY_DV_LED new_value = old_value;
-
-    if (old_value == AML_DV_TV_LED && !(dv_cap & DV_RGB_444_8BIT))
-      new_value = static_cast<AML_DISPLAY_DV_LED>((dv_cap & LL_YCbCr_422_12BIT) != 0 ? AML_DV_PLAYER_LED : -1);
-
-    if (old_value == AML_DV_PLAYER_LED && !(dv_cap & LL_YCbCr_422_12BIT))
-      new_value = static_cast<AML_DISPLAY_DV_LED>((dv_cap & DV_RGB_444_8BIT) != 0 ? AML_DV_TV_LED : -1);
-
-    if (new_value != old_value)
-      settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED, new_value);
-  }
+  CServiceBroker::GetSettingsComponent()->GetSettings()->
+    GetSettingsManager()->RegisterSettingOptionsFiller("dv_led_modes", SettingOptionsComponentsFiller);
 
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
 
@@ -363,8 +339,6 @@ bool CWinSystemAmlogic::InitWindowSystem()
       CLog::Log(LOGDEBUG, "CWinSystemAmlogic::InitWindowSystem Looks like no display is connected, wait for hotplug");
     }
   }
-
-  RefreshDisplayCapabilities();
 
   MonitorStart();
 
@@ -474,6 +448,76 @@ void CWinSystemAmlogic::UpdateResolutions()
 void CWinSystemAmlogic::RefreshDisplayCapabilities()
 {
   m_amlDisplay->aml_refresh_display_caps();
+
+  // disabledolbyvision, sdr2dv and hdr2dv are chained by enable dependencies,
+  // keep them device-keyed so a disabled row always has its cause on screen
+  const bool device_dv = aml_support_dolby_vision();
+  const bool sink_dv = device_dv && m_amlDisplay->aml_display_support_dv();
+
+  const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+
+  auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
+  if (setting)
+    setting->SetVisible(device_dv);
+
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV);
+  if (setting)
+    setting->SetVisible(device_dv);
+
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV);
+  if (setting)
+    setting->SetVisible(device_dv);
+
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED);
+  if (setting)
+    setting->SetVisible(sink_dv);
+
+  setting = settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5);
+  if (setting)
+    setting->SetVisible(sink_dv);
+
+  if (IsHDRDisplay())
+  {
+    CServiceBroker::GetSettingsComponent()
+        ->GetSettings()
+        ->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR)
+        ->SetVisible(true);
+
+    int sdr2hdr = CServiceBroker::GetSettingsComponent()
+        ->GetSettings()
+        ->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
+    if (sdr2hdr)
+    {
+      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::{} -- setting sdr2hdr mode to {:d}", __FUNCTION__, sdr2hdr);
+      CSysfsPath("/sys/module/aml_media/parameters/sdr_mode", sdr2hdr);
+      CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", 0);
+      CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 0);
+    }
+
+    CServiceBroker::GetSettingsComponent()
+        ->GetSettings()
+        ->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR)
+        ->SetVisible(true);
+
+    int hdr2sdr = CServiceBroker::GetSettingsComponent()
+        ->GetSettings()
+        ->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
+    if (hdr2sdr)
+    {
+      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::{} -- setting hdr2sdr mode to {:d}", __FUNCTION__, hdr2sdr);
+      CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", hdr2sdr);
+    }
+  }
+  else
+  {
+    setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
+    if (setting)
+      setting->SetVisible(false);
+
+    setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
+    if (setting)
+      setting->SetVisible(false);
+  }
 }
 
 bool CWinSystemAmlogic::IsHDRDisplay()
