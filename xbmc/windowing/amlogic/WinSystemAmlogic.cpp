@@ -109,8 +109,6 @@ void CWinSystemAmlogic::SettingOptionsComponentsFiller(const SettingConstPtr& se
     if (old_value == AML_DV_PLAYER_LED && !dv_cap.SupportsDVPlayerLED())
       new_value = static_cast<AML_DISPLAY_DV_LED>(dv_cap.SupportsDVTVLED()? AML_DV_TV_LED : -1);
 
-    // a sink offering neither mode leaves the stored value alone, the framework
-    // would persist -1 with nothing selectable to correct it
     if (new_value != -1)
       current = new_value;
   }
