@@ -348,7 +348,7 @@ bool CWinSystemAmlogicGLESContext::SupportsStereo(const RenderStereoMode mode) c
 {
   const std::string videoStereoMode{CServiceBroker::GetDataCacheCore().GetVideoStereoMode()};
 
-  if (aml_display_support_3d() &&
+  if (m_amlDisplay->aml_display_support_3d() &&
       mode == RenderStereoMode::HARDWAREBASED &&
       (videoStereoMode.empty() || videoStereoMode == "mono" || videoStereoMode == "block_lr" ||
        videoStereoMode == "block_rl")) {
