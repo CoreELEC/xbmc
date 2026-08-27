@@ -239,19 +239,17 @@ bool aml_support_dolby_vision()
 
 bool aml_dolby_vision_enabled()
 {
-  static int dv_enabled = -1;
   bool dv_user_enabled(!CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
 
-  if (dv_enabled == -1)
-    dv_enabled = (!!aml_support_dolby_vision() &&
-                  static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_dv());
+  bool dv_enabled = (!!aml_support_dolby_vision() &&
+                     static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())
+                         ->GetAmlDisplay()->aml_display_support_dv());
 
   return ((dv_enabled && !!dv_user_enabled) == 1);
 }
 
 bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)
 {
-  static int convert_to_dv = -1;
   const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
   bool dv_user_enabled(!settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
   bool user_convert_to_dv;
@@ -261,9 +259,9 @@ bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)
   else
     user_convert_to_dv = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV);
 
-  if (convert_to_dv == -1)
-    convert_to_dv = (!!aml_support_dolby_vision() &&
-                     static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_dv());
+  bool convert_to_dv = (!!aml_support_dolby_vision() &&
+                        static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())
+                            ->GetAmlDisplay()->aml_display_support_dv());
 
   return ((convert_to_dv && !!user_convert_to_dv && !!dv_user_enabled) == 1);
 }
