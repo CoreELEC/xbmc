@@ -22,6 +22,12 @@ enum AML_DISPLAY_DV_LED
   AML_DV_PLAYER_LED
 };
 
+#define HDR10_PLUS_CAP      (int)(1<<0)
+#define HDR10_CAP           (int)(1<<2)
+#define SMPTE_ST_2084_CAP   (int)(1<<3)
+#define HLG_CAP             (int)(1<<4)
+
+#define DV_2160p60Hz        (int)(1<<2)
 #define DV_RGB_444_8BIT     (int)(1<<3)
 #define LL_YCbCr_422_12BIT  (int)(1<<5)
 
