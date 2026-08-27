@@ -25,6 +25,7 @@
 #include "utils/StreamDetails.h"
 #include "utils/StringUtils.h"
 #include "utils/TimeUtils.h"
+#include "windowing/amlogic/WinSystemAmlogic.h"
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
 
@@ -2159,12 +2160,13 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
 
   // enable Dolby Vision driver when 'dovi.ko' is available
   bool device_support_dv(aml_support_dolby_vision());
+  bool display_support_dv(static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_dv());
   bool user_dv_disable(CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
   bool dv_enable(device_support_dv && !user_dv_disable &&
-    hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && (aml_display_support_dv() || hints.dovi.dv_profile == 5));
+    hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && (display_support_dv || hints.dovi.dv_profile == 5));
   CLog::Log(LOGINFO, "CAMLCodec::OpenDecoder Amlogic device {} support DV, DV is {} by user, display {} support DV, DV system is {}",
     device_support_dv ? "does" : "does not", user_dv_disable ? "disabled" : "enabled",
-    aml_display_support_dv() ? "does" : "does not", dv_enable ? "enabled" : "disabled");
+    display_support_dv ? "does" : "does not", dv_enable ? "enabled" : "disabled");
   if (dv_enable)
   {
     // enable Dolby Vision
@@ -3095,7 +3097,7 @@ void CAMLCodec::SetVideoRect(const CRect &SrcRect, const CRect &DestRect)
     dst_rect.y2 = info.iHeight * 2 + info.iBlanking;
   }
 
-  if (aml_display_support_3d())
+  if (static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_3d())
   {
     int mvc_view_mode = 3;
     switch (am_private->video_format)

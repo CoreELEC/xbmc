@@ -19,6 +19,7 @@
 #include "settings/SettingsComponent.h"
 #include "utils/AMLUtils.h"
 #include "utils/log.h"
+#include "utils/RegExp.h"
 #include "windowing/GraphicContext.h"
 
 void FbDestroyCallback(gbm_bo* bo, void* data)
@@ -877,6 +878,75 @@ CAMLDisplay::CAMLDisplay()
 {
 }
 
+void CAMLDisplay::aml_refresh_display_caps()
+{
+  // built locally so a stream opening during the update cannot see empty caps
+  // refresh HDR capabilities
+  CHDRCapabilities caps;
+  int hdr_cap = m_amlDRMUtils->aml_get_drmProperty("hdr_cap", DRM_MODE_OBJECT_CONNECTOR);
+  int dv_cap = m_amlDRMUtils->aml_get_drmProperty("dv_cap", DRM_MODE_OBJECT_CONNECTOR);
+
+  hdr_cap = hdr_cap < 0 ? 0 : hdr_cap;
+  dv_cap = dv_cap < 0 ? 0 : dv_cap;
+
+  if (hdr_cap & (HDR10_CAP | SMPTE_ST_2084_CAP))
+    caps.SetHDR10();
+
+  if (hdr_cap & HDR10_PLUS_CAP)
+    caps.SetHDR10Plus();
+
+  if (hdr_cap & HLG_CAP)
+    caps.SetHLG();
+
+  // refresh DV capability
+  if (dv_cap)
+    caps.SetDolbyVision();
+
+  if (dv_cap & DV_2160p60Hz)
+    caps.SetDolbyVision4k60();
+
+  if (dv_cap & DV_RGB_444_8BIT)
+    caps.SetDolbyVisionTVLED();
+
+  if (dv_cap & LL_YCbCr_422_12BIT)
+    caps.SetDolbyVisionPlayerLED();
+
+  m_hdr_caps = caps;
+
+  // refresh display widescreen
+  bool is_widescreen = true;
+  CSysfsPath edid{"/sys/class/amhdmitx/amhdmitx0/edid"};
+
+  if (edid.Exists())
+  {
+    std::string valstr = edid.Get<std::string>().value();
+    size_t pos = valstr.find("Physical size(mm):");
+    if (pos != std::string::npos)
+    {
+      int width_mm = 0, height_mm = 0;
+      sscanf(valstr.c_str() + pos, "Physical size(mm): %d x %d", &width_mm, &height_mm);
+      if (width_mm > 0 && height_mm > 0)
+      {
+          float ratio = static_cast<float>(width_mm) / height_mm;
+          // 16:9 range (with some tolerance)
+          is_widescreen = (ratio > 1.65f) ? 1 : 0;
+          CLog::Log(LOGDEBUG, "AMLUtils: display {} wide screen ({}x{}mm)",
+            is_widescreen ? "is" : "is not", width_mm, height_mm);
+      }
+    }
+  }
+
+  m_is_widescreen = is_widescreen;
+
+  // refresh 3D capability
+  bool support_3d = false;
+  CSysfsPath amhdmitx0_support_3d{"/sys/class/amhdmitx/amhdmitx0/support_3d"};
+  if (amhdmitx0_support_3d.Exists())
+    support_3d = amhdmitx0_support_3d.Get<int>().value();
+
+  m_support_3d = support_3d;
+}
+
 bool CAMLDisplay::set_native_resolution(const RESOLUTION_INFO &res, std::string framebuffer_name,
   const RenderStereoMode stereo_mode, bool force_mode_switch, bool hotplug_mode_switch)
 {
@@ -1094,7 +1164,7 @@ bool CAMLDisplay::aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
 
   // Fix pixel ratio when 4:3 resolution is used on wide screen
   const float res_ratio = static_cast<float>(res->iScreenWidth) / res->iScreenHeight;
-  if (res_ratio < 1.65f && aml_display_is_widescreen())
+  if (res_ratio < 1.65f && m_is_widescreen)
     res->fPixelRatio = (16.0f / 9.0f) / res_ratio;
 
   res->strId         = fromMode;

@@ -183,7 +183,7 @@ void CWinSystemAmlogic::HotplugEvent()
   drmModeConnection connection;
   int mode_count = m_amlDisplay->aml_get_display_modes_count(&connection);
 
-  UpdateHDRCapabilities();
+  RefreshDisplayCapabilities();
 
   if (connection == DRM_MODE_DISCONNECTED && mode_count == 1)
   {
@@ -279,7 +279,7 @@ bool CWinSystemAmlogic::InitWindowSystem()
     CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", 1);
   }
 
-  if (!aml_support_dolby_vision() || !aml_display_support_dv())
+  if (!aml_support_dolby_vision())
   {
     auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
     if (setting)
@@ -364,7 +364,7 @@ bool CWinSystemAmlogic::InitWindowSystem()
     }
   }
 
-  UpdateHDRCapabilities();
+  RefreshDisplayCapabilities();
 
   MonitorStart();
 
@@ -471,40 +471,21 @@ void CWinSystemAmlogic::UpdateResolutions()
   RefreshResolutions();
 }
 
-void CWinSystemAmlogic::UpdateHDRCapabilities()
+void CWinSystemAmlogic::RefreshDisplayCapabilities()
 {
-  // built locally so a stream opening during the update cannot see empty caps
-  CHDRCapabilities caps;
-  int hdr_cap = m_amlDisplay->aml_get_drmProperty("hdr_cap", DRM_MODE_OBJECT_CONNECTOR);
-  int dv_cap = m_amlDisplay->aml_get_drmProperty("dv_cap", DRM_MODE_OBJECT_CONNECTOR);
-
-  if (hdr_cap & (HDR10_CAP | SMPTE_ST_2084_CAP))
-    caps.SetHDR10();
-
-  if (hdr_cap & HDR10_PLUS_CAP)
-    caps.SetHDR10Plus();
-
-  if (hdr_cap & HLG_CAP)
-    caps.SetHLG();
-
-  if (dv_cap)
-    caps.SetDolbyVision();
-
-  if (dv_cap & DV_2160p60Hz)
-    caps.SetDolbyVision4k60();
-
-  m_hdr_caps = caps;
+  m_amlDisplay->aml_refresh_display_caps();
 }
 
 bool CWinSystemAmlogic::IsHDRDisplay()
 {
-  return (m_hdr_caps.SupportsHDR10() | m_hdr_caps.SupportsHDR10Plus() | m_hdr_caps.SupportsHLG() |
-         (m_hdr_caps.SupportsDolbyVision() != DolbyVisionFormat::DOLBYVISION_TYPE_NONE));
+  CHDRCapabilities caps = m_amlDisplay->GetHDRCaps();
+  return (caps.SupportsHDR10() | caps.SupportsHDR10Plus() | caps.SupportsHLG() |
+         (caps.SupportsDolbyVision() != DolbyVisionFormat::DOLBYVISION_TYPE_NONE));
 }
 
 CHDRCapabilities CWinSystemAmlogic::GetDisplayHDRCapabilities() const
 {
-  return m_hdr_caps;
+  return m_amlDisplay->GetHDRCaps();
 }
 
 float CWinSystemAmlogic::GetGuiSdrPeakLuminance() const

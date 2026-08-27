@@ -39,6 +39,7 @@
 #include "utils/URIUtils.h"
 #include "utils/XTimeUtils.h"
 #include "utils/log.h"
+#include "windowing/amlogic/WinSystemAmlogic.h"
 
 #include <algorithm>
 #include <map>
@@ -2017,7 +2018,8 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         if (av_dict_get(pStream->metadata, "title", NULL, 0))
           st->m_description = av_dict_get(pStream->metadata, "title", NULL, 0)->value;
 
-        if (pStream->codecpar->codec_id == AV_CODEC_ID_H264 && aml_display_support_3d())
+        if (pStream->codecpar->codec_id == AV_CODEC_ID_H264 &&
+            static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_3d())
         {
           if (CDVDCodecUtils::IsH264AnnexB(m_pFormatContext->iformat->name, pStream))
           {

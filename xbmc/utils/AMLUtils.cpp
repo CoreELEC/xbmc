@@ -20,6 +20,8 @@
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "platform/linux/SysfsPath.h"
+#include "windowing/amlogic/WinSystemAmlogic.h"
+#include "windowing/WinSystem.h"
 
 #include <amcodec/codec.h>
 
@@ -89,71 +91,6 @@ std::string aml_get_cpufamily_name(int cpuid)
       }
   }
   return "Unknown";
-}
-
-bool aml_display_is_widescreen()
-{
-  bool is_widescreen = true;
-  CSysfsPath edid{"/sys/class/amhdmitx/amhdmitx0/edid"};
-
-  if (edid.Exists())
-  {
-    std::string valstr = edid.Get<std::string>().value();
-    size_t pos = valstr.find("Physical size(mm):");
-    if (pos != std::string::npos)
-    {
-      int width_mm = 0, height_mm = 0;
-      sscanf(valstr.c_str() + pos, "Physical size(mm): %d x %d", &width_mm, &height_mm);
-      if (width_mm > 0 && height_mm > 0)
-      {
-          float ratio = static_cast<float>(width_mm) / height_mm;
-          // 16:9 range (with some tolerance)
-          is_widescreen = (ratio > 1.65f) ? 1 : 0;
-          CLog::Log(LOGDEBUG, "AMLUtils: display {} wide screen ({}x{}mm)",
-            is_widescreen ? "is" : "is not", width_mm, height_mm);
-      }
-    }
-  }
-
-  return is_widescreen;
-}
-
-bool aml_display_support_dv()
-{
-  static int support_dv = -1;
-
-  if (support_dv == -1)
-  {
-    CRegExp regexp;
-    regexp.RegComp("The Rx don't support DolbyVision");
-    std::string valstr;
-    CSysfsPath dv_cap{"/sys/devices/virtual/amhdmitx/amhdmitx0/dv_cap"};
-    if (dv_cap.Exists())
-    {
-      valstr = dv_cap.Get<std::string>().value();
-      support_dv = (regexp.RegFind(valstr) >= 0) ? 0 : 1;
-    }
-  }
-
-  return support_dv;
-}
-
-bool aml_display_support_3d()
-{
-  static int support_3d = -1;
-
-  if (support_3d == -1)
-  {
-    CSysfsPath amhdmitx0_support_3d{"/sys/class/amhdmitx/amhdmitx0/support_3d"};
-    if (amhdmitx0_support_3d.Exists())
-      support_3d = amhdmitx0_support_3d.Get<int>().value();
-    else
-      support_3d = 0;
-
-    CLog::Log(LOGDEBUG, "AMLUtils: display support 3D: {}", bool(!!support_3d));
-  }
-
-  return (support_3d == 1);
 }
 
 static bool aml_support_vcodec_profile(const char *regex)
@@ -306,7 +243,8 @@ bool aml_dolby_vision_enabled()
   bool dv_user_enabled(!CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
 
   if (dv_enabled == -1)
-    dv_enabled = (!!aml_support_dolby_vision() && !!aml_display_support_dv());
+    dv_enabled = (!!aml_support_dolby_vision() &&
+                  static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_dv());
 
   return ((dv_enabled && !!dv_user_enabled) == 1);
 }
@@ -324,7 +262,8 @@ bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)
     user_convert_to_dv = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV);
 
   if (convert_to_dv == -1)
-    convert_to_dv = (!!aml_support_dolby_vision() && !!aml_display_support_dv());
+    convert_to_dv = (!!aml_support_dolby_vision() &&
+                     static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_dv());
 
   return ((convert_to_dv && !!user_convert_to_dv && !!dv_user_enabled) == 1);
 }
