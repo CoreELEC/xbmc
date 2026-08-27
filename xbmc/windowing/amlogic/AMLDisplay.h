@@ -15,6 +15,7 @@
 
 #include "rendering/RenderSystemTypes.h"
 #include "threads/CriticalSection.h"
+#include "utils/HDRCapabilities.h"
 #include "windowing/Resolution.h"
 
 struct drm_fb
@@ -140,6 +141,7 @@ class CAMLDisplay
 public:
   CAMLDisplay();
 
+  void aml_refresh_display_caps();
   int aml_get_Device_handle() const { return m_amlDRMUtils->aml_get_drmDevice_handle(); }
   void aml_init_drmDevice() { m_amlDRMUtils->aml_init_drmDevice(); }
   void aml_drmDevice_vsync() { m_amlDRMUtils->aml_drmDevice_vsync(); };
@@ -166,9 +168,17 @@ public:
   int TakeOutFenceFd() const { return m_amlDRMUtils->TakeOutFenceFd(); }
   bool GetHotPlug() { bool ret = m_bHotPlug; m_bHotPlug = false; return ret; }
   void SetHotPlug() { m_bHotPlug = true; }
+
+  CHDRCapabilities GetHDRCaps() const { return m_hdr_caps; }
+  bool aml_display_support_dv() const
+    { return m_hdr_caps.SupportsDolbyVision() != DolbyVisionFormat::DOLBYVISION_TYPE_NONE; }
+  bool aml_display_support_3d() const { return m_support_3d; }
 private:
   std::unique_ptr<CAMLDRMUtils> m_amlDRMUtils;
   bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res);
   bool m_bHotPlug = false;
   RenderStereoMode m_stereo_mode;
+  CHDRCapabilities m_hdr_caps;
+  bool m_is_widescreen = false;
+  bool m_support_3d = false;
 };
