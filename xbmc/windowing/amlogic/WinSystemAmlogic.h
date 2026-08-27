@@ -53,6 +53,8 @@ public:
 
   void MonitorStart();
   void MonitorStop();
+
+  CAMLDisplay* GetAmlDisplay() const { return m_amlDisplay.get(); }
 protected:
   std::string m_framebuffer_name;
   bool IsHotplugPending() const { return m_hotplugPending.load(); }
@@ -69,7 +71,6 @@ protected:
   CCriticalSection m_resourceSection;
   std::vector<IDispResource*> m_resources;
   std::unique_ptr<CLibInputHandler> m_libinput;
-  CHDRCapabilities m_hdr_caps;
   bool m_force_mode_switch;
   bool m_hotplug_mode_switch{false};
   bool m_presentationReady{false};
@@ -86,7 +87,7 @@ private:
 
   void RefreshResolutions();
   void HotplugEvent();
-  void UpdateHDRCapabilities();
+  void RefreshDisplayCapabilities();
   static void FDEventCallback(int id, int fd, short revents, void *data);
 
   int m_fdMonitorId;

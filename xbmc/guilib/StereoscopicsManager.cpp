@@ -38,6 +38,7 @@
 #include "utils/StringUtils.h"
 #include "utils/Variant.h"
 #include "utils/log.h"
+#include "windowing/amlogic/WinSystemAmlogic.h"
 #include "windowing/WinSystem.h"
 
 #include <stdlib.h>
@@ -565,7 +566,7 @@ void CStereoscopicsManager::OnStreamChange()
 
   // early return if playback mode should be ignored and we're in no stereoscopic mode right now
   if ((playbackMode == STEREOSCOPIC_PLAYBACK_MODE_IGNORE && mode == RenderStereoMode::OFF) ||
-      !aml_display_support_3d())
+      !static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_3d())
     return;
 
   if (!CStereoscopicsManager::IsVideoStereoscopic())
