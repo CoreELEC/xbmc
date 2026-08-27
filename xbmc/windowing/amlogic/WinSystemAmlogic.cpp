@@ -475,32 +475,23 @@ void CWinSystemAmlogic::UpdateHDRCapabilities()
 {
   // built locally so a stream opening during the update cannot see empty caps
   CHDRCapabilities caps;
-  CSysfsPath hdr_cap{"/sys/class/amhdmitx/amhdmitx0/hdr_cap"};
-  CSysfsPath dv_cap{"/sys/class/amhdmitx/amhdmitx0/dv_cap"};
-  std::string valstr;
+  int hdr_cap = m_amlDisplay->aml_get_drmProperty("hdr_cap", DRM_MODE_OBJECT_CONNECTOR);
+  int dv_cap = m_amlDisplay->aml_get_drmProperty("dv_cap", DRM_MODE_OBJECT_CONNECTOR);
 
-  if (hdr_cap.Exists())
-  {
-    valstr = hdr_cap.Get<std::string>().value();
-    if (valstr.find("Traditional HDR: 1") != std::string::npos ||
-        valstr.find("SMPTE ST 2084: 1") != std::string::npos)
-      caps.SetHDR10();
+  if (hdr_cap & (HDR10_CAP | SMPTE_ST_2084_CAP))
+    caps.SetHDR10();
 
-    if (valstr.find("HDR10Plus Supported: 1") != std::string::npos)
-      caps.SetHDR10Plus();
+  if (hdr_cap & HDR10_PLUS_CAP)
+    caps.SetHDR10Plus();
 
-    if (valstr.find("Hybrid Log-Gamma: 1") != std::string::npos)
-      caps.SetHLG();
-  }
+  if (hdr_cap & HLG_CAP)
+    caps.SetHLG();
 
-  if (dv_cap.Exists())
-  {
-    valstr = dv_cap.Get<std::string>().value();
-    if (valstr.find("2160p30hz: 1") != std::string::npos)
-      caps.SetDolbyVision();
-    else if (valstr.find("2160p60hz: 1") != std::string::npos)
-      caps.SetDolbyVision4k60();
-  }
+  if (dv_cap)
+    caps.SetDolbyVision();
+
+  if (dv_cap & DV_2160p60Hz)
+    caps.SetDolbyVision4k60();
 
   m_hdr_caps = caps;
 }
