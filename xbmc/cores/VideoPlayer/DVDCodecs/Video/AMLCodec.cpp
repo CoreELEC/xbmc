@@ -2482,6 +2482,15 @@ void CAMLCodec::CloseDecoder()
   // disable Dolby Vision driver
   if (dv_enabled)
   {
+    // the transition needs a few display frames before the core powers down
+    CSysfsPath dolby_vision_status{"/sys/module/aml_media/parameters/dolby_vision_status"};
+    if (dolby_vision_status.Exists())
+    {
+      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
+      while (dolby_vision_status.Get<int>().value() != 0 && (std::chrono::system_clock::now() - now) < std::chrono::seconds(m_decoder_timeout))
+        usleep(10000); // wait 10ms
+    }
+
     CSysfsPath dv_video_on{"/sys/class/amdolby_vision/dv_video_on"};
     if (dv_video_on.Exists())
     {
