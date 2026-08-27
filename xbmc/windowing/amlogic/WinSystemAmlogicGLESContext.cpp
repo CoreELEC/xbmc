@@ -345,7 +345,7 @@ std::unique_ptr<CVideoSync> CWinSystemAmlogicGLESContext::GetVideoSync(CVideoRef
 
 bool CWinSystemAmlogicGLESContext::SupportsStereo(const RenderStereoMode mode) const
 {
-  if (aml_display_support_3d() &&
+  if (m_amlDisplay->aml_display_support_3d() &&
       mode == RenderStereoMode::HARDWAREBASED) {
     // yes, we support hardware based MVC decoding
     return true;
