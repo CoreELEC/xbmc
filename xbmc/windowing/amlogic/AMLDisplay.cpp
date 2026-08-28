@@ -722,6 +722,67 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name, unsigned int obj_type)
   return ret;
 }
 
+// set a property
+void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, unsigned int value)
+{
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
+  unsigned int id = 0;
+
+  if (!aml_get_drmDevice_connected())
+  {
+    CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - connector of drmDevice is not connected", __FUNCTION__);
+
+    switch (obj_type) {
+      case DRM_MODE_OBJECT_CONNECTOR:
+        if (m_connector)
+          id = m_connector->connector_id;
+        set_drmProp(id, name, obj_type, value, NULL);
+        [[fallthrough]];
+      default:
+        return;
+    }
+  }
+
+  switch (obj_type) {
+    case DRM_MODE_OBJECT_CRTC:
+      if (m_crtc)
+        id = m_crtc->crtc_id;
+      break;
+    case DRM_MODE_OBJECT_CONNECTOR:
+      if (m_connector)
+        id = m_connector->connector_id;
+      break;
+    case DRM_MODE_OBJECT_ENCODER:
+      if (m_encoder)
+        id = m_encoder->encoder_id;
+      break;
+    default:
+      return;
+  }
+
+  set_drmProp(id, name, obj_type, value, NULL);
+}
+
+void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, std::string value)
+{
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
+  uint32_t mode_blobid = 0;
+
+  if (!aml_get_drmDevice_connected())
+  {
+    CLog::Log(LOGWARNING, "CAMLDRMUtils::{} - connector of drmDevice is not connected", __FUNCTION__);
+    return;
+  }
+
+  if (drmModeCreatePropertyBlob(m_fd, value.c_str(), value.size(), &mode_blobid))
+  {
+    CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - failed to create mode property blob", __FUNCTION__);
+    return;
+  }
+
+  aml_set_drmProperty(name, obj_type, mode_blobid);
+}
+
 // get modes count and status if current device is connected
 int CAMLDRMUtils::aml_get_drmDevice_modes_count(drmModeConnection *connection)
 {
