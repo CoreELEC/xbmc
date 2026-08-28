@@ -2176,7 +2176,9 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
     CSysfsPath dolby_vision_ll_policy{"/sys/module/aml_media/parameters/dolby_vision_ll_policy"};
     if (dolby_vision_ll_policy.Exists())
     {
-      if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED)
+      if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+              CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED ||
+          !display_support_dv)
         dolby_vision_ll_policy.Set(DOLBY_VISION_LL_YUV422);
       else
         dolby_vision_ll_policy.Set(DOLBY_VISION_LL_DISABLE);
