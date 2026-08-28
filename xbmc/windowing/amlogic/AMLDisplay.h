@@ -92,6 +92,8 @@ public:
     const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch,
     bool hotplug_mode_switch);
   int aml_get_drmProperty(std::string name, unsigned int obj_type);
+  void aml_set_drmProperty(std::string name, unsigned int obj_type, unsigned int value);
+  void aml_set_drmProperty(std::string name, unsigned int obj_type, std::string value);
   int aml_get_drmDevice_modes_count(drmModeConnection *connection);
   std::string aml_get_drmDevice_preferred_mode();
   bool aml_set_drmDevice_active(std::string mode, int fractional_rate,
@@ -156,6 +158,10 @@ public:
   bool aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolutions);
   int aml_get_drmProperty(std::string name, unsigned int obj_type) const
     { return m_amlDRMUtils->aml_get_drmProperty(name, obj_type); }
+  void aml_set_drmProperty(std::string name, unsigned int obj_type, unsigned int value)
+    { m_amlDRMUtils->aml_set_drmProperty(name, obj_type, value); }
+  void aml_set_drmProperty(std::string name, unsigned int obj_type, std::string value)
+    { m_amlDRMUtils->aml_set_drmProperty(name, obj_type, value); }
   void FlipPage(uint32_t fb_id) { m_amlDRMUtils->FlipPage(fb_id); }
   bool aml_set_drmDevice_active(bool active) const
     { return m_amlDRMUtils->aml_set_drmDevice_active(
