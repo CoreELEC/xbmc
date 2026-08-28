@@ -191,10 +191,15 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
         m_pFormatName = "am-h264mvc";
       else
         m_pFormatName = "am-h264";
+
       // convert h264-avcC to h264-annex-b as h264-avcC
       // under streamers can have issues when seeking.
       if (m_hints.extradata && m_hints.extradata.GetData()[0] == 1)
       {
+        // length-prefix size from the original avcC
+        if (m_hints.extradata.GetSize() > 4)
+          m_nalLengthSize = (m_hints.extradata.GetData()[4] & 0x3) + 1;
+
         m_bitstream = new CBitstreamConverter;
         m_bitstream->Open(m_hints.codec, m_hints.extradata.GetData(), m_hints.extradata.GetSize(), true);
         m_bitstream->ResetStartDecode();
