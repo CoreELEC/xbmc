@@ -588,7 +588,8 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
   return ret;
 }
 
-int CAMLDRMUtils::get_drmProp(unsigned int id, std::string name, unsigned int obj_type)
+int CAMLDRMUtils::get_drmProp(
+    unsigned int id, std::string name, unsigned int obj_type, void* data, int* data_len)
 {
   int ret = -1;
   unsigned int i;
@@ -601,7 +602,7 @@ int CAMLDRMUtils::get_drmProp(unsigned int id, std::string name, unsigned int ob
     return ret;
   }
 
-  for(i = 0; i < props->count_props; i++)
+  for (i = 0; i < props->count_props; i++)
   {
     drmModePropertyPtr prop = drmModeGetProperty(m_fd, props->props[i]);
 
@@ -610,8 +611,46 @@ int CAMLDRMUtils::get_drmProp(unsigned int id, std::string name, unsigned int ob
 
     if (StringUtils::EqualsNoCase(prop->name, name))
     {
-      ret = (int)props->prop_values[i];
-      CLog::Log(LOGDEBUG, LOGWINDOWING, "CAMLDRMUtils::{} - get property '{}', value: {:d}", __FUNCTION__, prop->name, ret);
+      if (data && data_len && (prop->flags & DRM_MODE_PROP_BLOB))
+      {
+        drmModePropertyBlobPtr blob = drmModeGetPropertyBlob(m_fd, props->prop_values[i]);
+
+        if (!blob)
+        {
+          CLog::Log(LOGERROR, "CAMLDRMUtils::{} - failed to get blob data for property '{}'",
+                    __FUNCTION__, prop->name);
+          drmModeFreeProperty(prop);
+          break;
+        }
+
+        int copy_len = static_cast<int>(blob->length);
+        if (copy_len > *data_len)
+        {
+          CLog::Log(LOGWARNING,
+                    "CAMLDRMUtils::{} - blob property '{}' truncated, "
+                    "blob size: {}, buffer size: {}",
+                    __FUNCTION__, prop->name, blob->length, *data_len);
+          copy_len = *data_len;
+        }
+
+        memcpy(data, blob->data, copy_len);
+        *data_len = static_cast<int>(blob->length);
+        ret = static_cast<int>(blob->id);
+
+        CLog::Log(LOGDEBUG,
+                  "CAMLDRMUtils::{} - get blob property '{}', "
+                  "blob id: {}, length: {}",
+                  __FUNCTION__, prop->name, blob->id, blob->length);
+
+        drmModeFreePropertyBlob(blob);
+      }
+      else
+      {
+        ret = (int)props->prop_values[i];
+        CLog::Log(LOGDEBUG, LOGWINDOWING, "CAMLDRMUtils::{} - get property '{}', value: {:d}",
+                  __FUNCTION__, prop->name, ret);
+      }
+
       drmModeFreeProperty(prop);
       break;
     }
@@ -669,7 +708,10 @@ void CAMLDRMUtils::set_drmProp(unsigned int id, std::string name,
 }
 
 // get a property
-int CAMLDRMUtils::aml_get_drmProperty(std::string name, unsigned int obj_type)
+int CAMLDRMUtils::aml_get_drmProperty(std::string name,
+                                      unsigned int obj_type,
+                                      void* data,
+                                      int* data_len)
 {
   int ret = -1;
   unsigned int id;
@@ -681,7 +723,7 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name, unsigned int obj_type)
     switch (obj_type) {
       case DRM_MODE_OBJECT_CONNECTOR:
         id = m_connector->connector_id;
-        ret = get_drmProp(id, name, obj_type);
+        ret = get_drmProp(id, name, obj_type, data, data_len);
         [[fallthrough]];
       default:
         return ret;
@@ -702,7 +744,7 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name, unsigned int obj_type)
       return ret;
   }
 
-  ret = get_drmProp(id, name, obj_type);
+  ret = get_drmProp(id, name, obj_type, data, data_len);
 
   return ret;
 }

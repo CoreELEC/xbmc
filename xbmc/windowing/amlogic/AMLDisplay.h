@@ -91,7 +91,10 @@ public:
   bool aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::string mode,
     const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch,
     bool hotplug_mode_switch);
-  int aml_get_drmProperty(std::string name, unsigned int obj_type);
+  int aml_get_drmProperty(std::string name,
+                          unsigned int obj_type,
+                          void* data = nullptr,
+                          int* data_len = nullptr);
   void aml_set_drmProperty(std::string name, unsigned int obj_type, unsigned int value);
   void aml_set_drmProperty(std::string name, unsigned int obj_type, std::string value);
   int aml_get_drmDevice_modes_count(drmModeConnection *connection);
@@ -114,7 +117,11 @@ private:
                                       unsigned int height,
                                       std::string framebuffer_name);
   int aml_get_drmDevice();
-  int get_drmProp(unsigned int id, std::string name, unsigned int obj_type);
+  int get_drmProp(unsigned int id,
+                  std::string name,
+                  unsigned int obj_type,
+                  void* data = nullptr,
+                  int* data_len = nullptr);
   void set_drmProp(unsigned int id, std::string name,
     unsigned int obj_type, unsigned int value, drmModeAtomicReqPtr req);
   bool SupportsFormat(drmModePlane *plane, uint32_t format);
@@ -156,8 +163,13 @@ public:
   std::string aml_get_preferred_mode();
   bool aml_get_native_resolution(RESOLUTION_INFO *res);
   bool aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolutions);
-  int aml_get_drmProperty(std::string name, unsigned int obj_type) const
-    { return m_amlDRMUtils->aml_get_drmProperty(name, obj_type); }
+  int aml_get_drmProperty(std::string name,
+                          unsigned int obj_type,
+                          void* data = nullptr,
+                          int* data_len = nullptr) const
+  {
+    return m_amlDRMUtils->aml_get_drmProperty(name, obj_type, data, data_len);
+  }
   void aml_set_drmProperty(std::string name, unsigned int obj_type, unsigned int value)
     { m_amlDRMUtils->aml_set_drmProperty(name, obj_type, value); }
   void aml_set_drmProperty(std::string name, unsigned int obj_type, std::string value)

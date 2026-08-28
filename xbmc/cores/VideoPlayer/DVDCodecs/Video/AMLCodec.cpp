@@ -2167,35 +2167,37 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
   CLog::Log(LOGINFO, "CAMLCodec::OpenDecoder Amlogic device {} support DV, DV is {} by user, display {} support DV, DV system is {}",
     device_support_dv ? "does" : "does not", user_dv_disable ? "disabled" : "enabled",
     display_support_dv ? "does" : "does not", dv_enable ? "enabled" : "disabled");
+
+  auto* AmlDisplay =
+      static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay();
+
   if (dv_enable)
   {
     // enable Dolby Vision
-    CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_enable", 'Y');
+    AmlDisplay->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 1);
 
     // use player led mode when enabled
-    CSysfsPath dolby_vision_ll_policy{"/sys/module/aml_media/parameters/dolby_vision_ll_policy"};
-    if (dolby_vision_ll_policy.Exists())
-    {
-      if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-              CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED ||
-          !display_support_dv)
-        dolby_vision_ll_policy.Set(DOLBY_VISION_LL_YUV422);
-      else
-        dolby_vision_ll_policy.Set(DOLBY_VISION_LL_DISABLE);
-    }
+    if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+            CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED ||
+        !display_support_dv)
+      AmlDisplay->aml_set_drmProperty("dv_ll_policy", DRM_MODE_OBJECT_CRTC, DOLBY_VISION_LL_YUV422);
+    else
+      AmlDisplay->aml_set_drmProperty("dv_ll_policy", DRM_MODE_OBJECT_CRTC,
+                                      DOLBY_VISION_LL_DISABLE);
 
     // setup Dolby Vision VS-Engine for non DV media
     if (hints.dovi.dv_profile == 0)
     {
-      CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", AMDV_FORCE_OUTPUT_MODE);
+      AmlDisplay->aml_set_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC, AMDV_FORCE_OUTPUT_MODE);
       if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED)
-        CSysfsPath("/sys/class/amdolby_vision/dv_mode", (AMDV_OUTPUT_MODE_IPT + 1) % 6);
+        AmlDisplay->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC, AMDV_OUTPUT_MODE_IPT);
       else
-        CSysfsPath("/sys/class/amdolby_vision/dv_mode", (AMDV_OUTPUT_MODE_IPT_TUNNEL + 1) % 6);
+        AmlDisplay->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC,
+                                        AMDV_OUTPUT_MODE_IPT_TUNNEL);
     }
     else
     {
-      CSysfsPath("/sys/class/amvecm/enable_hdr10plus", 0);
+      AmlDisplay->aml_set_drmProperty("enable_hdr10plus", DRM_MODE_OBJECT_CRTC, 0);
       am_private->gcodec.dv_enable = 1;
     }
 
@@ -2203,16 +2205,14 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
     {
       if (doviIsFEL) // use stream path if not MEL
       {
-        CSysfsPath amdolby_vision_debug{"/sys/class/amdolby_vision/debug"};
-        if (amdolby_vision_debug.Exists())
-        {
-          amdolby_vision_debug.Set("enable_fel 1");
-          amdolby_vision_debug.Set("enable_mel 1");
-        }
+        AmlDisplay->aml_set_drmProperty("dv_debug", DRM_MODE_OBJECT_CRTC, "enable_fel 1");
+        AmlDisplay->aml_set_drmProperty("dv_debug", DRM_MODE_OBJECT_CRTC, "enable_mel 1");
         am_private->gcodec.dec_mode = STREAM_TYPE_STREAM;
       }
     }
   }
+  else
+    AmlDisplay->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 0);
 
   // DEC_CONTROL_FLAG_DISABLE_FAST_POC
   CSysfsPath("/sys/module/amvdec_h264/parameters/dec_control", 4);
@@ -2449,9 +2449,10 @@ void CAMLCodec::SetVfmMap(const std::string &name, const std::string &map)
 
 void CAMLCodec::CloseDecoder()
 {
-  CSysfsPath dolby_vision_enable{"/sys/module/aml_media/parameters/dolby_vision_enable"};
-  CSysfsPath dolby_vision_policy{"/sys/module/aml_media/parameters/dolby_vision_policy"};
-  bool dv_enabled(StringUtils::EqualsNoCase(dolby_vision_enable.Get<std::string>().value(), "Y"));
+  auto* AmlDisplay =
+      static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay();
+  int dolby_vision_policy = AmlDisplay->aml_get_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC);
+  bool dv_enabled(AmlDisplay->aml_get_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC));
   CLog::Log(LOGDEBUG, "CAMLCodec::CloseDecoder");
 
   SetPollDevice(-1);
@@ -2464,8 +2465,8 @@ void CAMLCodec::CloseDecoder()
   }
 
   // disable Dolby Vision VS-Engine for non DV media
-  if (dv_enabled && dolby_vision_policy.Get<int>().value() == AMDV_FORCE_OUTPUT_MODE)
-    CSysfsPath("/sys/class/amdolby_vision/dv_mode", (AMDV_OUTPUT_MODE_BYPASS + 1) % 6);
+  if (dv_enabled && dolby_vision_policy == AMDV_FORCE_OUTPUT_MODE)
+    AmlDisplay->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC, AMDV_OUTPUT_MODE_BYPASS);
 
   m_dll->codec_close(&am_private->vcodec);
   dumpfile_close(am_private);
@@ -2485,37 +2486,26 @@ void CAMLCodec::CloseDecoder()
   if (dv_enabled)
   {
     // the transition needs a few display frames before the core powers down
-    CSysfsPath dolby_vision_status{"/sys/module/aml_media/parameters/dolby_vision_status"};
-    if (dolby_vision_status.Exists())
-    {
-      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
-      while (dolby_vision_status.Get<int>().value() != 0 && (std::chrono::system_clock::now() - now) < std::chrono::seconds(m_decoder_timeout))
-        usleep(10000); // wait 10ms
-    }
+    std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
+    while (AmlDisplay->aml_get_drmProperty("dv_status", DRM_MODE_OBJECT_CRTC) != 0 &&
+           (std::chrono::system_clock::now() - now) < std::chrono::seconds(m_decoder_timeout))
+      usleep(10000); // wait 10ms
 
-    CSysfsPath dv_video_on{"/sys/class/amdolby_vision/dv_video_on"};
-    if (dv_video_on.Exists())
-    {
-      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
-      while(dv_video_on.Get<int>().value() == 1 && (std::chrono::system_clock::now() - now) < std::chrono::seconds(m_decoder_timeout))
-        usleep(10000); // wait 10ms
-    }
+    while (AmlDisplay->aml_get_drmProperty("dv_video_on", DRM_MODE_OBJECT_CRTC) == 1 &&
+           (std::chrono::system_clock::now() - now) < std::chrono::seconds(m_decoder_timeout))
+      usleep(10000); // wait 10ms
 
-    if (dolby_vision_policy.Get<int>().value() == AMDV_FORCE_OUTPUT_MODE)
-      dolby_vision_policy.Set(AMDV_FOLLOW_SOURCE);
+    if (dolby_vision_policy == AMDV_FORCE_OUTPUT_MODE)
+      AmlDisplay->aml_set_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC, AMDV_FOLLOW_SOURCE);
     else
-      CSysfsPath("/sys/class/amvecm/enable_hdr10plus", 1);
+      AmlDisplay->aml_set_drmProperty("enable_hdr10plus", DRM_MODE_OBJECT_CRTC, 1);
 
-    dolby_vision_enable.Set('N');
+    AmlDisplay->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 0);
   }
 
-  CSysfsPath amdolby_vision_debug{"/sys/class/amdolby_vision/debug"};
-  if (amdolby_vision_debug.Exists())
-  {
-    amdolby_vision_debug.Set("enable_fel 0");
-    amdolby_vision_debug.Set("enable_mel 0");
-    amdolby_vision_debug.Set("force_unmap");
-  }
+  AmlDisplay->aml_set_drmProperty("dv_debug", DRM_MODE_OBJECT_CRTC, "enable_fel 0");
+  AmlDisplay->aml_set_drmProperty("dv_debug", DRM_MODE_OBJECT_CRTC, "enable_mel 0");
+  AmlDisplay->aml_set_drmProperty("dv_debug", DRM_MODE_OBJECT_CRTC, "force_unmap");
 
   ShowMainVideo(false);
 
