@@ -1080,11 +1080,17 @@ void CVideoPlayer::OpenDefaultStreams(bool reset)
   for (const auto& stream : m_SelectionStreams.Get(StreamType::VIDEO, vf))
   {
     // choose video base layer as default if dual layer stream
-    if (m_pDemuxer)
+    // only demuxer streams can be dual layer, nav and external streams are not
+    // known to the demuxer and must not be probed for it
+    if (m_pDemuxer && STREAM_SOURCE_MASK(stream.source) == STREAM_SOURCE_DEMUX)
     {
-      CDemuxStreamVideo* vstream = static_cast<CDemuxStreamVideo*>(m_pDemuxer->GetStream(stream.demuxerId, stream.id));
-      if (vstream->isDualStream && vstream->isELStream)
-        continue;
+      CDemuxStream* st = m_pDemuxer->GetStream(stream.demuxerId, stream.id);
+      if (st && st->type == StreamType::VIDEO)
+      {
+        CDemuxStreamVideo* vstream = static_cast<CDemuxStreamVideo*>(st);
+        if (vstream->isDualStream && vstream->isELStream)
+          continue;
+      }
     }
 
     if (OpenStream(m_CurrentVideo, stream.demuxerId, stream.id, stream.source, reset))
