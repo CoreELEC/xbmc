@@ -23,6 +23,16 @@
 #include "utils/RegExp.h"
 #include "windowing/GraphicContext.h"
 
+namespace
+{
+constexpr float FractionalRate(float rate)
+{
+  // Divide in double: in float the result lands one ULP low. Widened explicitly
+  // for -Werror=double-promotion.
+  return static_cast<float>(static_cast<double>(rate) / 1.001);
+}
+} // unnamed namespace
+
 void FbDestroyCallback(gbm_bo* bo, void* data)
 {
   drm_fb* fb = static_cast<drm_fb*>(data);
@@ -1237,7 +1247,7 @@ bool CAMLDisplay::aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     case 23:
     case 29:
     case 59:
-      res->fRefreshRate = (float)((rrate + 1)/1.001f);
+      res->fRefreshRate = FractionalRate(rrate + 1);
       break;
     default:
       res->fRefreshRate = (float)rrate;
@@ -1278,7 +1288,7 @@ bool CAMLDisplay::aml_get_native_resolution(RESOLUTION_INFO *res)
   bool result = aml_mode_to_resolution(mode.c_str(), res);
 
   if (m_amlDRMUtils->aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR) == 1)
-    res->fRefreshRate /= 1.001f;
+    res->fRefreshRate = FractionalRate(res->fRefreshRate);
 
   return result;
 }
@@ -1339,7 +1349,7 @@ bool CAMLDisplay::aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolution
           case 24:
           case 30:
           case 60:
-            res.fRefreshRate /= 1.001f;
+            res.fRefreshRate = FractionalRate(res.fRefreshRate);
             res.strMode       = StringUtils::Format("{:d}x{:d} @ {:.2f}{} - Full Screen", res.iScreenWidth, res.iScreenHeight, res.fRefreshRate,
               res.dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "");
             resolutions.push_back(res);
