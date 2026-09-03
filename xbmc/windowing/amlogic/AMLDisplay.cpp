@@ -161,7 +161,8 @@ bool CAMLGBMUtils::LockFrontBuffer(int fd)
   if (gbm_surface_has_free_buffers(GetSurface()))
   {
     m_buffer.reset(new CGBMSurfaceBuffer(GetSurface()));
-    m_drm_fb = GetFBFromBo(fd, m_buffer->Get());
+    if (m_buffer->Get())
+      m_drm_fb = GetFBFromBo(fd, m_buffer->Get());
   }
 
   return m_drm_fb != nullptr;
