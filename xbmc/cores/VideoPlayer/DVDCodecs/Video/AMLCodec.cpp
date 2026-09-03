@@ -2459,6 +2459,8 @@ void CAMLCodec::CloseDecoder()
   am_private->extradata = {};
   if (am_private->vcodec.config)
     free(am_private->vcodec.config);
+  free(am_private->hdr_buf.data);
+  am_private->hdr_buf.data = NULL;
   // return tsync to default so external apps work
   CSysfsPath("/sys/class/tsync/enable", 1);
   // disable Dolby Vision driver
