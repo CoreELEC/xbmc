@@ -2617,7 +2617,7 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
     if (ret < 0)
     {
       CLog::Log(LOGDEBUG, "CAMLCodec::{}: ERROR!!! grow_packet for apk failed.!!!", __FUNCTION__);
-      return ret;
+      return false;
     }
 
     pkt->data = pkt->avpkt.data;
