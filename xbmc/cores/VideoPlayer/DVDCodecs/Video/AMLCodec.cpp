@@ -999,7 +999,16 @@ int vvc_add_frame_dec_info(am_private_t *para)
         header_data += 2; // nal header 0x00 0x01
         unit_size = header_data[0] << 8 | header_data[1];
         header_data += 2; // nal unit size
-        para->hdr_buf.data = (char *)realloc(para->hdr_buf.data, data_pos + unit_size + 4);
+        char *grown = (char *)realloc(para->hdr_buf.data, data_pos + unit_size + 4);
+        if (!grown)
+        {
+          CLog::Log(LOGDEBUG, "[vvc_add_frame_dec_info] NOMEM!");
+          free(para->hdr_buf.data);
+          para->hdr_buf.data = NULL;
+          para->hdr_buf.size = 0;
+          return PLAYER_NOMEM;
+        }
+        para->hdr_buf.data = grown;
         memcpy(para->hdr_buf.data + data_pos, nalu_header, 4);
         memcpy(para->hdr_buf.data + data_pos + 4, header_data, unit_size);
         header_data += unit_size;
@@ -1009,6 +1018,12 @@ int vvc_add_frame_dec_info(am_private_t *para)
     else if (header_data[0] == 0x0 && header_data[1] == 0x0 && header_data[2] == 0x1)
     {
       para->hdr_buf.data = (char *)malloc(size);
+      if (!para->hdr_buf.data)
+      {
+        CLog::Log(LOGDEBUG, "[vvc_add_frame_dec_info] NOMEM!");
+        para->hdr_buf.size = 0;
+        return PLAYER_NOMEM;
+      }
       memcpy(para->hdr_buf.data, header_data, size);
       data_pos = size;
     }
