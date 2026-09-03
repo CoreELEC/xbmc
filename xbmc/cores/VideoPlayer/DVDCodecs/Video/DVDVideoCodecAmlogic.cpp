@@ -458,6 +458,12 @@ void CDVDVideoCodecAmlogic::Close(void)
 {
   CLog::Log(LOGDEBUG, "{}::{}", __MODULE_NAME__, __FUNCTION__);
 
+  while (!m_packages.empty())
+  {
+    KODI::MEMORY::AlignedFree(std::get<0>(m_packages.front()));
+    m_packages.pop_front();
+  }
+
   // a successor codec may already own the store, so Unregister only clears our own values
   if (m_metadataToken)
   {
