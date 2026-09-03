@@ -64,7 +64,8 @@ CWinSystemAmlogic::CWinSystemAmlogic()
   {
     std::string framebuffer(env_framebuffer);
     std::string::size_type start = framebuffer.find("fb");
-    m_framebuffer_name = framebuffer.substr(start);
+    if (start != std::string::npos)
+      m_framebuffer_name = framebuffer.substr(start);
   }
 
   m_nativeDisplay = EGL_NO_DISPLAY;
