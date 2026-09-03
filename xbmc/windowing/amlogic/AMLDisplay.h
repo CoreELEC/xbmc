@@ -9,6 +9,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include <memory>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -103,7 +104,7 @@ public:
   bool aml_get_drmDevice_connected() const { return m_connection == DRM_MODE_CONNECTED; }
   void FlipPage(uint32_t fb_id);
 
-  void SetInFenceFd(int fd) { m_inFenceFd = fd; }
+  void SetInFenceFd(int fd) { if (m_inFenceFd != -1) close(m_inFenceFd); m_inFenceFd = fd; }
   int TakeOutFenceFd()
   {
     int fd{-1};
