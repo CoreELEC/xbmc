@@ -290,7 +290,7 @@ void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int vie
   if ((fd = open("/dev/amvideo", O_RDWR)) >= 0)
   {
     if (ioctl(fd, AMSTREAM_IOC_SET_3D_TYPE, mode) != 0)
-      CLog::Log(LOGERROR, "AMLUtils::{} - unable to set 3D video mode 0x%x", __FUNCTION__, mode);
+      CLog::Log(LOGERROR, "AMLUtils::{} - unable to set 3D video mode {:#x}", __FUNCTION__, mode);
     close(fd);
 
     CSysfsPath("/sys/module/aml_media/parameters/g_framepacking_support", framepacking_support ? 1 : 0);
