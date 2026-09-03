@@ -944,7 +944,12 @@ void CAMLDRMUtils::FlipPage(uint32_t fb_id)
   if (!aml_get_drmDevice_connected())
     return;
 
+  if (!m_plane || !m_crtc)
+    return;
+
   drmModeAtomicReqPtr req = drmModeAtomicAlloc();
+  if (!req)
+    return;
 
   set_drmProp(m_plane->plane_id, "FB_ID", DRM_MODE_OBJECT_PLANE , fb_id, req);
   set_drmProp(m_plane->plane_id, "CRTC_ID", DRM_MODE_OBJECT_PLANE , m_crtc->crtc_id, req);
