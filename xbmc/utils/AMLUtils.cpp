@@ -43,7 +43,14 @@ int aml_get_cpufamily_id()
         {
           std::ssub_match value = match[1];
           std::string cpu_family = value.str().substr(0, 2);
-          aml_cpufamily_id = std::stoi(cpu_family, nullptr, 16);
+          try
+          {
+            aml_cpufamily_id = std::stoi(cpu_family, nullptr, 16);
+          }
+          catch (const std::exception&)
+          {
+            aml_cpufamily_id = -1;
+          }
           break;
         }
       }
@@ -77,7 +84,12 @@ std::string aml_get_cpufamily_name(int cpuid)
     case AML_S6:
       return "S6";
     default:
-      return aml_get_cpufamily_name(aml_get_cpufamily_id());
+    {
+      int resolved = aml_get_cpufamily_id();
+      if (cpuid != resolved)
+        return aml_get_cpufamily_name(resolved);
+      return "Unknown";
+    }
   }
   return "Unknown";
 }
