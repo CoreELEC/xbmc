@@ -1569,9 +1569,14 @@ int pre_header_feeding(am_private_t *para, am_packet_t *pkt)
     if (para->stream_type == AM_STREAM_ES) {
         if (pkt->hdr == NULL) {
             pkt->hdr = (hdr_buf_t*)malloc(sizeof(hdr_buf_t));
+            if (!pkt->hdr) {
+                return PLAYER_NOMEM;
+            }
             pkt->hdr->data = (char *)malloc(HDR_BUF_SIZE);
             if (!pkt->hdr->data) {
                 //CLog::Log(LOGDEBUG, "[pre_header_feeding] NOMEM!");
+                free(pkt->hdr);
+                pkt->hdr = NULL;
                 return PLAYER_NOMEM;
             }
         }
@@ -1666,9 +1671,15 @@ int pre_header_feeding(am_private_t *para, am_packet_t *pkt)
     else if (para->stream_type == AM_STREAM_PS) {
         if (pkt->hdr == NULL) {
             pkt->hdr = (hdr_buf_t*)malloc(sizeof(hdr_buf_t));
+            if (!pkt->hdr) {
+                CLog::Log(LOGDEBUG, "[pre_header_feeding] NOMEM!");
+                return PLAYER_NOMEM;
+            }
             pkt->hdr->data = (char*)malloc(HDR_BUF_SIZE);
             if (!pkt->hdr->data) {
                 CLog::Log(LOGDEBUG, "[pre_header_feeding] NOMEM!");
+                free(pkt->hdr);
+                pkt->hdr = NULL;
                 return PLAYER_NOMEM;
             }
         }
