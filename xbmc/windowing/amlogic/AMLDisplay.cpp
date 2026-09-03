@@ -513,6 +513,9 @@ std::string CAMLDRMUtils::aml_get_drmDevice_modes(void)
 {
   std::string modes ="";
 
+  if (!m_connector)
+    return modes;
+
   CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - connector have {:d} modes", __FUNCTION__, m_connector->count_modes);
   for (int i = 0; i < m_connector->count_modes; i++)
   {
