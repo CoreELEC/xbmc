@@ -1218,7 +1218,9 @@ int av1_parser_frame(
             else
                 meta_type = OBU_METADATA_TYPE_AOM_RESERVED_0;
             p = data + bytes_read;
-            CLog::Log(LOGDEBUG, "\tmeta type {} {:d}+{:d}", meta_type_name[type], bytes_read, payload_size - bytes_read);
+            CLog::Log(LOGDEBUG, "\tmeta type {} {:d}+{:d}",
+                      type < 6 ? meta_type_name[type] : "RESERVED", bytes_read,
+                      payload_size - bytes_read);
 
             if (meta_type == OBU_METADATA_TYPE_ITUT_T35 && meta_buf != NULL) {
                 if ((p[0] == 0xb5) /* country code */
