@@ -304,6 +304,7 @@ void CAMLDRMUtils::aml_init_drmDevice()
   if (!planeResources)
   {
     CLog::Log(LOGERROR, "CAMLDRMUtils::{} - failed to get plane resources of drmDevice", __FUNCTION__);
+    CleanAndClose();
     throw std::runtime_error("failed to get plane resources of drmDevice");
   }
 
