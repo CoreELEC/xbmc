@@ -1037,6 +1037,18 @@ bool CAMLDisplay::set_native_resolution(const RESOLUTION_INFO &res, std::string 
 {
   bool result = false;
 
+  RenderStereoMode previous_stereo_mode = m_stereo_mode;
+  if (previous_stereo_mode == RenderStereoMode::UNDEFINED)
+  {
+    CSysfsPath _kernel_stereo_mode{"/sys/class/amhdmitx/amhdmitx0/stereo_mode"};
+    if (_kernel_stereo_mode.Exists())
+      previous_stereo_mode = static_cast<RenderStereoMode>(_kernel_stereo_mode.Get<int>().value());
+  }
+  if (previous_stereo_mode != stereo_mode &&
+      (previous_stereo_mode == RenderStereoMode::HARDWAREBASED ||
+       stereo_mode == RenderStereoMode::HARDWAREBASED))
+    force_mode_switch = true;
+
   if (aml_get_cpufamily_id() < AML_T7)
   {
     handle_display_stereo_mode(stereo_mode);
