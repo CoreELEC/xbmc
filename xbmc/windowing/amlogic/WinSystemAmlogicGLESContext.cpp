@@ -116,6 +116,8 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
 
   StreamHdrType hdrType = CServiceBroker::GetWinSystem()->GetGfxContext().GetHDRType();
   bool force_mode_switch_by_hdr = (m_hdrType != hdrType);
+  bool force_mode_switch_by_stereo_mode = (m_stereo_mode != stereo_mode);
+  bool force_mode_switch_by_fractional_rate = (cur_fractional_rate != fractional_rate);
   bool force_mode_switch_by_hotplug = m_amlDisplay->GetHotPlug();
 
   // get current used resolution
@@ -128,15 +130,15 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
 
   const std::string new_hdrStr = CStreamDetails::HdrTypeToString(hdrType);
   const std::string old_hdrStr = CStreamDetails::HdrTypeToString(m_hdrType);
-  CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: "
-    "m_bWindowCreated: {}, "
-    "frac rate {:d}({:d}), "
-    "hdrType: {}({}), force mode switch: {}",
-    __FUNCTION__,
-    m_bWindowCreated,
-    fractional_rate, cur_fractional_rate,
-    new_hdrStr.empty() ? "none" : new_hdrStr, old_hdrStr.empty() ? "none" : old_hdrStr,
-    force_mode_switch_by_hdr ? "by HDR" : force_mode_switch_by_hotplug ? "by HotPlug" : "no");
+  CLog::Log(LOGDEBUG,
+            "CWinSystemAmlogicGLESContext::{}: "
+            "m_bWindowCreated: {}, "
+            "hdrType: {}({}), "
+            "force mode switch by - hdr: {}, frac rate: {}, stereo mode: {}, hotplug: {}",
+            __FUNCTION__, m_bWindowCreated, new_hdrStr.empty() ? "none" : new_hdrStr,
+            old_hdrStr.empty() ? "none" : old_hdrStr, force_mode_switch_by_hdr,
+            force_mode_switch_by_fractional_rate, force_mode_switch_by_stereo_mode,
+            force_mode_switch_by_hotplug);
   CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: "
     "cur: iWidth: {:04d}, iHeight: {:04d}, iScreenWidth: {:04d}, iScreenHeight: {:04d}, fRefreshRate: {:02.2f}, dwFlags: {:02x}, nativeGUI: {}",
     __FUNCTION__,
@@ -149,13 +151,14 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
 
   // check if mode switch is needed
   if (current_resolution.iWidth == res.iWidth && current_resolution.iHeight == res.iHeight &&
-      current_resolution.iScreenWidth == res.iScreenWidth && current_resolution.iScreenHeight == res.iScreenHeight &&
-      m_bFullScreen == fullScreen && current_resolution.fRefreshRate == res.fRefreshRate &&
-      (current_resolution.dwFlags & D3DPRESENTFLAG_MODEMASK) == (res.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
-      m_stereo_mode == stereo_mode && m_bWindowCreated &&
-      !force_mode_switch_by_hdr && !force_mode_switch_by_hotplug &&
-      (fractional_rate == cur_fractional_rate) &&
-      nativeGUI == m_nativeGUI)
+      current_resolution.iScreenWidth == res.iScreenWidth &&
+      current_resolution.iScreenHeight == res.iScreenHeight && m_bFullScreen == fullScreen &&
+      current_resolution.fRefreshRate == res.fRefreshRate &&
+      (current_resolution.dwFlags & D3DPRESENTFLAG_MODEMASK) ==
+          (res.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+      m_bWindowCreated && nativeGUI == m_nativeGUI && !force_mode_switch_by_hdr &&
+      !force_mode_switch_by_hotplug && !force_mode_switch_by_fractional_rate &&
+      !force_mode_switch_by_stereo_mode)
   {
     CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: No need to create a new window", __FUNCTION__);
     return true;
@@ -170,13 +173,17 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
     m_force_mode_switch = true;
     m_hotplug_mode_switch = true;
   }
+  else if (force_mode_switch_by_stereo_mode)
+  {
+    m_force_mode_switch = true;
+  }
   else
   if (current_resolution.iWidth == res.iWidth && current_resolution.iHeight == res.iHeight &&
       current_resolution.iScreenWidth == res.iScreenWidth && current_resolution.iScreenHeight == res.iScreenHeight &&
       MathUtils::FloatEquals(current_resolution.fRefreshRate, res.fRefreshRate, 0.06f))
   {
     // same resolution, check frac rate and other parameter
-    if ((cur_fractional_rate != fractional_rate) || force_mode_switch_by_hdr || (m_stereo_mode != stereo_mode))
+    if (force_mode_switch_by_fractional_rate || force_mode_switch_by_hdr)
       m_force_mode_switch = true;
   }
 
