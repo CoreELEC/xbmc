@@ -651,6 +651,7 @@ static int write_header(am_private_t *para, am_packet_t *pkt)
                 return PLAYER_SUCCESS;
             }
         }
+        int eagain_retries = 0;
         while (1) {
             write_bytes = para->m_dll->codec_write(pkt->codec, pkt->hdr->data + len, pkt->hdr->size - len);
             if (write_bytes < 0 || write_bytes > (pkt->hdr->size - len)) {
@@ -658,6 +659,11 @@ static int write_header(am_private_t *para, am_packet_t *pkt)
                     CLog::Log(LOGDEBUG, "ERROR:write header failed!");
                     return PLAYER_WR_FAILED;
                 } else {
+                    if (++eagain_retries > 100) {
+                        CLog::Log(LOGDEBUG, "ERROR:write header timed out (EAGAIN)!");
+                        return PLAYER_WR_FAILED;
+                    }
+                    usleep(RW_WAIT_TIME);
                     continue;
                 }
             } else {
