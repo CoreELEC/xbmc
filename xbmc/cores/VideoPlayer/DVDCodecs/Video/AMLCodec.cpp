@@ -651,6 +651,7 @@ static int write_header(am_private_t *para, am_packet_t *pkt)
                 return PLAYER_SUCCESS;
             }
         }
+        int eagain_retries = 0;
         while (1) {
             write_bytes = para->m_dll->codec_write(pkt->codec, pkt->hdr->data + len, pkt->hdr->size - len);
             if (write_bytes < 0 || write_bytes > (pkt->hdr->size - len)) {
@@ -658,6 +659,11 @@ static int write_header(am_private_t *para, am_packet_t *pkt)
                     CLog::Log(LOGDEBUG, "ERROR:write header failed!");
                     return PLAYER_WR_FAILED;
                 } else {
+                    if (++eagain_retries > 100) {
+                        CLog::Log(LOGDEBUG, "ERROR:write header timed out (EAGAIN)!");
+                        return PLAYER_WR_FAILED;
+                    }
+                    usleep(RW_WAIT_TIME);
                     continue;
                 }
             } else {
@@ -1478,7 +1484,10 @@ static int wmv3_write_header(am_private_t *para, am_packet_t *pkt)
 {
     CLog::Log(LOGDEBUG, "wmv3_write_header");
     unsigned i, check_sum = 0;
-    unsigned data_len = para->extradata.GetSize() + 4;
+    size_t wmv3_extra = para->extradata.GetSize();
+    if (wmv3_extra > HDR_BUF_SIZE - 26)
+        wmv3_extra = HDR_BUF_SIZE - 26;
+    unsigned data_len = wmv3_extra + 4;
 
     pkt->hdr->data[0] = 0;
     pkt->hdr->data[1] = 0;
@@ -1515,8 +1524,8 @@ static int wmv3_write_header(am_private_t *para, am_packet_t *pkt)
     pkt->hdr->data[24] = (para->video_height >> 8) & 0xff;
     pkt->hdr->data[25] =  para->video_height & 0xff;
 
-    memcpy(pkt->hdr->data + 26, para->extradata.GetData(), para->extradata.GetSize());
-    pkt->hdr->size = para->extradata.GetSize() + 26;
+    memcpy(pkt->hdr->data + 26, para->extradata.GetData(), wmv3_extra);
+    pkt->hdr->size = wmv3_extra + 26;
     if (1) {
         pkt->codec = &para->vcodec;
     } else {
@@ -1530,8 +1539,20 @@ static int wmv3_write_header(am_private_t *para, am_packet_t *pkt)
 static int wvc1_write_header(am_private_t *para, am_packet_t *pkt)
 {
     CLog::Log(LOGDEBUG, "wvc1_write_header");
-    memcpy(pkt->hdr->data, para->extradata.GetData() + 1, para->extradata.GetSize() - 1);
-    pkt->hdr->size = para->extradata.GetSize() - 1;
+    size_t wvc1_extra = para->extradata.GetSize();
+    if (wvc1_extra < 1) {
+        CLog::Log(LOGDEBUG, "[wvc1_write_header] empty extradata!");
+        // Left describing nothing rather than whatever malloc returned: the header
+        // is only freed on the success path, so an error return leaves it live and
+        // write_header decides on this field.
+        pkt->hdr->size = 0;
+        return PLAYER_EMPTY_P;
+    }
+    wvc1_extra -= 1;
+    if (wvc1_extra > HDR_BUF_SIZE)
+        wvc1_extra = HDR_BUF_SIZE;
+    memcpy(pkt->hdr->data, para->extradata.GetData() + 1, wvc1_extra);
+    pkt->hdr->size = wvc1_extra;
     if (1) {
         pkt->codec = &para->vcodec;
     } else {
@@ -2315,8 +2336,16 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
   {
     am_private->vcodec.config_len = static_cast<int>(config_data.size());
     am_private->vcodec.config = (char*)malloc(config_data.size() + 1);
-    config_data.copy(am_private->vcodec.config, config_data.size());
-    am_private->vcodec.config[am_private->vcodec.config_len] = '\0';
+    if (am_private->vcodec.config)
+    {
+      config_data.copy(am_private->vcodec.config, config_data.size());
+      am_private->vcodec.config[am_private->vcodec.config_len] = '\0';
+    }
+    else
+    {
+      am_private->vcodec.config_len = 0;
+      CLog::Log(LOGERROR, "CAMLCodec::OpenDecoder - config alloc failed");
+    }
   }
 
   if (am_private->vcodec.dec_mode == STREAM_TYPE_SINGLE)
@@ -2478,7 +2507,10 @@ void CAMLCodec::CloseDecoder()
   am_private->hdr_buf.data = NULL;
 
   if (am_private->vcodec.config)
+  {
     free(am_private->vcodec.config);
+    am_private->vcodec.config = NULL;
+  }
 
   // return tsync to default so external apps work
   CSysfsPath("/sys/class/tsync/enable", 1);
