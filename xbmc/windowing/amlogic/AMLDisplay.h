@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "rendering/RenderSystemTypes.h"
+#include "threads/CriticalSection.h"
 #include "utils/HDRCapabilities.h"
 #include "windowing/Resolution.h"
 
@@ -138,6 +139,7 @@ private:
   drmModeCrtcPtr m_crtc{nullptr};
   drmModeCrtcPtr m_orig_crtc{nullptr};
   drmModePlanePtr m_plane{nullptr};
+  CCriticalSection m_drmSection;
 
   int m_inFenceFd{-1};
   int m_outFenceFd{-1};
