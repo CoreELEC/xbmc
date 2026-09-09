@@ -257,6 +257,7 @@ void CAMLDRMUtils::CleanAndClose()
 
 void CAMLDRMUtils::aml_init_drmDevice()
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   CleanAndClose();
 
   // get resources of drmDevice
@@ -491,6 +492,7 @@ int CAMLDRMUtils::aml_get_drmDevice()
 // get current mode of drmDevice
 std::string CAMLDRMUtils::aml_get_drmDevice_mode()
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   std::string mode = "";
   std::string default_mode = "dummy_l";
 
@@ -511,6 +513,7 @@ std::string CAMLDRMUtils::aml_get_drmDevice_mode()
 // get all modes of current connected device
 std::string CAMLDRMUtils::aml_get_drmDevice_modes(void)
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   std::string modes ="";
 
   if (!m_connector)
@@ -532,6 +535,7 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
   const RenderStereoMode stereo_mode, std::string framebuffer_name, bool force_mode_switch,
   bool hotplug_mode_switch)
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   bool ret = false;
   const bool _hotplug_mode_switch = hotplug_mode_switch && m_connector && m_connector->count_modes > 1;
   const bool _force_mode_switch = force_mode_switch || _hotplug_mode_switch;
@@ -723,6 +727,7 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name,
                                       void* data,
                                       int* data_len)
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   int ret = -1;
   unsigned int id;
 
@@ -732,6 +737,10 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name,
 
     switch (obj_type) {
       case DRM_MODE_OBJECT_CONNECTOR:
+        // A rebuild that failed freed this and left the object alive. Leave the
+        // function, not the switch: the one below reads the same pointer.
+        if (!m_connector)
+          return ret;
         id = m_connector->connector_id;
         ret = get_drmProp(id, name, obj_type, data, data_len);
         [[fallthrough]];
@@ -762,6 +771,7 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name,
 // set a property
 void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, unsigned int value)
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   unsigned int id;
 
   if (!aml_get_drmDevice_connected())
@@ -770,6 +780,10 @@ void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, 
 
     switch (obj_type) {
       case DRM_MODE_OBJECT_CONNECTOR:
+        // A rebuild that failed freed this and left the object alive. Leave the
+        // function, not the switch: the one below reads the same pointer.
+        if (!m_connector)
+          return;
         id = m_connector->connector_id;
         set_drmProp(id, name, obj_type, value, NULL);
         [[fallthrough]];
@@ -797,6 +811,7 @@ void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, 
 
 void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, std::string value)
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   uint32_t mode_blobid = 0;
 
   if (!aml_get_drmDevice_connected())
@@ -817,6 +832,7 @@ void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, 
 // get modes count and status if current device is connected
 int CAMLDRMUtils::aml_get_drmDevice_modes_count(drmModeConnection *connection)
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   int mode_count = 0;
 
   if (connection)
@@ -831,6 +847,7 @@ int CAMLDRMUtils::aml_get_drmDevice_modes_count(drmModeConnection *connection)
 // get preferred mode of drmDevice
 std::string CAMLDRMUtils::aml_get_drmDevice_preferred_mode()
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   std::string mode, modes = "";
 
   if (!aml_get_drmDevice_connected())
@@ -854,6 +871,7 @@ std::string CAMLDRMUtils::aml_get_drmDevice_preferred_mode()
 bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rate,
   const RenderStereoMode stereo_mode, bool force_mode_switch, bool active)
 {
+  std::unique_lock<CCriticalSection> lock(m_drmSection);
   bool ret = false;
   drmModeModeInfoPtr drmDevicemode = NULL;
   drmModeModeInfo syntheticMode = {};
