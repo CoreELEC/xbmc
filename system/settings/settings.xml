@@ -4001,6 +4001,7 @@
             <dependency type="enable" setting="coreelec.amlogic.hdr2sdr" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.sdr2dv" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.hdr2dv" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr10plus2dv" operator="is">0</dependency>
           </dependencies>
         </setting>
         <setting id="coreelec.amlogic.hdr2sdr" type="boolean" label="14406" help="14407">
@@ -4011,6 +4012,7 @@
             <dependency type="enable" setting="coreelec.amlogic.sdr2hdr" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.sdr2dv" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.hdr2dv" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr10plus2dv" operator="is">0</dependency>
           </dependencies>
         </setting>
         <setting id="coreelec.amlogic.sdr2dv" type="boolean" label="14310" help="14311">
@@ -4030,6 +4032,25 @@
           <dependencies>
             <dependency type="enable" setting="coreelec.amlogic.sdr2hdr" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.hdr2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr10plus2dv" operator="is">0</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.disabledolbyvision" operator="is">false</dependency>
+          </dependencies>
+        </setting>
+        <setting id="coreelec.amlogic.hdr10plus2dv" type="integer" label="14314" help="14315">
+          <requirement>HAVE_AMCODEC</requirement>
+          <default>0</default>
+          <constraints>
+            <options>
+              <option label="351">0</option>
+              <option label="14305">1</option>
+              <option label="14306">2</option>
+            </options>
+          </constraints>
+          <control type="list" format="string" />
+          <dependencies>
+            <dependency type="enable" setting="coreelec.amlogic.sdr2hdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr2dv" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.disabledolbyvision" operator="is">false</dependency>
           </dependencies>
         </setting>

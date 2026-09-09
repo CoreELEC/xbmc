@@ -8954,6 +8954,20 @@ msgctxt "#14304"
 msgid "RDS Radio"
 msgstr ""
 
+#. Option for setting #14314 - generate a CM v4.0 Dolby Vision RPU
+#: system/settings/settings.xml
+msgctxt "#14305"
+msgid "CM v4.0"
+msgstr ""
+
+#. Option for setting #14314 - generate a CM v2.9 Dolby Vision RPU
+#: system/settings/settings.xml
+msgctxt "#14306"
+msgid "CM v2.9"
+msgstr ""
+
+#empty strings from id 14307 to 14309
+
 #: system/settings/settings.xml
 msgctxt "#14310"
 msgid "Tone map SDR to Dolby Vision"
@@ -8974,7 +8988,19 @@ msgctxt "#14313"
 msgid "Intended for Dolby Vision enabled displays. HDR content will be tone mapped by Dolby Vision VS-Engine."
 msgstr ""
 
-#empty strings from id 14305 to 15010
+#. Setting to convert HDR10+ dynamic metadata to Dolby Vision profile 8.1
+#: system/settings/settings.xml
+msgctxt "#14314"
+msgid "Convert HDR10+ to Dolby Vision"
+msgstr ""
+
+#. Help text of setting with label #14314
+#: system/settings/settings.xml
+msgctxt "#14315"
+msgid "Play HDR10+ video as Dolby Vision. Needs a TV that supports Dolby Vision. Video that already has its own Dolby Vision is left as it is.[CR][CR]CM v4.0 carries an average brightness that CM v2.9 has no field for, so it should be more accurate; not every TV uses it."
+msgstr ""
+
+#empty strings from id 14316 to 15010
 
 #: system/settings/settings.xml
 msgctxt "#14400"

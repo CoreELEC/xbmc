@@ -295,6 +295,7 @@ bool CWinSystemAmlogic::InitWindowSystem()
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE, false);
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV, false);
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV, false);
+    settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_HDR10PLUS_TO_DV, 0);
     settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED, AML_DV_TV_LED);
     settings->SetBool(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5, true);
   }
@@ -463,6 +464,10 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
     setting->SetVisible(device_dv);
 
   setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV);
+  if (setting)
+    setting->SetVisible(device_dv);
+
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR10PLUS_TO_DV);
   if (setting)
     setting->SetVisible(device_dv);
 

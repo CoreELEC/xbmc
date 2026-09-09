@@ -9,6 +9,7 @@
 #pragma once
 
 #include "AMLFrameMetadata.h"
+#include "AMLHdr10PlusToDv.h"
 #include "DVDVideoCodec.h"
 #include "DVDStreamInfo.h"
 #include "threads/CriticalSection.h"
@@ -104,6 +105,11 @@ protected:
   h264_sequence  *m_h264_sequence;
   double          m_h264_sequence_pts;
   bool            m_has_keyframe;
+  bool            m_convertHdr10Plus = false;
+  // owns the HDR10+ -> DV conversion for this stream; Amlogic-only, so it lives
+  // here rather than in the shared CBitstreamConverter
+  KODI::AML::HDR::CHdr10PlusToDvSession m_hdr10PlusSession;
+  std::vector<uint8_t> m_hdr10PlusAu;
 
   CBitstreamParser *m_bitparser;
   CBitstreamConverter *m_bitstream;
@@ -116,6 +122,8 @@ private:
   uint32_t m_metadataToken{0};
   bool m_metaLeadLogged{false};
   bool m_stripHdr10Plus{false};
+  // latched at Open on the player thread; see the degraded-open branch
+  bool m_sinkLacksHdr10Plus{false};
   bool m_dualLayer{false};
   int m_nalLengthSize{0};
   double m_lastCommitPts{0.0};

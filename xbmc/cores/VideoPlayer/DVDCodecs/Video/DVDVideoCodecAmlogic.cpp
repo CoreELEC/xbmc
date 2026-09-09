@@ -16,6 +16,7 @@
 #include "DVDClock.h"
 #include "DVDStreamInfo.h"
 #include "AMLCodec.h"
+#include "AMLHdr10PlusToDv.h"
 #include "ServiceBroker.h"
 #include "utils/AMLUtils.h"
 #include "utils/HDRCapabilities.h"
@@ -31,6 +32,8 @@ extern "C"
 {
 #include <libavutil/hdr_dynamic_metadata.h>
 }
+
+using namespace KODI::AML::HDR;
 
 #define __MODULE_NAME__ "DVDVideoCodecAmlogic"
 
@@ -119,6 +122,9 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
   m_nalLengthSize = 0;
   m_streamMeta = {};
   m_stripHdr10Plus = false;
+  m_convertHdr10Plus = false;
+  m_hdr10PlusSession = {};
+  m_hdr10PlusAu.clear();
   m_metadataSequencer.Reset();
 
   CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::Opening: codec {:d} profile:{:d} extra_size:{:d}", m_hints.codec, hints.profile, hints.extradata.GetSize());
@@ -416,6 +422,10 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
   if (m_bitstream)
   {
     const CHDRCapabilities caps = CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities();
+    // latched here, at Open: the hotplug handler rewrites the display caps
+    // unsynchronised from the app thread, so the decode path must not re-read
+    // them once playback is under way
+    m_sinkLacksHdr10Plus = !caps.SupportsHDR10Plus();
     if (!caps.SupportsHDR10Plus())
     {
       m_bitstream->SetRemoveHdr10Plus(true);
@@ -429,6 +439,115 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       if (m_hints.dovi.dv_profile > 0)
         m_streamMeta.flags.push_back("rpu-removed");
     }
+
+#if defined(HAVE_LIBDOVI)
+    // Convert HDR10+ dynamic metadata to Dolby Vision profile 8.1 RPUs. Only
+    // for PQ HEVC on a DV-capable display, and never for streams that carry
+    // their own DV metadata. Require a PQ signal (transfer or HDR10/HDR10+
+    // flag) so HLG/SDR streams with a stray HDR10+ SEI are not wrapped as DV;
+    // accepting the flag as well avoids missing files with no container
+    // transfer. (The HDR10PLUS arm is defensive only - nothing in the tree ever
+    // assigns that hdrType to a stream; DetermineHdrType yields HDR10 for it.)
+    const bool isPq = m_hints.colorTransferCharacteristic == AVCOL_TRC_SMPTE2084 ||
+                      m_hints.hdrType == StreamHdrType::HDR_TYPE_HDR10 ||
+                      m_hints.hdrType == StreamHdrType::HDR_TYPE_HDR10PLUS;
+    // One setting carries both the on/off decision and the content mapping
+    // version: 0 off, 1 convert emitting CMv4.0, 2 convert emitting CMv2.9.
+    // Read once here so the choice is a setting change, not a rebuild.
+    const int hdr10PlusToDv = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+        CSettings::SETTING_COREELEC_AMLOGIC_HDR10PLUS_TO_DV);
+    if (hdr10PlusToDv != 0 &&
+        m_hints.codec == AV_CODEC_ID_HEVC && m_hints.extradata && !m_hints.cryptoSession &&
+        isPq &&
+        m_hints.hdrType != StreamHdrType::HDR_TYPE_DOLBYVISION &&
+        // Redundant on the FFmpeg path, where hdrType is set from the same
+        // configuration record - but a client demuxer copies hdr_type and dovi
+        // across independently (DVDDemuxClient), so an add-on can report
+        // profile 8 alongside HDR10 and only this stops it arming. Neither
+        // covers a remux that kept in-band RPUs but lost the record: nothing
+        // reads the elementary stream this early. See ProcessAccessUnit().
+        m_hints.dovi.dv_profile == 0 &&
+        aml_support_dolby_vision() &&
+        caps.SupportsDolbyVision() != DolbyVisionFormat::DOLBYVISION_TYPE_NONE &&
+        !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+            CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE) &&
+        // The settings dependencies only grey the control out; the stored value
+        // survives, so the Dolby Vision master switch and the three VS10 modes
+        // that can claim this stream are re-checked here. sdr2dv is not among
+        // them: aml_convert_to_dv_by_vs_engine only reads it for
+        // hdrType == HDR_TYPE_NONE, which the isPq gate above excludes. The
+        // hdr2dv check is redundant today - its only mechanism is the hdrType
+        // rewrite in CVideoPlayer::OpenStream, which the hdrType clause above
+        // already blocks - and is kept because that coupling lives in
+        // cross-platform code this patch does not own. A silent break there
+        // would mean VS10 and this both converting the same stream.
+        !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+            CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR) &&
+        !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+            CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR) &&
+        !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+            CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV))
+    {
+      m_convertHdr10Plus = true;
+      // CMv2.9 cannot represent an average below 819 (2.43 nits) and dark
+      // content sits under it; CMv4.0 carries the remainder in level 3.
+      m_hdr10PlusSession.SetCmMode(hdr10PlusToDv == 1 ? DvCmMode::V40 : DvCmMode::V29);
+      m_bitstream->SetRemoveHdr10Plus(false);
+      // the SEI is consumed, not discarded - don't report it as removed
+      m_stripHdr10Plus = false;
+
+      // seed the static HDR metadata from the container; the converter
+      // refreshes it from MDCV/CLL SEIs in the bitstream, up to and including the
+      // access unit that produces the first RPU; static metadata is frozen after
+      HDRStaticMetadataInfo metadata;
+      if (m_hints.masteringMetadata)
+      {
+        // has_primaries and has_luminance are set independently, and ffmpeg
+        // copies the side data whole either way - reading luminance without the
+        // flag divides 0/0 and casts a NaN.
+        if (m_hints.masteringMetadata->has_luminance)
+        {
+          metadata.max_lum =
+              static_cast<uint32_t>(av_q2d(m_hints.masteringMetadata->max_luminance) + 0.5);
+          metadata.min_lum =
+              static_cast<uint32_t>(av_q2d(m_hints.masteringMetadata->min_luminance) * 10000 + 0.5);
+        }
+        if (m_hints.masteringMetadata->has_primaries)
+        {
+          // ffmpeg orders display_primaries R,G,B; the SEI - and so
+          // HDRStaticMetadataInfo - orders them G,B,R (HEVC D.3.27). Remap
+          // rather than copy, and scale to the SEI's 0.00002 units. A straight
+          // copy would emit level 9 with the primaries permuted; without the seed
+          // at all, a stream whose mastering metadata lives only in the container
+          // falls back to CMv2.9.
+          constexpr int kOurGbrFromFfmpegRgb[3] = {1, 2, 0};
+          for (int i = 0; i < 3; ++i)
+          {
+            const auto& prim =
+                m_hints.masteringMetadata->display_primaries[kOurGbrFromFfmpegRgb[i]];
+            metadata.display_primaries_x[i] =
+                static_cast<uint16_t>(av_q2d(prim[0]) * 50000 + 0.5);
+            metadata.display_primaries_y[i] =
+                static_cast<uint16_t>(av_q2d(prim[1]) * 50000 + 0.5);
+          }
+          metadata.white_point_x = static_cast<uint16_t>(
+              av_q2d(m_hints.masteringMetadata->white_point[0]) * 50000 + 0.5);
+          metadata.white_point_y = static_cast<uint16_t>(
+              av_q2d(m_hints.masteringMetadata->white_point[1]) * 50000 + 0.5);
+          metadata.has_mdcv = true;
+        }
+      }
+      if (m_hints.contentLightMetadata)
+      {
+        metadata.max_cll = m_hints.contentLightMetadata->MaxCLL;
+        metadata.max_fall = m_hints.contentLightMetadata->MaxFALL;
+      }
+      m_hdr10PlusSession.SetStaticMetadata(metadata);
+
+      CLog::Log(LOGINFO, "{}::{} - HDR10+ to Dolby Vision profile 8.1 conversion enabled",
+                __MODULE_NAME__, __FUNCTION__);
+    }
+#endif
   }
 
   if (m_hints.contentLightMetadata)
@@ -608,11 +727,25 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       if (!m_bitstream->CanStartDecode())
       {
         CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::{}: waiting for keyframe (bitstream)", __FUNCTION__);
+        // Nothing was generated for this access unit - ProcessAccessUnit runs
+        // below this return - so the rollback is a no-op today. Kept because the
+        // ordering is not an invariant worth relying on.
+        m_hdr10PlusSession.RollbackAu();
         m_pendingMeta = m_streamMeta;
         return true;
       }
       pData = m_bitstream->GetConvertBuffer();
       iSize = m_bitstream->GetConvertSize();
+
+      // Amlogic-only: rewrite the assembled access unit to carry a generated
+      // Dolby Vision RPU instead of its HDR10+ SEI. Runs here, on the shared
+      // converter's output, so that nothing cross-platform has to change.
+      if (m_convertHdr10Plus &&
+          m_hdr10PlusSession.ProcessAccessUnit(pData, iSize, m_hdr10PlusAu))
+      {
+        pData = m_hdr10PlusAu.data();
+        iSize = static_cast<uint32_t>(m_hdr10PlusAu.size());
+      }
       doviIsFEL = m_bitstream->GetDoviIsFEL();
       IsHdr10Plus = m_bitstream->GetIsHdrPlus();
       if (IsHdr10Plus && m_stripHdr10Plus &&
@@ -641,6 +774,50 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       if (packet.pts == DVD_NOPTS_VALUE)
         m_hints.ptsinvalid = true;
 
+      // HDR10+ metadata was converted to DV RPUs: open the decoder in Dolby
+      // Vision profile 8.1 mode instead of plain HDR10.
+      if (m_convertHdr10Plus && m_hdr10PlusSession.Converted())
+      {
+        CLog::Log(LOGINFO,
+                  "CDVDVideoCodecAmlogic::{}: HDR10+ converted to DV P8.1, opening "
+                  "decoder in DV mode",
+                  __FUNCTION__);
+        m_hints.hdrType = StreamHdrType::HDR_TYPE_DOLBYVISION;
+        m_hints.dovi.dv_version_major = 1;
+        m_hints.dovi.dv_version_minor = 0;
+        m_hints.dovi.dv_profile = 8;
+        m_hints.dovi.dv_level = 6;
+        m_hints.dovi.rpu_present_flag = 1;
+        m_hints.dovi.el_present_flag = 0;
+        m_hints.dovi.bl_present_flag = 1;
+        m_hints.dovi.dv_bl_signal_compatibility_id = 1;
+        // the output is now Dolby Vision: mark the picture as DV so the AML
+        // renderer takes its DV path (dv_is_used) matching the actual output
+        m_videobuffer.hdrType = StreamHdrType::HDR_TYPE_DOLBYVISION;
+        IsHdr10Plus = true; // converted => source was HDR10+; report that, not the DV output
+      }
+      else if (m_convertHdr10Plus)
+      {
+        // DEGRADED STATE: conversion was armed but no HDR10+ RPU was produced by
+        // the first access unit (e.g. HDR10+ carried only as container side data,
+        // or an unparseable first SEI). Fall back to native HDR10/HDR10+
+        // rather than dropping anything. The decoder is now latched to HDR10 for
+        // the whole stream, so the converter has to be disarmed with it: left
+        // armed, a later access unit would strip its HDR10+ SEI and inject a DV
+        // RPU into a decode session opened as HDR10, and mute the native side
+        // channel on the way past, leaving neither an RPU nor HDR10+.
+        m_convertHdr10Plus = false;
+        if (m_bitstream && m_sinkLacksHdr10Plus)
+        {
+          m_bitstream->SetRemoveHdr10Plus(true);
+          m_stripHdr10Plus = true;
+        }
+        CLog::Log(LOGWARNING, "CDVDVideoCodecAmlogic::{}: HDR10+ to DV conversion armed "
+                  "but no RPU generated on first AU - disarmed, playing as native "
+                  "HDR10/HDR10+",
+                  __FUNCTION__);
+      }
+
       m_processInfo.SetDoviIsFEL(doviIsFEL);
       m_processInfo.SetIsHdr10Plus(IsHdr10Plus);
 
@@ -654,7 +831,13 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
     }
   }
 
-  if (packet.pSideData && packet.iSideDataElems > 0)
+  // Suppress the native HDR10+ side channel only when conversion actually
+  // happened (an RPU was written into this access unit). Keying on intent alone
+  // would drop HDR10+ from a stream we armed but could not convert (e.g. HDR10+
+  // carried only as container side data), leaving neither its side channel nor a
+  // generated RPU.
+  const bool converting = m_hdr10PlusSession.ConvertedThisAu();
+  if (packet.pSideData && packet.iSideDataElems > 0 && !converting)
   {
     const AVPacketSideData* sideData = av_packet_side_data_get(static_cast<AVPacketSideData*>(packet.pSideData),
                                                                packet.iSideDataElems,
@@ -704,6 +887,14 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
     KODI::MEMORY::AlignedFree(pDataBackup);
     m_packages.pop_front();
   }
+
+  // The decoder refused this access unit (ES buffer full); VideoPlayerVideo
+  // re-offers the identical packet. Generation already committed the cache key,
+  // so roll it back and let the replay reproduce the same RPU exactly. Forcing a
+  // refresh here instead would invent a scene cut on every mid-shot stall, since
+  // back-pressure has nothing to do with scene changes.
+  if (!data_added && pData)
+    m_hdr10PlusSession.RollbackAu();
 
   return data_added;
 }
@@ -759,6 +950,11 @@ void CDVDVideoCodecAmlogic::DrainMetadataToClock()
 void CDVDVideoCodecAmlogic::Reset(void)
 {
   m_Codec->Reset();
+
+  // A seek breaks the shot: invalidate the cache key so the next RPU carries
+  // scene_refresh_flag=1 and the display re-anchors instead of smoothing on
+  // from where it left off. The cached RPUs themselves are kept as a fallback.
+  m_hdr10PlusSession.Reset();
 
   while (!m_packages.empty())
   {
