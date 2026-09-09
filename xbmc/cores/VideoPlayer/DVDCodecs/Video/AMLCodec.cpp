@@ -2336,8 +2336,16 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
   {
     am_private->vcodec.config_len = static_cast<int>(config_data.size());
     am_private->vcodec.config = (char*)malloc(config_data.size() + 1);
-    config_data.copy(am_private->vcodec.config, config_data.size());
-    am_private->vcodec.config[am_private->vcodec.config_len] = '\0';
+    if (am_private->vcodec.config)
+    {
+      config_data.copy(am_private->vcodec.config, config_data.size());
+      am_private->vcodec.config[am_private->vcodec.config_len] = '\0';
+    }
+    else
+    {
+      am_private->vcodec.config_len = 0;
+      CLog::Log(LOGERROR, "CAMLCodec::OpenDecoder - config alloc failed");
+    }
   }
 
   if (am_private->vcodec.dec_mode == STREAM_TYPE_SINGLE)
@@ -2499,7 +2507,10 @@ void CAMLCodec::CloseDecoder()
   am_private->hdr_buf.data = NULL;
 
   if (am_private->vcodec.config)
+  {
     free(am_private->vcodec.config);
+    am_private->vcodec.config = NULL;
+  }
 
   // return tsync to default so external apps work
   CSysfsPath("/sys/class/tsync/enable", 1);
