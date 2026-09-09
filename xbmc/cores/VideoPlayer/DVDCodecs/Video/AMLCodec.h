@@ -104,6 +104,9 @@ private:
 
   DllLibAmCodec   *m_dll;
   bool             m_opened;
+  //! Whether this took the system default vfm chain away, so the close puts back
+  //! only what it actually took.
+  bool             m_vfmMapOverridden{false};
   bool             m_drain = false;
   am_private_t    *am_private;
   CDVDStreamInfo   m_hints;
