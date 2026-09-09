@@ -1026,7 +1026,7 @@ void CAMLDisplay::aml_refresh_display_caps()
 
   if (edid.Exists())
   {
-    std::string valstr = edid.Get<std::string>().value();
+    std::string valstr = edid.Get<std::string>().value_or("");
     size_t pos = valstr.find("Physical size(mm):");
     if (pos != std::string::npos)
     {
@@ -1049,7 +1049,7 @@ void CAMLDisplay::aml_refresh_display_caps()
   bool support_3d = false;
   CSysfsPath amhdmitx0_support_3d{"/sys/class/amhdmitx/amhdmitx0/support_3d"};
   if (amhdmitx0_support_3d.Exists())
-    support_3d = amhdmitx0_support_3d.Get<int>().value();
+    support_3d = amhdmitx0_support_3d.Get<int>().value_or(0);
 
   m_support_3d = support_3d;
 }
@@ -1086,7 +1086,8 @@ void CAMLDisplay::handle_display_stereo_mode(const RenderStereoMode stereo_mode)
   {
     CSysfsPath _kernel_stereo_mode{"/sys/class/amhdmitx/amhdmitx0/stereo_mode"};
     if (_kernel_stereo_mode.Exists())
-      m_stereo_mode = static_cast<RenderStereoMode>(_kernel_stereo_mode.Get<int>().value());
+      m_stereo_mode = static_cast<RenderStereoMode>(
+          _kernel_stereo_mode.Get<int>().value_or(static_cast<int>(RenderStereoMode::UNDEFINED)));
   }
 
   if (m_stereo_mode != stereo_mode)
@@ -1148,7 +1149,7 @@ std::string CAMLDisplay::aml_get_preferred_mode()
   CSysfsPath cmdline{"/proc/cmdline"};
   if (cmdline.Exists())
   {
-    std::vector<std::string> cmdlinestr = StringUtils::Split(cmdline.Get<std::string>().value(), " ");
+    std::vector<std::string> cmdlinestr = StringUtils::Split(cmdline.Get<std::string>().value_or(""), " ");
 
     for (std::vector<std::string>::const_reverse_iterator item = cmdlinestr.rbegin(); item != cmdlinestr.rend(); ++item)
     {
@@ -1316,7 +1317,7 @@ bool CAMLDisplay::aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolution
     CSysfsPath vesa_cap{"/sys/class/amhdmitx/amhdmitx0/vesa_cap"};
     if (vesa_cap.Exists())
     {
-      addstr = vesa_cap.Get<std::string>().value();
+      addstr = vesa_cap.Get<std::string>().value_or("");
       valstr += "\n" + addstr;
     }
   }
@@ -1329,12 +1330,12 @@ bool CAMLDisplay::aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolution
       CSysfsPath dcapfile3d{"/sys/class/amhdmitx/amhdmitx0/disp_cap_3d"};
       if (dcapfile3d.Exists())
       {
-        addstr = dcapfile3d.Get<std::string>().value();
+        addstr = dcapfile3d.Get<std::string>().value_or("");
         valstr += "\n" + addstr;
       }
     }
     else
-      valstr = user_dcapfile_3d.Get<std::string>().value();
+      valstr = user_dcapfile_3d.Get<std::string>().value_or("");
   }
 
 
