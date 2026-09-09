@@ -17,6 +17,7 @@
 #include "utils/Geometry.h"
 
 #include <deque>
+#include <mutex>
 #include <atomic>
 
 typedef struct am_private_t am_private_t;
@@ -103,6 +104,9 @@ private:
 
   DllLibAmCodec   *m_dll;
   bool             m_opened;
+  //! Whether this took the system default vfm chain away, so the close puts back
+  //! only what it actually took.
+  bool             m_vfmMapOverridden{false};
   bool             m_drain = false;
   am_private_t    *am_private;
   CDVDStreamInfo   m_hints;
@@ -129,6 +133,8 @@ private:
   unsigned int m_state;
 
   PosixFilePtr     m_amlVideoFile;
+  //! Per instance, not file scope: the member it guards is per instance.
+  std::mutex       m_amlVideoFileMutex;
   std::string      m_defaultVfmMap;
 
   static std::atomic_flag  m_pollSync;

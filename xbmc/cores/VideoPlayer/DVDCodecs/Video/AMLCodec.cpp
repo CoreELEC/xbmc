@@ -43,6 +43,7 @@
 #include <linux/videodev2.h>
 #include <sys/poll.h>
 #include <chrono>
+#include <exception>
 #include <thread>
 #include "aom_integer.h"
 #include "obu_util.h"
@@ -2320,7 +2321,12 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
   }
 
   if (am_private->vcodec.dec_mode == STREAM_TYPE_SINGLE)
+  {
+    // Recorded before the write: a write that throws half way still has to be
+    // put back.
+    m_vfmMapOverridden = true;
     SetVfmMap("default", "decoder amlvideo deinterlace amvideo");
+  }
 
   int ret = m_dll->codec_init(&am_private->vcodec);
   if (ret != CODEC_ERROR_NONE)
@@ -2370,7 +2376,10 @@ bool CAMLCodec::OpenAmlVideo(const CDVDStreamInfo &hints)
     return false;
   }
 
-  m_amlVideoFile = amlVideoFile;
+  {
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    m_amlVideoFile = amlVideoFile;
+  }
   m_defaultVfmMap = GetVfmMap("default");
 
   return true;
@@ -2423,16 +2432,31 @@ std::string CAMLCodec::GetVfmMap(const std::string &name)
   std::string sectionMap;
   for (size_t i = 0; i < sections.size(); ++i)
   {
-    if (StringUtils::StartsWith(sections[i], name + " {"))
+    // The line is "[NN]  <id> { node(a) node }", so match the id against the
+    // token in front of the brace rather than the start of the line.
+    size_t brace = sections[i].find('{');
+    if (brace == std::string::npos)
+      continue;
+    std::string id = sections[i].substr(0, brace);
+    StringUtils::Trim(id);
+    if (!id.empty() && StringUtils::EndsWith(id, name) &&
+        (id.size() == name.size() || id[id.size() - name.size() - 1] == ' '))
     {
       sectionMap = sections[i];
       break;
     }
   }
 
-  int openingBracePos = sectionMap.find('{') + 1;
+  if (sectionMap.empty())
+    return sectionMap;
+
+  size_t openingBracePos = sectionMap.find('{') + 1;
   sectionMap = sectionMap.substr(openingBracePos, sectionMap.size() - openingBracePos - 1);
-  StringUtils::Replace(sectionMap, "(0)", "");
+  // Interior nodes carry their activity as "(0)" or "(1)"; the last is printed
+  // bare. The names are what is written back.
+  for (char digit = '0'; digit <= '9'; ++digit)
+    StringUtils::Replace(sectionMap, std::string("(") + digit + ")", "");
+  StringUtils::Trim(sectionMap);
 
   return sectionMap;
 }
@@ -2514,12 +2538,35 @@ void CAMLCodec::CloseDecoder()
 
 void CAMLCodec::CloseAmlVideo()
 {
-  m_amlVideoFile.reset();
+  PosixFilePtr closing;
+  {
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    closing.swap(m_amlVideoFile);
+  }
+  // Dropped here rather than at the end of the scope, so the node is released at
+  // the same point as before. A frame still in flight holds its own reference.
+  closing.reset();
 
-  if (am_private->vcodec.dec_mode == STREAM_TYPE_SINGLE)
-    SetVfmMap("default", m_defaultVfmMap);
-
-  m_amlVideoFile = NULL;
+  // Put back only what this took away, and only if it took it. Nothing to give
+  // back if the read found no such map, and an empty one is a map that exists with
+  // no nodes - not worth restoring over a working chain.
+  if (m_vfmMapOverridden)
+  {
+    m_vfmMapOverridden = false;
+    if (!m_defaultVfmMap.empty())
+    {
+      try
+      {
+        SetVfmMap("default", m_defaultVfmMap);
+      }
+      catch (const std::exception& e)
+      {
+        // Reached from the codec's destructor, where an escape would terminate.
+        CLog::Log(LOGERROR, "CAMLCodec::{} - could not restore the vfm map: {}",
+                  __FUNCTION__, e.what());
+      }
+    }
+  }
 }
 
 void CAMLCodec::Reset()
@@ -2766,7 +2813,12 @@ int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
   vbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   vbuf.index = index;
 
-  if (!m_amlVideoFile)
+  PosixFilePtr amlVideoFile;
+  {
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    amlVideoFile = m_amlVideoFile;
+  }
+  if (!amlVideoFile)
     return 0;
 
   if (drop)
@@ -2774,7 +2826,7 @@ int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
 
   CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::ReleaseFrame idx:{:d}, drop:{:d}", index, static_cast<int>(drop));
 
-  if ((ret = m_amlVideoFile->IOControl(VIDIOC_QBUF, &vbuf)) < 0)
+  if ((ret = amlVideoFile->IOControl(VIDIOC_QBUF, &vbuf)) < 0)
     CLog::Log(LOGERROR, "CAMLCodec::ReleaseFrame - VIDIOC_QBUF failed: {}", strerror(errno));
   return ret;
 }
