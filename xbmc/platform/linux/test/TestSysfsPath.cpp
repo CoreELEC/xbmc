@@ -105,3 +105,20 @@ TEST_F(TestSysfsPath, SysfsPathTestPathDoesNotExist)
   CSysfsPath otherPath{"/thispathdoesnotexist"};
   ASSERT_FALSE(otherPath.Exists());
 }
+
+TEST_F(TestSysfsPath, SysfsPathTestReadThatCannotRunGivesADefinedValue)
+{
+  CSysfsPath missing{"/thispathdoesnotexist"};
+  EXPECT_EQ(missing.Get<int>().value_or(-1), 0);
+  EXPECT_EQ(missing.Get<unsigned int>().value_or(1u), 0u);
+  EXPECT_EQ(missing.Get<double>().value_or(-1.0), 0.0);
+  EXPECT_FALSE(missing.Get<bool>().value_or(true));
+
+  // An empty node reads the same way: the sentry hits eof before converting.
+  std::string filepath = GetTestFilePath();
+  std::ofstream(filepath).close();
+  CSysfsPath empty{filepath};
+  ASSERT_TRUE(empty.Exists());
+  EXPECT_EQ(empty.Get<int>().value_or(-1), 0);
+  std::remove(filepath.c_str());
+}
