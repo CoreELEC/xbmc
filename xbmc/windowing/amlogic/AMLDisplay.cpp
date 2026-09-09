@@ -737,6 +737,10 @@ int CAMLDRMUtils::aml_get_drmProperty(std::string name,
 
     switch (obj_type) {
       case DRM_MODE_OBJECT_CONNECTOR:
+        // A rebuild that failed freed this and left the object alive. Leave the
+        // function, not the switch: the one below reads the same pointer.
+        if (!m_connector)
+          return ret;
         id = m_connector->connector_id;
         ret = get_drmProp(id, name, obj_type, data, data_len);
         [[fallthrough]];
@@ -776,6 +780,10 @@ void CAMLDRMUtils::aml_set_drmProperty(std::string name, unsigned int obj_type, 
 
     switch (obj_type) {
       case DRM_MODE_OBJECT_CONNECTOR:
+        // A rebuild that failed freed this and left the object alive. Leave the
+        // function, not the switch: the one below reads the same pointer.
+        if (!m_connector)
+          return;
         id = m_connector->connector_id;
         set_drmProp(id, name, obj_type, value, NULL);
         [[fallthrough]];
