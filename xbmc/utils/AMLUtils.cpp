@@ -277,7 +277,11 @@ int aml_amdv_wait(StreamHdrType hdrType)
   if (hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
   {
     CSysfsPath amdv_wait_delay{"/sys/module/aml_media/parameters/amdv_wait_delay"};
-    return amdv_wait_delay.Get<int>().value();
+    // The read cannot report a missing node, so ask first. CRenderManager reads
+    // this as a delay and counts a large one down a call at a time.
+    if (!amdv_wait_delay.Exists())
+      return 0;
+    return amdv_wait_delay.Get<int>().value_or(0);
   }
   else
     return 0;

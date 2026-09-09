@@ -35,7 +35,10 @@ public:
     {
       std::ifstream file(m_path);
 
-      T value;
+      // Value-initialised: when the stream's sentry fails - the open failed, or
+      // the file is empty - operator>> never runs the conversion and leaves this
+      // untouched.
+      T value{};
 
       file >> value;
 
