@@ -2370,7 +2370,10 @@ bool CAMLCodec::OpenAmlVideo(const CDVDStreamInfo &hints)
     return false;
   }
 
-  m_amlVideoFile = amlVideoFile;
+  {
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    m_amlVideoFile = amlVideoFile;
+  }
   m_defaultVfmMap = GetVfmMap("default");
 
   return true;
@@ -2514,12 +2517,17 @@ void CAMLCodec::CloseDecoder()
 
 void CAMLCodec::CloseAmlVideo()
 {
-  m_amlVideoFile.reset();
+  PosixFilePtr closing;
+  {
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    closing.swap(m_amlVideoFile);
+  }
+  // Dropped here rather than at the end of the scope, so the node is released at
+  // the same point as before. A frame still in flight holds its own reference.
+  closing.reset();
 
   if (am_private->vcodec.dec_mode == STREAM_TYPE_SINGLE)
     SetVfmMap("default", m_defaultVfmMap);
-
-  m_amlVideoFile = NULL;
 }
 
 void CAMLCodec::Reset()
@@ -2766,7 +2774,12 @@ int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
   vbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   vbuf.index = index;
 
-  if (!m_amlVideoFile)
+  PosixFilePtr amlVideoFile;
+  {
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    amlVideoFile = m_amlVideoFile;
+  }
+  if (!amlVideoFile)
     return 0;
 
   if (drop)
@@ -2774,7 +2787,7 @@ int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
 
   CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::ReleaseFrame idx:{:d}, drop:{:d}", index, static_cast<int>(drop));
 
-  if ((ret = m_amlVideoFile->IOControl(VIDIOC_QBUF, &vbuf)) < 0)
+  if ((ret = amlVideoFile->IOControl(VIDIOC_QBUF, &vbuf)) < 0)
     CLog::Log(LOGERROR, "CAMLCodec::ReleaseFrame - VIDIOC_QBUF failed: {}", strerror(errno));
   return ret;
 }
