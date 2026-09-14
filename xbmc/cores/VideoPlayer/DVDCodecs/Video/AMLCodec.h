@@ -58,6 +58,8 @@ struct pq_ctrl_s {
 #define AMVECM_IOC_S_PQ_CTRL  _IOW(_VE_CM, 0x69, struct vpp_pq_ctrl_s)
 #define AMVECM_IOC_G_PQ_CTRL  _IOR(_VE_CM, 0x6a, struct vpp_pq_ctrl_s)
 
+#define AMLVIDEO_IOC_GET_VFQ     _IOR('V', 0x01, int)
+
 class CAMLCodec
 {
 public:
