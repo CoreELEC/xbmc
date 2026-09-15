@@ -649,7 +649,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
   // the just-presented region is video-only: OSD, GUI and subtitles come later
   if (presented)
     ServiceVideoCaptures();
-
+/*
   if (presented && !gui)
   {
     CRect src, dst, view;
@@ -657,7 +657,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
     m_overlays.SetVideoRect(src, dst, view);
     m_overlays.RenderHDROverlays(m_presentsource);
   }
-
+*/
   if (gui || m_renderDebug)
   {
     if (!m_pRenderer->IsGuiLayer())
@@ -667,6 +667,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
     m_pRenderer->GetVideoRect(src, dst, view);
     m_overlays.SetVideoRect(src, dst, view);
     m_overlays.Render(m_presentsource);
+    m_overlays.RenderHDROverlays(m_presentsource);
 
     if (m_renderDebug)
     {
