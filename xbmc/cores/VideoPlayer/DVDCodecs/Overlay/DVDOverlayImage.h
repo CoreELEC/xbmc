@@ -80,6 +80,9 @@ public:
   // pixels are already HDR, matching video's colorimetry
   bool m_isHDROverlay{false};
 
+  // hold information if overlay is PGS format
+  bool m_isPGS{false};
+
   int linesize{0};
   int x{0};
   int y{0};

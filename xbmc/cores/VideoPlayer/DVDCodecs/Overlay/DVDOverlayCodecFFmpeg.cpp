@@ -284,6 +284,7 @@ std::shared_ptr<CDVDOverlay> CDVDOverlayCodecFFmpeg::GetOverlay()
     //! @todo for now, set hint for PGS+PQ for UHD Bluray, update for DVB+HLG if needed
     overlay->m_isHDROverlay = m_pCodecContext->codec_id == AV_CODEC_ID_HDMV_PGS_SUBTITLE &&
                               m_pCodecContext->color_trc == AVCOL_TRC_SMPTE2084;
+    overlay->m_isPGS = m_pCodecContext->codec_id == AV_CODEC_ID_HDMV_PGS_SUBTITLE;
     overlay->source_width = m_width;
     overlay->source_height = m_height;
 
