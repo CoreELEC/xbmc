@@ -498,6 +498,7 @@ const CGlMatrix& CConvertMatrix::GenMat()
       break;
     case AVCOL_SPC_BT2020_NCL:
     case AVCOL_SPC_BT2020_CL:
+    case AVCOL_SPC_ICTCP:
       convYCbCr = BT2020YCbCr;
       break;
     default:
@@ -633,6 +634,7 @@ Matrix3x1 CConvertMatrix::GetRGBYuvCoefs(AVColorSpace colspace)
       break;
     case AVCOL_SPC_BT2020_NCL:
     case AVCOL_SPC_BT2020_CL:
+    case AVCOL_SPC_ICTCP:
       coefs[0] = BT2020YCbCr.Kr;
       coefs[1] = 1 - BT2020YCbCr.Kr - BT2020YCbCr.Kb;
       coefs[2] = BT2020YCbCr.Kb;
