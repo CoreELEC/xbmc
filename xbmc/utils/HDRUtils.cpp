@@ -31,6 +31,8 @@ Colorimetry GetColorimetry(const VideoPicture& picture)
     case AVCOL_SPC_SMPTE170M:
     case AVCOL_SPC_BT470BG:
       return Colorimetry::SMPTE_170M_YCC;
+    case AVCOL_SPC_ICTCP:
+      return Colorimetry::ICTCP;
     default:
       if (picture.iWidth > 1024 || picture.iHeight >= 600)
         return Colorimetry::BT709_YCC;
