@@ -143,9 +143,32 @@ std::shared_ptr<COverlay> COverlay::Create(const CDVDOverlayImage& o, CRect& rSo
   return std::make_shared<COverlayTextureGLES>(o, rSource);
 }
 
+inline bool IsImageColored(const std::vector<uint32_t>& rgba)
+{
+  constexpr uint8_t TOL = 2; // grayscale tolerance
+  const size_t count = rgba.size();
+
+  for (size_t i = 0; i < count; ++i)
+  {
+    const uint32_t px = rgba[i] & 0x00FFFFFF;
+    const uint8_t r = (px >> 16) & 0xFF;
+    const uint8_t g = (px >>  8) & 0xFF;
+    const uint8_t b = (px >>  0) & 0xFF;
+
+    const uint8_t maxc = std::max({r, g, b});
+    const uint8_t minc = std::min({r, g, b});
+
+    if ((maxc - minc) > TOL)
+      return true; // colored
+  }
+
+  return false; // grayscale
+}
+
 COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSource)
 {
   m_isHDROverlay = o.m_isHDROverlay;
+  m_isPGS = o.m_isPGS;
 
   glGenTextures(1, &m_texture);
   glBindTexture(GL_TEXTURE_2D, m_texture);
@@ -176,6 +199,7 @@ COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSour
     m_pma = !!USE_PREMULTIPLIED_ALPHA;
     convert_rgba(o, m_pma, rgba, paletteOverride);
 
+    m_isColoredPGS = IsImageColored(rgba);
     // the direct back-buffer draw in Render bypasses the composite's
     // limited-range encode, so apply it to the pixels here
     //! @todo Move this into the overlay shader once limited-range and
@@ -505,6 +529,10 @@ void COverlayTextureGLES::Render(SRenderState& state)
   // time a shader is bound, so non-PMA consumers stay on straight-alpha math.
   if (m_pma)
     glUniform1f(renderSystem->GUIShaderGetPma(), 1.0f);
+
+  // Do not modify PGS overlay luminance to keep correct hue/saturation
+  if (m_isPGS && m_isColoredPGS && CServiceBroker::GetWinSystem()->GetGfxContext().IsTransferPQ())
+    glUniform1f(renderSystem->GUIShaderGetSdrPeak(), 1.0f);
 
   GLfloat ver[4][2];
   GLfloat tex[4][2];
