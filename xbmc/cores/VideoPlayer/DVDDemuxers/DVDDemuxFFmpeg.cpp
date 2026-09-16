@@ -2025,6 +2025,8 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         st->colorTransferCharacteristic = pStream->codecpar->color_trc;
         st->colorRange = pStream->codecpar->color_range;
         st->hdr_type = DetermineHdrType(pStream);
+        if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION)
+          st->colorSpace = AVCOL_SPC_ICTCP;
 
         // https://github.com/FFmpeg/FFmpeg/blob/release/7.0/doc/APIchanges
         const AVPacketSideData* sideData = nullptr;
