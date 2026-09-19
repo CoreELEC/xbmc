@@ -5335,6 +5335,38 @@ bool CVideoPlayer::OnAction(const CAction &action)
       m_renderManager.ToggleDebugVideo();
       break;
 
+#if defined(HAS_LIBAMCODEC)
+    case ACTION_VS10_ORIGINAL:
+    case ACTION_VS10_SDR:
+    case ACTION_VS10_HDR10:
+    case ACTION_VS10_DV:
+    {
+      THREAD_ACTION(action);
+      if (!m_processInfo->IsVideoHwDecoder())
+        return false;
+
+      AML_DV_OUTPUT_MODE mode = AML_DV_OUTPUT_MODE::BYPASS;
+      switch (action.GetID())
+      {
+        case ACTION_VS10_SDR:
+          mode = AML_DV_OUTPUT_MODE::SDR10;
+          break;
+        case ACTION_VS10_HDR10:
+          mode = AML_DV_OUTPUT_MODE::HDR10;
+          break;
+        case ACTION_VS10_DV:
+          mode = AML_DV_OUTPUT_MODE::IPT;
+          break;
+        default:
+          break;
+      }
+      if (!aml_dv_set_vs10_mode(mode))
+        return false;
+
+      m_renderManager.RequestDisplayReset();
+      return true;
+    }
+#endif
     case ACTION_PLAYER_PROCESS_INFO:
       CServiceBroker::GetAnnouncementManager()->Announce(ANNOUNCEMENT::Player, "OnProcessInfo");
       return true;

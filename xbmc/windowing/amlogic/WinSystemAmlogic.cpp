@@ -191,6 +191,12 @@ bool CWinSystemAmlogic::MessagePump()
   if (m_hotplugPending.exchange(false))
     HotplugEvent();
 
+  if (IsPresentationReady() && m_displayResetRequested.exchange(false))
+  {
+    RequestModeSwitch();
+    GetGfxContext().SetVideoResolution(GetGfxContext().GetVideoResolution(), true);
+  }
+
   return false;
 }
 

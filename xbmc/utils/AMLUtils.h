@@ -22,6 +22,16 @@ enum AML_DISPLAY_DV_LED
   AML_DV_PLAYER_LED
 };
 
+enum class AML_DV_OUTPUT_MODE
+{
+  IPT = 0,
+  IPT_TUNNEL = 1,
+  HDR10 = 2,
+  SDR10 = 3,
+  SDR8 = 4,
+  BYPASS = 5
+};
+
 #define HDR10_PLUS_CAP      (int)(1<<0)
 #define HDR10_CAP           (int)(1<<2)
 #define SMPTE_ST_2084_CAP   (int)(1<<3)
@@ -59,6 +69,8 @@ bool aml_support_avs2();
 bool aml_support_avs3();
 bool aml_support_dolby_vision();
 bool aml_dolby_vision_enabled();
+AML_DV_OUTPUT_MODE aml_dv_get_output_mode();
+bool aml_dv_set_vs10_mode(AML_DV_OUTPUT_MODE mode);
 bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType);
 bool aml_video_started();
 int aml_amdv_wait(StreamHdrType hdrType);

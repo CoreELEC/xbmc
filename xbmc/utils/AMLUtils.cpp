@@ -6,6 +6,7 @@
  *  See LICENSES/README.md for more information.
  */
 
+#include <chrono>
 #include <fcntl.h>
 #include <regex>
 #include <string.h>
@@ -17,6 +18,7 @@
 #include "utils/StringUtils.h"
 #include "ServiceBroker.h"
 #include "utils/RegExp.h"
+#include "settings/AdvancedSettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "platform/linux/SysfsPath.h"
@@ -246,6 +248,92 @@ bool aml_dolby_vision_enabled()
                          ->GetAmlDisplay()->aml_display_support_dv());
 
   return ((dv_enabled && !!dv_user_enabled) == 1);
+}
+
+AML_DV_OUTPUT_MODE aml_dv_get_output_mode()
+{
+  auto* display = static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay();
+  if (display->aml_get_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC) != 1)
+    return AML_DV_OUTPUT_MODE::BYPASS;
+
+  int mode = display->aml_get_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC);
+  if (mode < 0 || mode > static_cast<int>(AML_DV_OUTPUT_MODE::BYPASS))
+    return AML_DV_OUTPUT_MODE::BYPASS;
+
+  return static_cast<AML_DV_OUTPUT_MODE>(mode);
+}
+
+bool aml_dv_set_vs10_mode(AML_DV_OUTPUT_MODE mode)
+{
+  enum
+  {
+    AMDV_FOLLOW_SOURCE = 1,
+    AMDV_FORCE_OUTPUT_MODE = 2
+  };
+
+  if (!aml_support_dolby_vision())
+    return false;
+
+  auto* display = static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay();
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  if (display->aml_get_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC) < 0)
+    return false;
+
+  if (mode == AML_DV_OUTPUT_MODE::BYPASS)
+  {
+    display->aml_set_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC, AMDV_FOLLOW_SOURCE);
+  }
+  else
+  {
+    if (settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE))
+      return false;
+
+    bool playerLed = settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) ==
+      AML_DV_PLAYER_LED;
+    if (mode == AML_DV_OUTPUT_MODE::IPT)
+    {
+      if (!display->aml_display_support_dv())
+        return false;
+      if (!playerLed)
+        mode = AML_DV_OUTPUT_MODE::IPT_TUNNEL;
+    }
+    if (mode == AML_DV_OUTPUT_MODE::HDR10 && !CServiceBroker::GetWinSystem()->IsHDRDisplay())
+      return false;
+
+    display->aml_set_drmProperty("dv_ll_policy", DRM_MODE_OBJECT_CRTC, playerLed);
+    display->aml_set_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC, AMDV_FORCE_OUTPUT_MODE);
+    display->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 1);
+  }
+
+  display->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC, static_cast<unsigned int>(mode));
+  if (mode == AML_DV_OUTPUT_MODE::BYPASS &&
+      display->aml_get_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC) == 1)
+  {
+    const auto timeout = std::chrono::seconds(
+      CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_videoDecoderTimeout);
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    constexpr unsigned int POLL_INTERVAL_US = 10000;
+
+    // bypass mode is reported before the driver finishes shutting down the DV core
+    while (aml_dv_get_output_mode() == AML_DV_OUTPUT_MODE::BYPASS &&
+           (display->aml_get_drmProperty("dv_status", DRM_MODE_OBJECT_CRTC) != 0 ||
+            display->aml_get_drmProperty("dv_video_on", DRM_MODE_OBJECT_CRTC) != 0) &&
+           std::chrono::steady_clock::now() < deadline)
+      usleep(POLL_INTERVAL_US);
+
+    if (aml_dv_get_output_mode() == AML_DV_OUTPUT_MODE::BYPASS)
+    {
+      if (display->aml_get_drmProperty("dv_status", DRM_MODE_OBJECT_CRTC) == 0 &&
+          display->aml_get_drmProperty("dv_video_on", DRM_MODE_OBJECT_CRTC) == 0)
+        display->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 0);
+      else
+        CLog::Log(LOGWARNING, "AMLUtils::{}: timed out waiting for DV bypass", __FUNCTION__);
+    }
+  }
+
+  CLog::Log(LOGINFO, "AMLUtils::{}: requested mode {}, resolved mode {}", __FUNCTION__,
+    static_cast<int>(mode), static_cast<int>(aml_dv_get_output_mode()));
+  return true;
 }
 
 bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)

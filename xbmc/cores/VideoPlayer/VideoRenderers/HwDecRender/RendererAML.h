@@ -27,7 +27,7 @@ public:
   virtual bool ConfigChanged(const VideoPicture &picture) { return false; };
   virtual CRenderInfo GetRenderInfo() override;
   virtual void UnInit() override {};
-  virtual void Update() override {};
+  virtual void Update() override;
   virtual void RenderUpdate(int index, int index2, bool clear, unsigned int flags, unsigned int alpha) override;
   virtual bool SupportsMultiPassRendering()override { return false; };
   virtual bool Flush(bool saveBuffers) override;
@@ -53,4 +53,5 @@ private:
 
   uint64_t m_prevVPts;
   bool m_bConfigured;
+  bool m_transferPQ{false};
 };

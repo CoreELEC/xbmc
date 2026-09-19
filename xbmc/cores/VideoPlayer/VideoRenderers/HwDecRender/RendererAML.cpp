@@ -77,11 +77,32 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
   CLog::Log(LOGDEBUG, "CRendererAML::Configure {}DV support, {}, DV system is {}, HDR is {}", device_support_dv ? "" : "no ",
     user_dv_disable ? "disabled" : "enabled", dv_is_used ? "enabled" : "disabled", hdr_is_used ? "used" : "not used");
 
-  CServiceBroker::GetWinSystem()->GetGfxContext().SetTransferPQ(dv_is_used | hdr_is_used);
+  m_transferPQ = hdr_is_used;
+  Update();
 
   m_bConfigured = true;
 
   return true;
+}
+
+void CRendererAML::Update()
+{
+  bool transferPQ = m_transferPQ;
+  switch (aml_dv_get_output_mode())
+  {
+    case AML_DV_OUTPUT_MODE::IPT:
+    case AML_DV_OUTPUT_MODE::IPT_TUNNEL:
+    case AML_DV_OUTPUT_MODE::HDR10:
+      transferPQ = true;
+      break;
+    case AML_DV_OUTPUT_MODE::SDR10:
+    case AML_DV_OUTPUT_MODE::SDR8:
+      transferPQ = false;
+      break;
+    case AML_DV_OUTPUT_MODE::BYPASS:
+      break;
+  }
+  CServiceBroker::GetWinSystem()->GetGfxContext().SetTransferPQ(transferPQ);
 }
 
 CRenderInfo CRendererAML::GetRenderInfo()

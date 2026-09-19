@@ -32,6 +32,10 @@
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
 
+#if defined(HAS_LIBAMCODEC)
+#include "windowing/amlogic/WinSystemAmlogic.h"
+#endif
+
 #include <memory>
 #include <mutex>
 
@@ -428,6 +432,7 @@ void CRenderManager::UnInit()
 
   m_renderState = STATE_UNCONFIGURED;
   m_picture.Reset();
+  m_displayResetRequested = false;
   m_bRenderGUI = false;
   CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_picture.hdrType);
 
@@ -819,6 +824,17 @@ void CRenderManager::UpdateLatencyTweak()
 
 void CRenderManager::UpdateResolution()
 {
+#if defined(HAS_LIBAMCODEC)
+  if (m_displayResetRequested.exchange(false))
+  {
+    if (m_pRenderer)
+      m_pRenderer->Update();
+    auto* window = static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem());
+    window->RequestModeSwitch();
+    window->GetGfxContext().SetVideoResolution(window->GetGfxContext().GetVideoResolution(), true);
+    UpdateLatencyTweak();
+  }
+#endif
   if (m_bTriggerUpdateResolution)
   {
     if (CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenVideo() && CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenRoot())

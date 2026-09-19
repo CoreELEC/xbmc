@@ -55,6 +55,8 @@ public:
   void MonitorStop();
 
   CAMLDisplay* GetAmlDisplay() const { return m_amlDisplay.get(); }
+  void RequestModeSwitch() { m_force_mode_switch = true; }
+  void RequestDisplayReset() { m_displayResetRequested = true; }
 protected:
   std::string m_framebuffer_name;
   bool IsHotplugPending() const { return m_hotplugPending.load(); }
@@ -95,4 +97,5 @@ private:
   struct udev *m_udev;
   struct callback_data m_callback_data;
   std::atomic<bool> m_hotplugPending{false};
+  std::atomic<bool> m_displayResetRequested{false};
 };

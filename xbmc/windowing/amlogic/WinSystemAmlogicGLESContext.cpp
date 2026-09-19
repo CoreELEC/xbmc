@@ -158,7 +158,7 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
           (res.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
       m_bWindowCreated && nativeGUI == m_nativeGUI && !force_mode_switch_by_hdr &&
       !force_mode_switch_by_hotplug && !force_mode_switch_by_fractional_rate &&
-      !force_mode_switch_by_stereo_mode)
+      !force_mode_switch_by_stereo_mode && !m_force_mode_switch)
   {
     CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: No need to create a new window", __FUNCTION__);
     return true;

@@ -78,6 +78,7 @@ public:
 
   RESOLUTION GetResolution();
   void UpdateResolution();
+  void RequestDisplayReset() { m_displayResetRequested = true; }
   void TriggerUpdateResolution(float fps, int width, int height, std::string &stereomode);
   void SetViewMode(int iViewMode);
   void PreInit();
@@ -171,6 +172,7 @@ protected:
   CCriticalSection m_presentlock;
   CCriticalSection m_datalock;
   bool m_bTriggerUpdateResolution = false;
+  std::atomic<bool> m_displayResetRequested{false};
   bool m_bRenderGUI = true;
   bool m_renderedDebugOverlay = false;
   bool m_renderDebug = false;

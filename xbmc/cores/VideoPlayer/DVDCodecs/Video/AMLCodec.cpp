@@ -2558,6 +2558,9 @@ void CAMLCodec::CloseDecoder()
   ShowMainVideo(false);
 
   CloseAmlVideo();
+
+  if (dv_enabled)
+    static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->RequestDisplayReset();
 }
 
 void CAMLCodec::CloseAmlVideo()
