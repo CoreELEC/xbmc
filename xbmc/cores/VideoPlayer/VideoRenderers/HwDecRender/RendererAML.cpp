@@ -71,26 +71,61 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
   SetViewMode(m_videoSettings.m_ViewMode);
   ManageRenderArea();
 
-  // Configure GUI/OSD for HDR PQ when display is in HDR PQ mode
-  bool device_support_dv(aml_support_dolby_vision());
-  bool user_dv_disable(CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
-  bool dv_is_used(device_support_dv && !user_dv_disable && picture.color_space == AVCOL_SPC_ICTCP &&
-                  static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())
-                      ->GetAmlDisplay()
-                      ->aml_display_support_dv());
-  bool hdr_is_used(picture.color_space == AVCOL_SPC_BT2020_NCL &&
-                   CServiceBroker::GetWinSystem()->IsHDRDisplay());
-  CLog::Log(LOGDEBUG, "CRendererAML::Configure {}DV support, {}, DV system is {}, HDR is {}", device_support_dv ? "" : "no ",
-    user_dv_disable ? "disabled" : "enabled", dv_is_used ? "enabled" : "disabled", hdr_is_used ? "used" : "not used");
-
-  if (dv_is_used)
+  int color_transfer = 0;
+  switch (picture.color_space)
   {
-    CSysfsPath("/sys/class/amdolby_vision/graphic_fmt", 1 /* FORMAT_HDR10 */);
-    CServiceBroker::GetWinSystem()->SetGuiCompositing(AVCOL_TRC_SMPTE2084);
-  }
-  else if (hdr_is_used)
-    CServiceBroker::GetWinSystem()->GetGfxContext().SetTransferPQ(true);
+    case AVCOL_SPC_BT2020_NCL:
+    {
+      if (CServiceBroker::GetWinSystem()->IsHDRDisplay())
+      {
+        auto hdr_cap = CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities();
+        switch (picture.color_transfer)
+        {
+          case AVCOL_TRC_ARIB_STD_B67:
+            if (hdr_cap.SupportsHLG())
+            {
+              color_transfer = AVCOL_TRC_ARIB_STD_B67;
+              break;
+            }
+            [[fallthrough]];
+          case AVCOL_TRC_SMPTE2084:
+            if (hdr_cap.SupportsHDR10())
+              color_transfer = AVCOL_TRC_SMPTE2084;
+            break;
+          default:
+            break;
+        }
+      }
+      break;
+    }
 
+    case AVCOL_SPC_ICTCP:
+    {
+      bool dv_enabled(aml_support_dolby_vision() &&
+        !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
+
+      auto hdr_cap = CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities();
+      switch (picture.color_transfer)
+      {
+        case AVCOL_TRC_SMPTE2084:
+          if (hdr_cap.SupportsDolbyVision() != DolbyVisionFormat::DOLBYVISION_TYPE_NONE || hdr_cap.SupportsHDR10())
+          {
+            color_transfer = AVCOL_TRC_SMPTE2084;
+
+            if (dv_enabled)
+              CSysfsPath("/sys/class/amdolby_vision/graphic_fmt", 1 /* FORMAT_HDR10 */);
+          }
+          break;
+        default:
+          break;
+      }
+      break;
+    }
+    default:
+      break;
+  }
+
+  CServiceBroker::GetWinSystem()->SetGuiCompositing(color_transfer);
   m_bConfigured = true;
 
   return true;
