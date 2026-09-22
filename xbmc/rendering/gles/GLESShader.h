@@ -26,7 +26,6 @@ public:
   GLint GetCord0Loc() { return m_hCord0; }
   GLint GetCord1Loc() { return m_hCord1; }
   GLint GetDepthLoc() { return m_hDepth; }
-  GLint GetSdrPeakLoc() { return m_sdrPeak; }
   GLint GetPmaLoc() { return m_hPma; }
   GLint GetUniColLoc() { return m_hUniCol; }
   GLint GetCoord0MatrixLoc() { return m_hCoord0Matrix; }

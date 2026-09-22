@@ -92,10 +92,6 @@ namespace OVERLAY {
     // pixels are already HDR, matching video's colorimetry
     bool m_isHDROverlay{false};
 
-    // hold information if overlay is PGS format
-    bool m_isPGS{false};
-    bool m_isColoredPGS{false};
-
     int m_3dSubtitleDepth{0};
     bool m_pgsSubtitle{false};
 
