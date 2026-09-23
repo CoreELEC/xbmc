@@ -15,16 +15,12 @@
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/MediaSettings.h"
-#include "settings/Settings.h"
-#include "settings/SettingsComponent.h"
 #include "utils/AMLUtils.h"
 #include "utils/ScreenshotAML.h"
 #include "utils/log.h"
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
 #include "windowing/amlogic/WinSystemAmlogic.h"
-
-#include "platform/linux/SysfsPath.h"
 
 CRendererAML::CRendererAML()
  : m_prevVPts(DVD_NOPTS_VALUE)
@@ -36,9 +32,8 @@ CRendererAML::CRendererAML()
 CRendererAML::~CRendererAML()
 {
   Reset();
-  CServiceBroker::GetWinSystem()->SetGuiCompositing(0);
-  CServiceBroker::GetWinSystem()->GetGfxContext().SetTransferPQ(false);
-  CSysfsPath("/sys/class/amdolby_vision/graphic_fmt", 2 /* FORMAT_SDR */);
+  static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())
+      ->ReleaseHdrGuiSession(m_hdrGuiOwner);
 }
 
 CBaseRenderer* CRendererAML::Create(CVideoBuffer *buffer)
@@ -71,6 +66,8 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
   ManageRenderArea();
 
   int color_transfer = 0;
+  const bool dv_graphics =
+      picture.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && aml_dolby_vision_enabled();
   switch (picture.color_space)
   {
     case AVCOL_SPC_BT2020_NCL:
@@ -100,9 +97,6 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
 
     case AVCOL_SPC_ICTCP:
     {
-      bool dv_enabled(aml_support_dolby_vision() &&
-        !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
-
       auto hdr_cap = CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities();
       switch (picture.color_transfer)
       {
@@ -110,9 +104,6 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
           if (hdr_cap.SupportsDolbyVision() != DolbyVisionFormat::DOLBYVISION_TYPE_NONE || hdr_cap.SupportsHDR10())
           {
             color_transfer = AVCOL_TRC_SMPTE2084;
-
-            if (dv_enabled)
-              CSysfsPath("/sys/class/amdolby_vision/graphic_fmt", 1 /* FORMAT_HDR10 */);
           }
           break;
         default:
@@ -124,7 +115,22 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
       break;
   }
 
-  CServiceBroker::GetWinSystem()->SetGuiCompositing(color_transfer);
+  // dolby vision is PQ even when its stream color fields are unspecified
+  if (dv_graphics)
+    color_transfer = AVCOL_TRC_SMPTE2084;
+
+  const auto winSystem = static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem());
+  if (color_transfer != 0)
+  {
+    m_hdrGuiOwner = winSystem->ConfigureHdrGuiSession(m_hdrGuiOwner, color_transfer, dv_graphics);
+    if (m_hdrGuiOwner == 0)
+      CLog::Log(LOGWARNING, "CRendererAML: HDR GUI composite unavailable; using normal GUI path");
+  }
+  else
+  {
+    winSystem->ReleaseHdrGuiSession(m_hdrGuiOwner);
+    m_hdrGuiOwner = 0;
+  }
   m_bConfigured = true;
 
   return true;
