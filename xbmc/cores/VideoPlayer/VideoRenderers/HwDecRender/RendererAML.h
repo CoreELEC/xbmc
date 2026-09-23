@@ -52,5 +52,6 @@ private:
   } m_buffers[m_numRenderBuffers];
 
   uint64_t m_prevVPts;
+  uint64_t m_hdrGuiOwner{0};
   bool m_bConfigured;
 };
