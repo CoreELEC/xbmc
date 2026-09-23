@@ -575,7 +575,10 @@ void CWinSystemAmlogicGLESContext::CompositeGui()
   glBindTexture(GL_TEXTURE_2D, m_guiFbo.Texture());
 
   glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  // source-over the converted GUI while preserving destination alpha from
+  // the raw PGS pass underneath it
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
+                      GL_ONE_MINUS_SRC_ALPHA);
 
   // set up orthographic projection (screen coords, Y-down)
   float w = static_cast<float>(m_guiFboWidth);
