@@ -4400,9 +4400,13 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
       // match the video stream it accompanies, per BD-ROM Part 3.
       if (hint.codec == AV_CODEC_ID_HDMV_PGS_SUBTITLE)
       {
-        hint.colorSpace = m_CurrentVideo.hint.colorSpace;
+        hint.colorSpace = AVCOL_SPC_BT2020_NCL;
         hint.colorPrimaries = m_CurrentVideo.hint.colorPrimaries;
-        hint.colorTransferCharacteristic = m_CurrentVideo.hint.colorTransferCharacteristic;
+        hint.colorTransferCharacteristic = AVCOL_TRC_SMPTE2084;
+
+        CDemuxStreamSubtitleFFmpeg* pSubStream = dynamic_cast<CDemuxStreamSubtitleFFmpeg*>(stream);
+        if (pSubStream && StringUtils::Contains(pSubStream->m_description, "SDR"))
+          hint.colorSpace = AVCOL_SPC_BT709;
       }
       res = OpenSubtitleStream(hint);
       break;
