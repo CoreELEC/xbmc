@@ -8,13 +8,15 @@
 
 #pragma once
 
+#include "WinSystemAmlogic.h"
 #include "cores/VideoPlayer/VideoRenderers/FrameBufferObject.h"
 #include "rendering/gles/GuiCompositeShaderGLES.h"
 #include "rendering/gles/RenderSystemGLES.h"
 #include "utils/EGLUtils.h"
 #include "utils/GlobalsHandling.h"
 #include "utils/StreamDetails.h"
-#include "WinSystemAmlogic.h"
+
+#include <mutex>
 
 namespace KODI
 {
@@ -52,6 +54,8 @@ public:
 
   // GUI compositing for HDR
   bool SetGuiCompositing(int colorTransfer) override;
+  uint64_t ConfigureHdrGuiSession(uint64_t owner, int colorTransfer, bool dvGraphics) override;
+  void ReleaseHdrGuiSession(uint64_t owner) override;
   bool BeginGuiComposite(bool guiWillRender) override;
   void EndGuiComposite() override;
   void ClearBackBuffer(bool guiWillRender) override;
@@ -80,6 +84,14 @@ private:
   bool m_guiWillRender{true};
 
   std::unique_ptr<CGuiCompositeShaderGLES> m_compositeShader;
+
+  void ResetHdrGuiSession();
+  bool SetDvGraphicFormat(unsigned int format);
+  bool SetDvGraphicsState(bool enabled);
+  std::mutex m_hdrGuiMutex;
+  uint64_t m_hdrGuiOwner{0};
+  uint64_t m_hdrGuiNextOwner{0};
+  bool m_hdrGuiDvGraphics{false};
 };
 
 }
