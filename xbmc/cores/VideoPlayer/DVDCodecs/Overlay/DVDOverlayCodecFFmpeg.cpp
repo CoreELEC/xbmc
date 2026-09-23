@@ -310,6 +310,7 @@ std::shared_ptr<CDVDOverlay> CDVDOverlayCodecFFmpeg::GetOverlay()
     overlay->bForced = (rect.flags & AV_SUBTITLE_FLAG_FORCED);
     //! @todo for now, set hint for PGS+PQ for UHD Bluray, update for DVB+HLG if needed
     overlay->m_isHDROverlay = m_pCodecContext->codec_id == AV_CODEC_ID_HDMV_PGS_SUBTITLE &&
+                              m_pCodecContext->colorspace == AVCOL_SPC_BT2020_NCL &&
                               m_pCodecContext->color_trc == AVCOL_TRC_SMPTE2084;
     overlay->source_width = m_width;
     overlay->source_height = m_height;

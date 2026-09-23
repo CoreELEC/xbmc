@@ -4436,9 +4436,27 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
       // match the video stream it accompanies, per BD-ROM Part 3.
       if (hint.codec == AV_CODEC_ID_HDMV_PGS_SUBTITLE)
       {
-        hint.colorSpace = m_CurrentVideo.hint.colorSpace;
-        hint.colorPrimaries = m_CurrentVideo.hint.colorPrimaries;
-        hint.colorTransferCharacteristic = m_CurrentVideo.hint.colorTransferCharacteristic;
+        CDemuxStreamSubtitleFFmpeg* pSubStream = dynamic_cast<CDemuxStreamSubtitleFFmpeg*>(stream);
+        if (pSubStream && StringUtils::Contains(pSubStream->m_description, "SDR"))
+        {
+          hint.colorSpace = AVCOL_SPC_BT709;
+          hint.colorPrimaries = AVCOL_PRI_BT709;
+          hint.colorTransferCharacteristic = AVCOL_TRC_BT709;
+        }
+        else if (m_CurrentVideo.hint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
+        {
+          // dolby vision may expose ICtCp or unspecified base-layer fields,
+          // while its associated PGS is authored as BT.2020/PQ graphics
+          hint.colorSpace = AVCOL_SPC_BT2020_NCL;
+          hint.colorPrimaries = AVCOL_PRI_BT2020;
+          hint.colorTransferCharacteristic = AVCOL_TRC_SMPTE2084;
+        }
+        else
+        {
+          hint.colorSpace = m_CurrentVideo.hint.colorSpace;
+          hint.colorPrimaries = m_CurrentVideo.hint.colorPrimaries;
+          hint.colorTransferCharacteristic = m_CurrentVideo.hint.colorTransferCharacteristic;
+        }
       }
       res = OpenSubtitleStream(hint);
       break;
