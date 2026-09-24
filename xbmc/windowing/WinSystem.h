@@ -271,7 +271,8 @@ public:
   // When false, implementations should skip FBO bind/clear since no GUI
   // draws will land in the FBO this frame.
   virtual bool BeginGuiComposite(bool guiWillRender) { return false; }
-  virtual void EndGuiComposite() {}
+  virtual void EndGuiComposite() { ClearBackBuffer(false); }
+  virtual void ClearBackBuffer(bool guiWillRender) {}
   virtual void CompositeGui() {}
 
   // True when GUI is rendered to an FBO that is then color-transformed
