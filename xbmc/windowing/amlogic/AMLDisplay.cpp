@@ -26,9 +26,7 @@ namespace
 {
 constexpr float FractionalRate(float rate)
 {
-  // Divide in double: in float the result lands one ULP low. Widened explicitly
-  // for -Werror=double-promotion.
-  return static_cast<float>(static_cast<double>(rate) / 1.001);
+  return rate / 1.001f;
 }
 } // unnamed namespace
 
