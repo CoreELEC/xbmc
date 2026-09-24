@@ -443,6 +443,12 @@ void CWinSystemAmlogicGLESContext::EndGuiComposite()
 {
   if (m_guiWillRender)
     m_guiFbo.EndRender();
+}
+
+void CWinSystemAmlogicGLESContext::ClearBackBuffer(bool guiWillRender)
+{
+  if (!guiWillRender)
+    return;
 
   // Clear the backbuffer before video renders. In the FBO compositing path,
   // video renders in the RenderEx pass with clear=false, so DrawBlackBars is
