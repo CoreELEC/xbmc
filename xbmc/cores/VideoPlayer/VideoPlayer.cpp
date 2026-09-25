@@ -4437,13 +4437,23 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
       if (hint.codec == AV_CODEC_ID_HDMV_PGS_SUBTITLE)
       {
         CDemuxStreamSubtitleFFmpeg* pSubStream = dynamic_cast<CDemuxStreamSubtitleFFmpeg*>(stream);
+        // the demux stream keeps the source type when the hint is faked for VS-Engine
+        StreamHdrType videoHdrType = m_CurrentVideo.hint.hdrType;
+        if (m_pDemuxer && STREAM_SOURCE_MASK(m_CurrentVideo.source) == STREAM_SOURCE_DEMUX)
+        {
+          CDemuxStream* st = m_pDemuxer->GetStream(m_CurrentVideo.demuxerId, m_CurrentVideo.id);
+          if (st && st->type == StreamType::VIDEO)
+            videoHdrType = static_cast<CDemuxStreamVideo*>(st)->hdr_type;
+        }
         if (pSubStream && StringUtils::Contains(pSubStream->m_description, "SDR"))
         {
           hint.colorSpace = AVCOL_SPC_BT709;
           hint.colorPrimaries = AVCOL_PRI_BT709;
           hint.colorTransferCharacteristic = AVCOL_TRC_BT709;
         }
-        else if (m_CurrentVideo.hint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
+        else if (m_CurrentVideo.hint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION &&
+                 (videoHdrType == StreamHdrType::HDR_TYPE_DOLBYVISION ||
+                  videoHdrType == StreamHdrType::HDR_TYPE_HDR10))
         {
           // dolby vision may expose ICtCp or unspecified base-layer fields,
           // while its associated PGS is authored as BT.2020/PQ graphics
