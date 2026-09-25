@@ -93,6 +93,7 @@ public:
 
   // SUBTITLE
   int m_3dSubtitlePlane;
+  int sdrWhiteNits; // sdr palette white in nits when drawn as pq, 0 for none
 
   // CODEC EXTRADATA
   FFmpegExtraData extradata; // extra data for codec to use
