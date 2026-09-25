@@ -557,7 +557,7 @@ void COverlayTextureGLES::Render(SRenderState& state)
   if (m_pma)
     glUniform1f(renderSystem->GUIShaderGetPma(), 1.0f);
 
-  glUniform1f(depthLoc, 1.0f);
+  glUniform1f(depthLoc, -1.0f);
 
   const CRect texCoords(u1, v1, u2, v2);
   renderSystem->DrawGUIQuad(rd, &texCoords);
