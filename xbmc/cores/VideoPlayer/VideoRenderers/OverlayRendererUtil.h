@@ -47,6 +47,11 @@ bool ShouldConvertPQPaletteToSRGB(bool isHDROverlay);
 //! untouched.
 void ConvertPQPaletteToSRGB(std::vector<uint32_t>& palette);
 
+//! Converts a PGS palette in place from BT.709 video levels (BT.1886 gamma
+//! 2.4, black at zero) to BT.2020 ST.2084 (PQ), with white at whiteNits.
+//! Alpha is untouched.
+void ConvertSDRPaletteToPQ(std::vector<uint32_t>& palette, int whiteNits);
+
 //! paletteOverride, when non-null, is used in place of o.palette - e.g.
 //! a palette already converted by ConvertPQPaletteToSRGB() above. o.pixels
 //! (the per-pixel palette indices) is always taken from o itself either way.
