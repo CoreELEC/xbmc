@@ -20455,10 +20455,10 @@ msgctxt "#36096"
 msgid "Use system HDR/SDR brightness balance"
 msgstr ""
 
-#. Label of setting "System / Display / GUI peak luminance in HDR PQ mode"
+#. Label of setting "System / Display / GUI peak luminance"
 #: system/settings/settings.xml
 msgctxt "#36097"
-msgid "GUI peak luminance in HDR PQ mode"
+msgid "GUI peak luminance"
 msgstr ""
 
 #. Label of setting "System / Display / Use 10 bit for SDR"
@@ -22705,10 +22705,10 @@ msgctxt "#36546"
 msgid "Sets the visual depth of subtitles for stereoscopic 3D videos. The higher the value, the closer the subtitles will appear to the viewer."
 msgstr ""
 
-#. Description of setting with label #36097 "System / Display / GUI peak luminance in HDR PQ mode"
+#. Description of setting with label #36097 "System / Display / GUI peak luminance"
 #: system/settings/settings.xml
 msgctxt "#36547"
-msgid "Sets the peak luminance level for GUI elements while the display is in HDR PQ mode. This affects all OSD, subtitles and graphics that are SDR in origin."
+msgid "Sets the peak luminance level for GUI elements while the display is in HDR PQ mode, applied via GUI compositing."
 msgstr ""
 
 #. Description of setting with label #37021 "Set GUI resolution limit"
