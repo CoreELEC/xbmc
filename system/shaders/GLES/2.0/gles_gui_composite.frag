@@ -15,6 +15,7 @@ uniform sampler2D u_lutDegamma; // sRGB -> linear LUT (IEC 61966-2-1)
 uniform sampler2D u_lutTF;      // linear -> PQ LUT (LUT_SIZE entries, sdrPeak baked in)
 uniform float u_ootfGamma;      // HLG: OOTF gamma (1.2 for BT.2100 1000-nit ref)
                                 // PQ: 0.0 (use LUT path instead)
+uniform float u_hlgWhite;       // HLG: GUI white / 1000-nit nominal peak
 
 // BT.709 -> BT.2020 color space conversion matrix (applied in linear light)
 const mat3 bt709_to_bt2020 = mat3(
@@ -48,18 +49,17 @@ void main()
   if (u_ootfGamma > 0.0)
   {
     // HLG path: direct computation following libplacebo pl_color_delinearize.
-    // BT.2100 reference display: 1000 nits. GUI white (linear 1.0) = 203 nits
-    // (BT.2408 reference white) should map to 75% HLG signal.
+    // BT.2100 reference display: 1000 nits. GUI white (linear 1.0) = u_hlgWhite
+    // of that peak; 0.203 (BT.2408 reference white) maps to 75% HLG signal.
     //
     // Step 1: normalize to display-peak-relative units
     // Step 2: inverse OOTF with 12x prescale for OETF input domain
     // Step 3: HLG OETF (ARIB STD-B67) piecewise: sqrt for <=1, log for >1
-    const float csp_max = 1000.0 / 203.0; // display peak in ref-white units
     const float HLG_A = 0.17883277;
     const float HLG_B = 0.28466892;
     const float HLG_C = 0.55991073;
 
-    vec3 scene = linear / csp_max;
+    vec3 scene = linear * u_hlgWhite;
     float Y = dot(scene, vec3(0.2627, 0.6780, 0.0593));
     scene *= 12.0 * pow(max(1e-6, Y), (1.0 - u_ootfGamma) / u_ootfGamma);
 
