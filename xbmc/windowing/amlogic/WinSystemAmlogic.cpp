@@ -309,6 +309,7 @@ bool CWinSystemAmlogic::InitWindowSystem()
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV, false);
     settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED, AML_DV_TV_LED);
     settings->SetBool(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5, true);
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS, false);
   }
 
   CServiceBroker::GetSettingsComponent()->GetSettings()->
@@ -485,6 +486,11 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
   setting = settings->GetSetting(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5);
   if (setting)
     setting->SetVisible(sink_dv);
+
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS);
+  if (setting)
+    setting->SetVisible(
+      sink_dv && CSysfsPath{"/sys/module/aml_media/parameters/amdv_graphic_follow_video"}.Exists());
 
   if (IsHDRDisplay())
   {
