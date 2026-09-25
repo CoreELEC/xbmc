@@ -301,6 +301,9 @@ constexpr float ST2084_m2 = (2523.0f / 4096.0f) * 128.0f;
 constexpr float ST2084_c1 = 3424.0f / 4096.0f;
 constexpr float ST2084_c2 = (2413.0f / 4096.0f) * 32.0f;
 constexpr float ST2084_c3 = (2392.0f / 4096.0f) * 32.0f;
+constexpr float HLG_a = 0.17883277f;
+constexpr float HLG_b = 0.28466892f;
+constexpr float HLG_c = 0.55991073f;
 
 // PQ code value (0-1) -> linear (1.0 == 10000 nits).
 float DecodePQ(float x)
@@ -317,6 +320,12 @@ float EncodePQ(float y)
 {
   const float p = std::pow(std::clamp(y, 0.0f, 1.0f), ST2084_m1);
   return std::pow((ST2084_c1 + ST2084_c2 * p) / (1.0f + ST2084_c3 * p), ST2084_m2);
+}
+
+// HLG code value (0-1) -> scene linear (0-1), ITU-R BT.2100 inverse OETF
+float DecodeHLG(float x)
+{
+  return x <= 0.5f ? x * x / 3.0f : (std::exp((x - HLG_c) / HLG_a) + HLG_b) / 12.0f;
 }
 
 float LinearToSrgbComponent(float c)
@@ -397,6 +406,34 @@ void ConvertSDRPaletteToPQ(std::vector<uint32_t>& palette, int whiteNits)
                                         BT709_TO_2020[i][2] * linear709[2]) *
                                    255.0f +
                                0.5f);
+
+    entry = (a << PIXEL_ASHIFT) | (pq[0] << PIXEL_RSHIFT) | (pq[1] << PIXEL_GSHIFT) |
+            (pq[2] << PIXEL_BSHIFT);
+  }
+}
+
+void ConvertHLGPaletteToPQ(std::vector<uint32_t>& palette)
+{
+  // ITU-R BT.2100 HLG reference display
+  constexpr float PEAK = 1000.0f / 10000.0f;
+  constexpr float GAMMA = 1.2f;
+
+  for (uint32_t& entry : palette)
+  {
+    const int a = (entry >> PIXEL_ASHIFT) & 0xff;
+    const float scene[3] = {
+        DecodeHLG(((entry >> PIXEL_RSHIFT) & 0xff) / 255.0f),
+        DecodeHLG(((entry >> PIXEL_GSHIFT) & 0xff) / 255.0f),
+        DecodeHLG(((entry >> PIXEL_BSHIFT) & 0xff) / 255.0f),
+    };
+
+    // OOTF on the BT.2020 scene luminance
+    const float y = 0.2627f * scene[0] + 0.6780f * scene[1] + 0.0593f * scene[2];
+    const float gain = y > 0.0f ? PEAK * std::pow(y, GAMMA - 1.0f) : 0.0f;
+
+    int pq[3];
+    for (int i = 0; i < 3; i++)
+      pq[i] = static_cast<int>(EncodePQ(scene[i] * gain) * 255.0f + 0.5f);
 
     entry = (a << PIXEL_ASHIFT) | (pq[0] << PIXEL_RSHIFT) | (pq[1] << PIXEL_GSHIFT) |
             (pq[2] << PIXEL_BSHIFT);

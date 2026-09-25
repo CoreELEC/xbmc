@@ -52,6 +52,11 @@ void ConvertPQPaletteToSRGB(std::vector<uint32_t>& palette);
 //! Alpha is untouched.
 void ConvertSDRPaletteToPQ(std::vector<uint32_t>& palette, int whiteNits);
 
+//! Converts a PGS palette in place from BT.2100 HLG to BT.2020 ST.2084 (PQ)
+//! through the HLG reference display (1000 nits, system gamma 1.2, black at
+//! zero), so that 75% HLG lands at 203 nits. Alpha is untouched.
+void ConvertHLGPaletteToPQ(std::vector<uint32_t>& palette);
+
 //! paletteOverride, when non-null, is used in place of o.palette - e.g.
 //! a palette already converted by ConvertPQPaletteToSRGB() above. o.pixels
 //! (the per-pixel palette indices) is always taken from o itself either way.

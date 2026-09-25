@@ -43,4 +43,5 @@ private:
   std::shared_ptr<CDVDOverlay> m_pendingOverlay;
   bool m_loggedStereoSplit{false};
   int m_sdrWhiteNits{0};
+  bool m_isHLGOverlay{false};
 };
