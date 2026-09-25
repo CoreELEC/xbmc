@@ -145,7 +145,8 @@ std::shared_ptr<COverlay> COverlay::Create(const CDVDOverlayImage& o, CRect& rSo
 
 COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSource)
 {
-  m_isHDROverlay = o.m_isHDROverlay;
+  m_isHDROverlay = o.m_isHDROverlay ||
+                   (o.m_sdrWhiteNits > 0 && CServiceBroker::GetWinSystem()->IsHdrComposite());
 
   glGenTextures(1, &m_texture);
   glBindTexture(GL_TEXTURE_2D, m_texture);
@@ -169,6 +170,12 @@ COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSour
     {
       convertedPalette = o.palette;
       OVERLAY::ConvertPQPaletteToSRGB(convertedPalette);
+      paletteOverride = &convertedPalette;
+    }
+    else if (m_isHDROverlay && !o.m_isHDROverlay)
+    {
+      convertedPalette = o.palette;
+      OVERLAY::ConvertSDRPaletteToPQ(convertedPalette, o.m_sdrWhiteNits);
       paletteOverride = &convertedPalette;
     }
 

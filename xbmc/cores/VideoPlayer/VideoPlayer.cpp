@@ -4437,13 +4437,23 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
       if (hint.codec == AV_CODEC_ID_HDMV_PGS_SUBTITLE)
       {
         CDemuxStreamSubtitleFFmpeg* pSubStream = dynamic_cast<CDemuxStreamSubtitleFFmpeg*>(stream);
+        // the demux stream keeps the source type when the hint is faked for VS-Engine
+        StreamHdrType videoHdrType = m_CurrentVideo.hint.hdrType;
+        if (m_pDemuxer && STREAM_SOURCE_MASK(m_CurrentVideo.source) == STREAM_SOURCE_DEMUX)
+        {
+          CDemuxStream* st = m_pDemuxer->GetStream(m_CurrentVideo.demuxerId, m_CurrentVideo.id);
+          if (st && st->type == StreamType::VIDEO)
+            videoHdrType = static_cast<CDemuxStreamVideo*>(st)->hdr_type;
+        }
         if (pSubStream && StringUtils::Contains(pSubStream->m_description, "SDR"))
         {
           hint.colorSpace = AVCOL_SPC_BT709;
           hint.colorPrimaries = AVCOL_PRI_BT709;
           hint.colorTransferCharacteristic = AVCOL_TRC_BT709;
         }
-        else if (m_CurrentVideo.hint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
+        else if (m_CurrentVideo.hint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION &&
+                 (videoHdrType == StreamHdrType::HDR_TYPE_DOLBYVISION ||
+                  videoHdrType == StreamHdrType::HDR_TYPE_HDR10))
         {
           // dolby vision may expose ICtCp or unspecified base-layer fields,
           // while its associated PGS is authored as BT.2020/PQ graphics
@@ -4456,6 +4466,26 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
           hint.colorSpace = m_CurrentVideo.hint.colorSpace;
           hint.colorPrimaries = m_CurrentVideo.hint.colorPrimaries;
           hint.colorTransferCharacteristic = m_CurrentVideo.hint.colorTransferCharacteristic;
+        }
+        if ((m_CurrentVideo.hint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION ||
+             m_CurrentVideo.hint.colorTransferCharacteristic == AVCOL_TRC_SMPTE2084) &&
+            hint.colorTransferCharacteristic != AVCOL_TRC_SMPTE2084 &&
+            hint.colorTransferCharacteristic != AVCOL_TRC_ARIB_STD_B67)
+        {
+          // the DV driver's SDR graphics level under DV output, else BT.2408 graphics white
+          constexpr int DV_SDR_GRAPHICS_WHITE = 300;
+          constexpr int REFERENCE_WHITE = 203;
+          // hdr2sdr output is SDR even while the GUI composite runs as PQ,
+          // unless Dolby Vision output takes precedence, as in RendererAML
+          const bool hdr2sdr = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+              CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
+          const bool dvOutput =
+              m_CurrentVideo.hint.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION &&
+              aml_dolby_vision_enabled();
+          if (videoHdrType == StreamHdrType::HDR_TYPE_NONE)
+            hint.sdrWhiteNits = DV_SDR_GRAPHICS_WHITE;
+          else if (!hdr2sdr || dvOutput)
+            hint.sdrWhiteNits = REFERENCE_WHITE;
         }
       }
       res = OpenSubtitleStream(hint);

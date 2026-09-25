@@ -312,6 +312,13 @@ float DecodePQ(float x)
   return std::pow(num / den, 1.0f / ST2084_m1);
 }
 
+// linear (1.0 == 10000 nits) -> PQ code value (0-1)
+float EncodePQ(float y)
+{
+  const float p = std::pow(std::clamp(y, 0.0f, 1.0f), ST2084_m1);
+  return std::pow((ST2084_c1 + ST2084_c2 * p) / (1.0f + ST2084_c3 * p), ST2084_m2);
+}
+
 float LinearToSrgbComponent(float c)
 {
   c = std::clamp(c, 0.0f, 1.0f);
@@ -359,6 +366,40 @@ void ConvertPQPaletteToSRGB(std::vector<uint32_t>& palette)
     const int b = static_cast<int>(LinearToSrgbComponent(linear709[2]) * 255.0f + 0.5f);
 
     entry = (a << PIXEL_ASHIFT) | (r << PIXEL_RSHIFT) | (g << PIXEL_GSHIFT) | (b << PIXEL_BSHIFT);
+  }
+}
+
+void ConvertSDRPaletteToPQ(std::vector<uint32_t>& palette, int whiteNits)
+{
+  // linear BT.709 -> linear BT.2020 primaries, ITU-R BT.2087
+  static constexpr float BT709_TO_2020[3][3] = {
+      {0.627403896f, 0.329283039f, 0.043313065f},
+      {0.069097289f, 0.919540395f, 0.011362316f},
+      {0.016391439f, 0.088013308f, 0.895595253f},
+  };
+
+  constexpr float BT1886_GAMMA = 2.4f;
+  const float whiteScale = whiteNits / 10000.0f;
+
+  for (uint32_t& entry : palette)
+  {
+    const int a = (entry >> PIXEL_ASHIFT) & 0xff;
+    const float linear709[3] = {
+        std::pow(((entry >> PIXEL_RSHIFT) & 0xff) / 255.0f, BT1886_GAMMA) * whiteScale,
+        std::pow(((entry >> PIXEL_GSHIFT) & 0xff) / 255.0f, BT1886_GAMMA) * whiteScale,
+        std::pow(((entry >> PIXEL_BSHIFT) & 0xff) / 255.0f, BT1886_GAMMA) * whiteScale,
+    };
+
+    int pq[3];
+    for (int i = 0; i < 3; i++)
+      pq[i] = static_cast<int>(EncodePQ(BT709_TO_2020[i][0] * linear709[0] +
+                                        BT709_TO_2020[i][1] * linear709[1] +
+                                        BT709_TO_2020[i][2] * linear709[2]) *
+                                   255.0f +
+                               0.5f);
+
+    entry = (a << PIXEL_ASHIFT) | (pq[0] << PIXEL_RSHIFT) | (pq[1] << PIXEL_GSHIFT) |
+            (pq[2] << PIXEL_BSHIFT);
   }
 }
 
