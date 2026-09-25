@@ -12,7 +12,7 @@ precision mediump float;
 varying vec2 v_tex;
 uniform sampler2D u_samp;       // GUI FBO texture (sRGB, rendered by GUI shaders)
 uniform sampler2D u_lutDegamma; // sRGB -> linear LUT (IEC 61966-2-1)
-uniform sampler2D u_lutTF;      // linear -> PQ LUT (1024 entries, sdrPeak baked in)
+uniform sampler2D u_lutTF;      // linear -> PQ LUT (LUT_SIZE entries, sdrPeak baked in)
 uniform float u_ootfGamma;      // HLG: OOTF gamma (1.2 for BT.2100 1000-nit ref)
                                 // PQ: 0.0 (use LUT path instead)
 

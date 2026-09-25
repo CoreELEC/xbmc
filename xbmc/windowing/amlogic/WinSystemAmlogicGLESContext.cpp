@@ -352,6 +352,13 @@ bool CWinSystemAmlogicGLESContext::SetGuiCompositing(int colorTransfer)
       }
     }
 
+    // GUI reference white follows videoscreen.guipeakluminance instead of the
+    // composite's hardcoded 203 nits, so the setting is a working brightness
+    // control here too and means the same thing as on the per-primitive path.
+    // At the shipped default this is ~199 nits, i.e. a <2% change from before.
+    const float peak(CGuiCompositeShaderGLES::PeakFromPQCode(GetGuiSdrPeakLuminance()));
+    m_compositeShader->SetSdrPeak(peak);
+
     if (!m_compositeShader->CreateLUTs(colorTransfer))
     {
       CLog::Log(LOGERROR, "CWinSystemAmlogicGLESContext: failed to create LUTs");
@@ -359,6 +366,8 @@ bool CWinSystemAmlogicGLESContext::SetGuiCompositing(int colorTransfer)
       m_guiCompositing = false;
       return false;
     }
+    m_guiCompositeTransfer = colorTransfer;
+    m_guiCompositePeak = peak;
   }
   else
   {
@@ -517,6 +526,31 @@ bool CWinSystemAmlogicGLESContext::BeginGuiComposite(bool guiWillRender)
   //! re-using this cached sRGB FBO as the composite source.
   if (!guiWillRender)
     return true;
+
+  // Pick up a live guipeakluminance change so GUI brightness can be dialled in
+  // while a disc is playing, rather than only at the next stream start. One
+  // settings read per composited frame - cheaper than the per-primitive path,
+  // which already reads it on every shader enable (CGLESShader::OnEnabled) - and
+  // the LUT is rebuilt only when the value actually moves.
+  if (m_compositeShader)
+  {
+    const float peak(CGuiCompositeShaderGLES::PeakFromPQCode(GetGuiSdrPeakLuminance()));
+    if (peak != m_guiCompositePeak)
+    {
+      m_compositeShader->SetSdrPeak(peak);
+      if (!m_compositeShader->CreateLUTs(m_guiCompositeTransfer))
+      {
+        // CreateLUTs commits only on success, so the previous LUTs are still
+        // live and the GUI keeps rendering correctly at the old reference white.
+        // Put the shader's peak back in step with them, but still record the
+        // requested value so a failed rebuild is not retried on every frame.
+        CLog::Log(LOGWARNING, "CWinSystemAmlogicGLESContext: GUI peak luminance change "
+                              "rejected, keeping the previous reference white");
+        m_compositeShader->SetSdrPeak(m_guiCompositePeak);
+      }
+      m_guiCompositePeak = peak;
+    }
+  }
 
   if (!m_guiFbo.BeginRender())
     return false;
