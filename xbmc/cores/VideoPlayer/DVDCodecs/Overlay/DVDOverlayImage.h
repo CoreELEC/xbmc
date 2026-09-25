@@ -46,6 +46,7 @@ public:
     source_height = src.source_height;
     m_isHDROverlay = src.m_isHDROverlay;
     m_sdrWhiteNits = src.m_sdrWhiteNits;
+    m_isHLGOverlay = src.m_isHLGOverlay;
 
     pixels.resize(sub_h * linesize);
 
@@ -81,6 +82,7 @@ public:
   // pixels are already HDR, matching video's colorimetry
   bool m_isHDROverlay{false};
   int m_sdrWhiteNits{0};
+  bool m_isHLGOverlay{false};
 
   int linesize{0};
   int x{0};

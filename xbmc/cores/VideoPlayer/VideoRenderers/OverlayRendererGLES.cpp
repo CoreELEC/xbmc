@@ -160,7 +160,8 @@ std::shared_ptr<COverlay> COverlay::Create(const CDVDOverlayImage& o, CRect& rSo
 COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSource)
 {
   const KODI::UTILS::Eotf eotf = CServiceBroker::GetWinSystem()->GetEotf();
-  m_isHDROverlay = o.m_isHDROverlay || (o.m_sdrWhiteNits > 0 && eotf == KODI::UTILS::Eotf::PQ);
+  m_isHDROverlay = o.m_isHDROverlay || (o.m_sdrWhiteNits > 0 && eotf == KODI::UTILS::Eotf::PQ) ||
+                   (o.m_isHLGOverlay && eotf != KODI::UTILS::Eotf::TRADITIONAL_SDR);
 
   glGenTextures(1, &m_texture);
   glBindTexture(GL_TEXTURE_2D, m_texture);
@@ -185,6 +186,16 @@ COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSour
       convertedPalette = o.palette;
       OVERLAY::ConvertPQPaletteToSRGB(convertedPalette);
       paletteOverride = &convertedPalette;
+    }
+    else if (m_isHDROverlay && o.m_isHLGOverlay)
+    {
+      // an HLG composite takes the palette as it is
+      if (eotf == KODI::UTILS::Eotf::PQ)
+      {
+        convertedPalette = o.palette;
+        OVERLAY::ConvertHLGPaletteToPQ(convertedPalette);
+        paletteOverride = &convertedPalette;
+      }
     }
     else if (m_isHDROverlay && !o.m_isHDROverlay)
     {
