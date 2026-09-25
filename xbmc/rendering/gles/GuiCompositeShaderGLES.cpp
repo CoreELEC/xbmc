@@ -15,6 +15,7 @@ extern "C"
 #include <libavutil/pixfmt.h>
 }
 
+#include <algorithm>
 #include <cmath>
 
 namespace
@@ -30,6 +31,20 @@ float ForwardPQ(float L)
 {
   float Lm1 = std::pow(L, ST2084_m1);
   return std::pow((ST2084_c1 + ST2084_c2 * Lm1) / (1.0f + ST2084_c3 * Lm1), ST2084_m2);
+}
+
+// ST2084 EOTF: PQ code -> PQ-normalized luminance (nits / 10000). Exact inverse
+// of ForwardPQ, kept beside it so the constants are never duplicated elsewhere.
+float InversePQ(float E)
+{
+  if (E <= 0.0f)
+    return 0.0f;
+  const float Em2 = std::pow(std::min(E, 1.0f), 1.0f / ST2084_m2);
+  const float num = std::max(Em2 - ST2084_c1, 0.0f);
+  const float den = ST2084_c2 - ST2084_c3 * Em2;
+  if (den <= 0.0f)
+    return 1.0f;
+  return std::pow(num / den, 1.0f / ST2084_m1);
 }
 
 // IEC 61966-2-1 sRGB EOTF.
@@ -149,6 +164,25 @@ std::vector<float> CGuiCompositeShaderGLES::GenerateDegammaLUT()
   return lut;
 }
 
+float CGuiCompositeShaderGLES::PeakFromPQCode(float code)
+{
+  // The legacy Amlogic GUI peak is a PQ CODE, not nits. On the per-primitive
+  // path the scalar-encoded OSD plane is declared FORMAT_HDR8, so the DV core
+  // reads it as PQ - which is exactly why the default (0.7*40+30)/100 = 0.58
+  // lands GUI white on ~199 nits, within 2% of the 203-nit BT.2408 reference
+  // white this composite used to hardcode. Decoding the code therefore makes
+  // the same setting mean the same luminance on both paths.
+  //
+  // Clamped to 1000 nits. The raw curve reaches 10000 nits at the top of the
+  // slider, which no panel can show, and the PQ LUT only has LUT_SIZE entries
+  // spread over [0, peak] - stretching it that far crushes GUI shadows badly.
+  // The clamp engages around slider 64 (code 0.748), so the top third of the
+  // range is deliberately flat; CreateLUTs logs the resolved nits so a log shows
+  // when it is in effect. Above that point this intentionally stops tracking the
+  // per-primitive path, which applies no clamp because it needs no LUT.
+  return std::min(InversePQ(code), 0.1f);
+}
+
 std::vector<float> CGuiCompositeShaderGLES::GeneratePQLUT(float sdrPeak)
 {
   // PQ is display-referred (absolute luminance). sdrPeak is in PQ-normalized
@@ -166,42 +200,56 @@ std::vector<float> CGuiCompositeShaderGLES::GeneratePQLUT(float sdrPeak)
 
 bool CGuiCompositeShaderGLES::CreateLUTs(int colorTransfer)
 {
-  if (m_lutDegammaTexId)
-    glDeleteTextures(1, &m_lutDegammaTexId);
-  if (m_lutTFTexId)
-    glDeleteTextures(1, &m_lutTFTexId);
-
-  m_lutDegammaTexId = CreateLUTTexture(GenerateDegammaLUT());
-  if (!m_lutDegammaTexId)
+  // Build into locals and only commit on success. Deleting the live textures up
+  // front would leave the shader sampling destroyed/zero texture names on any
+  // failure - the GUI composites to solid black, and a caller that retries (a
+  // live SetSdrPeak change) would thrash glDeleteTextures/glTexImage2D every
+  // frame. Failure must be a no-op so the previous LUTs keep working.
+  GLuint degamma = CreateLUTTexture(GenerateDegammaLUT());
+  if (!degamma)
   {
     CLog::Log(LOGERROR, "CGuiCompositeShaderGLES::CreateLUTs - failed to create degamma LUT");
     return false;
   }
 
+  GLuint tf = 0;
+  float ootfGamma = 0.0f;
+
   if (colorTransfer == AVCOL_TRC_SMPTE2084)
   {
-    m_lutTFTexId = CreateLUTTexture(GeneratePQLUT(m_sdrPeak));
-    if (!m_lutTFTexId)
+    tf = CreateLUTTexture(GeneratePQLUT(m_sdrPeak));
+    if (!tf)
     {
       CLog::Log(LOGERROR, "CGuiCompositeShaderGLES::CreateLUTs - failed to create PQ LUT");
+      glDeleteTextures(1, &degamma);
       return false;
     }
-    m_ootfGamma = 0.0f;
-    CLog::Log(LOGDEBUG, "CGuiCompositeShaderGLES::CreateLUTs - created PQ LUT ({} entries)",
-              LUT_SIZE);
+    CLog::Log(LOGDEBUG,
+              "CGuiCompositeShaderGLES::CreateLUTs - created PQ LUT ({} entries, {:.0f} nits)",
+              LUT_SIZE, m_sdrPeak * 10000.0f);
   }
   else if (colorTransfer == AVCOL_TRC_ARIB_STD_B67)
   {
     // HLG: no TF LUT needed, shader computes OETF + inverse OOTF directly.
     // BT.2100: gamma = 1.2 + 0.42 * log10(Lw/1000). For 1000-nit ref: 1.2.
-    m_ootfGamma = 1.2f;
-    CLog::Log(LOGDEBUG, "CGuiCompositeShaderGLES::CreateLUTs - HLG mode (gamma {})", m_ootfGamma);
+    ootfGamma = 1.2f;
+    CLog::Log(LOGDEBUG, "CGuiCompositeShaderGLES::CreateLUTs - HLG mode (gamma {})", ootfGamma);
   }
   else
   {
     CLog::Log(LOGERROR, "CGuiCompositeShaderGLES::CreateLUTs - unsupported transfer function {}",
               colorTransfer);
+    glDeleteTextures(1, &degamma);
     return false;
   }
+
+  if (m_lutDegammaTexId)
+    glDeleteTextures(1, &m_lutDegammaTexId);
+  if (m_lutTFTexId)
+    glDeleteTextures(1, &m_lutTFTexId);
+
+  m_lutDegammaTexId = degamma;
+  m_lutTFTexId = tf;
+  m_ootfGamma = ootfGamma;
   return true;
 }
