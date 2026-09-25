@@ -80,6 +80,8 @@ void CDVDStreamInfo::Clear()
   orientation = 0;
   bitdepth = 0;
   m_3dSubtitlePlane = 0;
+  sdrWhiteNits = 0;
+  isHLGOverlay = false;
 }
 
 bool CDVDStreamInfo::Equal(const CDVDStreamInfo& right, int compare)
@@ -171,6 +173,12 @@ bool CDVDStreamInfo::Equal(const CDVDStreamInfo& right, int compare)
   if (m_3dSubtitlePlane != right.m_3dSubtitlePlane)
     return false;
 
+  if (sdrWhiteNits != right.sdrWhiteNits)
+    return false;
+
+  if (isHLGOverlay != right.isHLGOverlay)
+    return false;
+
   // Crypto
   if ((cryptoSession == nullptr) != (right.cryptoSession == nullptr))
     return false;
@@ -251,6 +259,8 @@ void CDVDStreamInfo::Assign(const CDVDStreamInfo& right, bool withextradata)
 
   // SUBTITLE
   m_3dSubtitlePlane = right.m_3dSubtitlePlane;
+  sdrWhiteNits = right.sdrWhiteNits;
+  isHLGOverlay = right.isHLGOverlay;
 }
 
 void CDVDStreamInfo::Assign(const CDemuxStream& right, bool withextradata)
