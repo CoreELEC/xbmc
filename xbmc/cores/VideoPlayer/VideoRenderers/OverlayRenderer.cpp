@@ -190,6 +190,11 @@ void CRenderer::RenderHDROverlays(int idx)
   const RenderStereoView stereoView =
       CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoView();
 
+  // the back buffer depth is not cleared while the GUI composites
+  CGraphicContext& gfxContext = CServiceBroker::GetWinSystem()->GetGfxContext();
+  const RENDER_ORDER renderOrder = gfxContext.GetRenderOrder();
+  gfxContext.SetRenderOrder(RENDER_ORDER_ALL_BACK_TO_FRONT);
+
   std::vector<SElement>& list = m_buffers[idx];
   for (std::vector<SElement>::iterator it = list.begin(); it != list.end(); ++it)
   {
@@ -206,6 +211,8 @@ void CRenderer::RenderHDROverlays(int idx)
       Render(o.get());
     }
   }
+
+  gfxContext.SetRenderOrder(renderOrder);
 
   ReleaseUnused();
 }
