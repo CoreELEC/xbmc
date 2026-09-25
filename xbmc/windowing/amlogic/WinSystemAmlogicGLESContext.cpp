@@ -12,6 +12,8 @@
 #include "ServiceBroker.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
+#include "settings/lib/Setting.h"
+#include "settings/lib/SettingsManager.h"
 #include "utils/AMLUtils.h"
 #include "utils/MathUtils.h"
 #include "utils/XTimeUtils.h"
@@ -89,11 +91,17 @@ bool CWinSystemAmlogicGLESContext::InitWindowSystem()
     m_eglFence = std::make_unique<KODI::UTILS::EGL::CEGLFence>(GetEGLDisplay());
   }
 
+  CServiceBroker::GetSettingsComponent()->GetSettings()->GetSettingsManager()->RegisterCallback(
+      this, {CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS});
+
   return true;
 }
 
 bool CWinSystemAmlogicGLESContext::DestroyWindowSystem()
 {
+  CServiceBroker::GetSettingsComponent()->GetSettings()->GetSettingsManager()->UnregisterCallback(
+      this);
+
   ResetHdrGuiSession();
 
   if (IsPresentationReady())
@@ -404,10 +412,48 @@ bool CWinSystemAmlogicGLESContext::SetDvGraphicsState(bool enabled)
   return SetDvGraphicFormat(enabled ? 1 /* FORMAT_HDR10 */ : 2 /* FORMAT_SDR */);
 }
 
+bool CWinSystemAmlogicGLESContext::SetDvGraphicFollowVideo(bool follow)
+{
+  m_hdrGuiFollowVideo = follow;
+
+  CSysfsPath followVideo{"/sys/module/aml_media/parameters/amdv_graphic_follow_video"};
+  if (!followVideo.Exists())
+    return false;
+
+  try
+  {
+    followVideo.Set(follow ? 1 : 0);
+    return true;
+  }
+  catch (const std::exception& e)
+  {
+    CLog::Log(LOGERROR, "CWinSystemAmlogicGLESContext: failed to set DV graphic follow video: {}",
+              e.what());
+    return false;
+  }
+}
+
+void CWinSystemAmlogicGLESContext::OnSettingChanged(const std::shared_ptr<const CSetting>& setting)
+{
+  if (!setting || setting->GetId() != CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS)
+    return;
+
+  const bool enabled = std::static_pointer_cast<const CSettingBool>(setting)->GetValue();
+
+  std::lock_guard lock(m_hdrGuiMutex);
+  const bool follow = m_hdrGuiDvGraphics && enabled;
+  if (follow != m_hdrGuiFollowVideo)
+    SetDvGraphicFollowVideo(follow);
+}
+
 uint64_t CWinSystemAmlogicGLESContext::ConfigureHdrGuiSession(uint64_t owner,
                                                               int colorTransfer,
                                                               bool dvGraphics)
 {
+  // read outside m_hdrGuiMutex, OnSettingChanged takes it with the setting locked
+  const bool followVideo = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+      CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS);
+
   std::lock_guard lock(m_hdrGuiMutex);
 
   if (owner == 0 || owner != m_hdrGuiOwner)
@@ -445,6 +491,7 @@ uint64_t CWinSystemAmlogicGLESContext::ConfigureHdrGuiSession(uint64_t owner,
 
   m_hdrGuiOwner = owner;
   m_hdrGuiDvGraphics = dvGraphics;
+  SetDvGraphicFollowVideo(dvGraphics && followVideo);
   return owner;
 }
 
@@ -459,6 +506,8 @@ void CWinSystemAmlogicGLESContext::ReleaseHdrGuiSession(uint64_t owner)
     SetDvGraphicsState(false);
   m_hdrGuiOwner = 0;
   m_hdrGuiDvGraphics = false;
+  if (m_hdrGuiFollowVideo)
+    SetDvGraphicFollowVideo(false);
 }
 
 void CWinSystemAmlogicGLESContext::ResetHdrGuiSession()
@@ -469,6 +518,8 @@ void CWinSystemAmlogicGLESContext::ResetHdrGuiSession()
     SetDvGraphicsState(false);
   m_hdrGuiOwner = 0;
   m_hdrGuiDvGraphics = false;
+  if (m_hdrGuiFollowVideo)
+    SetDvGraphicFollowVideo(false);
 }
 
 bool CWinSystemAmlogicGLESContext::BeginGuiComposite(bool guiWillRender)

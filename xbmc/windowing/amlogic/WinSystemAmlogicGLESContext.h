@@ -12,6 +12,7 @@
 #include "cores/VideoPlayer/VideoRenderers/FrameBufferObject.h"
 #include "rendering/gles/GuiCompositeShaderGLES.h"
 #include "rendering/gles/RenderSystemGLES.h"
+#include "settings/lib/ISettingCallback.h"
 #include "utils/EGLUtils.h"
 #include "utils/GlobalsHandling.h"
 #include "utils/StreamDetails.h"
@@ -25,7 +26,9 @@ namespace WINDOWING
 namespace AML
 {
 
-class CWinSystemAmlogicGLESContext : public CWinSystemAmlogic, public CRenderSystemGLES
+class CWinSystemAmlogicGLESContext : public CWinSystemAmlogic,
+                                     public CRenderSystemGLES,
+                                     public ISettingCallback
 {
 public:
   CWinSystemAmlogicGLESContext();
@@ -62,6 +65,8 @@ public:
   void CompositeGui() override;
   bool IsHdrComposite() const override { return m_guiCompositing; }
 
+  void OnSettingChanged(const std::shared_ptr<const CSetting>& setting) override;
+
   EGLDisplay GetEGLDisplay() const;
   EGLSurface GetEGLSurface() const;
   EGLContext GetEGLContext() const;
@@ -93,10 +98,12 @@ private:
   void ResetHdrGuiSession();
   bool SetDvGraphicFormat(unsigned int format);
   bool SetDvGraphicsState(bool enabled);
+  bool SetDvGraphicFollowVideo(bool follow);
   std::mutex m_hdrGuiMutex;
   uint64_t m_hdrGuiOwner{0};
   uint64_t m_hdrGuiNextOwner{0};
   bool m_hdrGuiDvGraphics{false};
+  bool m_hdrGuiFollowVideo{false};
 };
 
 }
