@@ -301,6 +301,12 @@ int aml_pgs_sdr_white_nits(StreamHdrType hdrType,
   return 0;
 }
 
+bool aml_pgs_hlg_raw(StreamHdrType hdrType, int pgsColorSpace, int pgsTransfer)
+{
+  return pgsColorSpace == AVCOL_SPC_BT2020_NCL && pgsTransfer == AVCOL_TRC_ARIB_STD_B67 &&
+         aml_pgs_hdr_output(hdrType);
+}
+
 bool aml_video_started()
 {
   CSysfsPath videostarted{"/sys/class/tsync/videostarted"};

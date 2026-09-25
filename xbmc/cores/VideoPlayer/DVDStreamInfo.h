@@ -94,6 +94,7 @@ public:
   // SUBTITLE
   int m_3dSubtitlePlane;
   int sdrWhiteNits; // sdr palette white in nits when drawn as pq, 0 for none
+  bool isHLGOverlay; // hlg palette drawn on the raw hdr pass
 
   // CODEC EXTRADATA
   FFmpegExtraData extradata; // extra data for codec to use

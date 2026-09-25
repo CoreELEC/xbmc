@@ -64,6 +64,7 @@ int aml_pgs_sdr_white_nits(StreamHdrType hdrType,
                            int videoTransfer,
                            StreamHdrType sourceHdrType,
                            int pgsTransfer);
+bool aml_pgs_hlg_raw(StreamHdrType hdrType, int pgsColorSpace, int pgsTransfer);
 bool aml_video_started();
 int aml_amdv_wait(StreamHdrType hdrType);
 void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int view_mode);
