@@ -516,7 +516,7 @@ void COverlayTextureGLES::Render(SRenderState& state)
   glEnableVertexAttribArray(posLoc);
   glEnableVertexAttribArray(tex0Loc);
 
-  glUniform1f(depthLoc, 1.0f);
+  glUniform1f(depthLoc, -1.0f);
   // Setup vertex position values
   ver[0][0] = ver[3][0] = rd.x1;
   ver[0][1] = ver[1][1] = rd.y1;
