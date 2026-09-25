@@ -22708,7 +22708,7 @@ msgstr ""
 #. Description of setting with label #36097 "System / Display / GUI peak luminance"
 #: system/settings/settings.xml
 msgctxt "#36547"
-msgid "Sets the peak luminance level for GUI elements while the display is in HDR PQ mode, applied via GUI compositing."
+msgid "Sets the peak luminance level for GUI elements while the display is in HDR PQ or HLG mode, applied via GUI compositing."
 msgstr ""
 
 #. Description of setting with label #37021 "Set GUI resolution limit"
