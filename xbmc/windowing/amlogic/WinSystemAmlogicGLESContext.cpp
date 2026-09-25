@@ -380,6 +380,21 @@ bool CWinSystemAmlogicGLESContext::SetGuiCompositing(int colorTransfer)
   return m_guiCompositing;
 }
 
+KODI::UTILS::Eotf CWinSystemAmlogicGLESContext::GetEotf() const
+{
+  if (!m_guiCompositing)
+    return KODI::UTILS::Eotf::TRADITIONAL_SDR;
+
+  return m_guiCompositeTransfer == AVCOL_TRC_ARIB_STD_B67 ? KODI::UTILS::Eotf::HLG
+                                                          : KODI::UTILS::Eotf::PQ;
+}
+
+KODI::UTILS::Colorimetry CWinSystemAmlogicGLESContext::GetColorimetry() const
+{
+  return m_guiCompositing ? KODI::UTILS::Colorimetry::BT2020_RGB
+                          : KODI::UTILS::Colorimetry::DEFAULT;
+}
+
 bool CWinSystemAmlogicGLESContext::SetDvGraphicFormat(unsigned int format)
 {
   CSysfsPath graphicFormat{"/sys/class/amdolby_vision/graphic_fmt"};
