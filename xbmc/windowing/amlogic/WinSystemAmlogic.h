@@ -41,6 +41,7 @@ public:
   void UpdateResolutions() override;
   bool IsHDRDisplay() override;
   CHDRCapabilities GetDisplayHDRCapabilities() const override;
+  float GetGuiSdrPeakLuminance() const override;
   HDR_STATUS GetOSHDRStatus() override;
 
   // prevent a stale renderer from restoring HDR GUI state owned by a newer session
