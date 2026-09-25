@@ -21,6 +21,15 @@ public:
 
   void SetProjection(const GLfloat* proj) { m_proj = proj; }
 
+  // GUI reference white, in PQ-normalized units (nits / 10000). Takes effect on
+  // the next CreateLUTs, which bakes it into the PQ LUT.
+  void SetSdrPeak(float peak) { m_sdrPeak = peak; }
+
+  // Convert a legacy PQ-signal-domain GUI peak (as CWinSystemAmlogic::
+  // GetGuiSdrPeakLuminance returns) into the PQ-normalized luminance SetSdrPeak
+  // expects. Lives here so the ST2084 constants are never duplicated.
+  static float PeakFromPQCode(float code);
+
   bool CreateLUTs(int colorTransfer);
 
   GLint GetPosLoc() { return m_hPos; }
