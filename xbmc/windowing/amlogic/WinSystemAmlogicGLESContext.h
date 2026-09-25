@@ -51,6 +51,8 @@ public:
 
   bool SupportsStereo(const RenderStereoMode mode) const override;
   void PresentRender(bool rendered, bool videoLayer) override;
+  KODI::UTILS::Eotf GetEotf() const override;
+  KODI::UTILS::Colorimetry GetColorimetry() const override;
 
   // GUI compositing for HDR
   bool SetGuiCompositing(int colorTransfer) override;
