@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace OVERLAY
 {
@@ -64,6 +65,65 @@ void ConvertIndices(
   for (int y = 0; y < height; y++, src += stride)
     for (int x = 0; x < width; x++)
       *dst++ = lut[src[x]];
+}
+
+void FindVisibleBox(const uint8_t* src,
+                    int stride,
+                    int width,
+                    int height,
+                    const uint32_t lut[256],
+                    int& x0,
+                    int& y0,
+                    int& x1,
+                    int& y1)
+{
+  bool clear[256];
+  for (int i = 0; i < 256; i++)
+    clear[i] = lut[i] == 0;
+
+  x0 = width;
+  y0 = height;
+  x1 = 0;
+  y1 = 0;
+  for (int y = 0; y < height; y++, src += stride)
+  {
+    int left = 0;
+    if (clear[0])
+    {
+      // skip runs of transparent index 0 a word at a time
+      for (uint64_t word = 0; left + 8 <= width; left += 8)
+      {
+        std::memcpy(&word, src + left, 8);
+        if (word)
+          break;
+      }
+    }
+    while (left < width && clear[src[left]])
+      left++;
+    if (left == width)
+      continue;
+
+    int right = width - 1;
+    while (clear[src[right]])
+      right--;
+
+    x0 = std::min(x0, left);
+    x1 = std::max(x1, right + 1);
+    y0 = std::min(y0, y);
+    y1 = y + 1;
+  }
+
+  if (x1 == 0)
+  {
+    x0 = y0 = 0;
+    x1 = y1 = 1;
+    return;
+  }
+
+  x0 = std::max(x0 - 1, 0);
+  y0 = std::max(y0 - 1, 0);
+  x1 = std::min(x1 + 1, width);
+  y1 = std::min(y1 + 1, height);
 }
 
 void convert_rgba(const CDVDOverlayImage& o,
