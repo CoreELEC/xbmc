@@ -139,6 +139,19 @@ static void LoadTexture(GLenum target,
   *v = (GLfloat)height / height2;
 }
 
+// true when the corners of rect land on whole pixels of the render target
+static bool IsPixelAligned(CRenderSystemGLES& renderSystem, const CRect& rect)
+{
+  for (CPoint p : {rect.P1(), rect.P2()})
+  {
+    float z = 0.0f;
+    renderSystem.Project(p.x, p.y, z);
+    if (std::abs(p.x - std::round(p.x)) > 1e-3f || std::abs(p.y - std::round(p.y)) > 1e-3f)
+      return false;
+  }
+  return true;
+}
+
 std::shared_ptr<COverlay> COverlay::Create(const CDVDOverlayImage& o, CRect& rSource)
 {
   return std::make_shared<COverlayTextureGLES>(o, rSource);
@@ -197,9 +210,24 @@ COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSour
       }
     }
 
-    auto rgba = std::make_unique_for_overwrite<uint32_t[]>(static_cast<size_t>(o.width) * o.height);
-    ConvertIndices(o.pixels.data(), o.linesize, o.width, o.height, lut, rgba.get());
-    LoadTexture(GL_TEXTURE_2D, o.width, o.height, o.width * 4, &m_u, &m_v, false, rgba.get());
+    int x0 = 0;
+    int y0 = 0;
+    int x1 = 0;
+    int y1 = 0;
+    FindVisibleBox(o.pixels.data(), o.linesize, o.width, o.height, lut, x0, y0, x1, y1);
+    const int width = x1 - x0;
+    const int height = y1 - y0;
+    if (width != o.width || height != o.height)
+    {
+      m_crop = CRect(x0, y0, x1, y1);
+      m_bitmapWidth = static_cast<float>(o.width);
+      m_bitmapHeight = static_cast<float>(o.height);
+    }
+
+    auto rgba = std::make_unique_for_overwrite<uint32_t[]>(static_cast<size_t>(width) * height);
+    ConvertIndices(o.pixels.data() + y0 * o.linesize + x0, o.linesize, width, height, lut,
+                   rgba.get());
+    LoadTexture(GL_TEXTURE_2D, width, height, width * 4, &m_u, &m_v, false, rgba.get());
   }
 
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -490,6 +518,33 @@ void COverlayTextureGLES::Render(SRenderState& state)
 
   CRenderSystemGLES* renderSystem =
       dynamic_cast<CRenderSystemGLES*>(CServiceBroker::GetRenderSystem());
+
+  float u1 = 0.0f;
+  float v1 = 0.0f;
+  float u2 = m_u;
+  float v2 = m_v;
+  if (!m_crop.IsEmpty())
+  {
+    const float scaleX = rd.Width() / m_bitmapWidth;
+    const float scaleY = rd.Height() / m_bitmapHeight;
+    const CRect box(rd.x1 + m_crop.x1 * scaleX, rd.y1 + m_crop.y1 * scaleY,
+                    rd.x1 + m_crop.x2 * scaleX, rd.y1 + m_crop.y2 * scaleY);
+    // the box samples the texels at the same positions as the bitmap's quad
+    // only when the edges of both are whole pixels; otherwise draw the
+    // bitmap's quad and let the texture clamp onto its transparent margin
+    if (IsPixelAligned(*renderSystem, rd) && IsPixelAligned(*renderSystem, box))
+    {
+      rd = box;
+    }
+    else
+    {
+      u1 = -m_crop.x1 / m_crop.Width() * m_u;
+      u2 = (m_bitmapWidth - m_crop.x1) / m_crop.Width() * m_u;
+      v1 = -m_crop.y1 / m_crop.Height() * m_v;
+      v2 = (m_bitmapHeight - m_crop.y1) / m_crop.Height() * m_v;
+    }
+  }
+
   renderSystem->EnableGUIShader(ShaderMethodGLES::SM_TEXTURE_NOBLEND);
   GLint depthLoc = renderSystem->GUIShaderGetDepth();
 
@@ -504,7 +559,7 @@ void COverlayTextureGLES::Render(SRenderState& state)
 
   glUniform1f(depthLoc, 1.0f);
 
-  const CRect texCoords(0.0f, 0.0f, m_u, m_v);
+  const CRect texCoords(u1, v1, u2, v2);
   renderSystem->DrawGUIQuad(rd, &texCoords);
   CRenderSystemBase::m_GUIElementCount++;
 
