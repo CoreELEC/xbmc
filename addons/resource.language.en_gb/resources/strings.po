@@ -9123,6 +9123,16 @@ msgctxt "#14427"
 msgid "Player-Led"
 msgstr ""
 
+#: system/settings/settings.xml
+msgctxt "#14428"
+msgid "Dolby Vision: Adapt subtitles and OSD to scene brightness"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14429"
+msgid "TV-Led Dolby Vision only. When on, subtitles and the OSD shown over the video are dimmed and adjusted with each scene, like the video. When off, they keep a steady brightness: the OSD and text subtitles follow GUI peak luminance, and image-based subtitles such as PGS keep their authored brightness."
+msgstr ""
+
 #: xbmc/music/MusicDatabase.cpp
 #: xbmc/video/VideoDatabase.cpp
 msgctxt "#15011"

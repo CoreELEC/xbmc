@@ -45,6 +45,11 @@
 
 using namespace KODI;
 
+namespace
+{
+constexpr unsigned int AMDV_FLAG_USE_SINK_MIN_MAX = 0x8;
+}
+
 std::unique_ptr<CAMLDisplay> CWinSystemAmlogic::m_amlDisplay = nullptr;
 
 CWinSystemAmlogic::CWinSystemAmlogic()
@@ -309,10 +314,13 @@ bool CWinSystemAmlogic::InitWindowSystem()
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV, false);
     settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED, AML_DV_TV_LED);
     settings->SetBool(CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5, true);
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS, false);
   }
 
   CServiceBroker::GetSettingsComponent()->GetSettings()->
     GetSettingsManager()->RegisterSettingOptionsFiller("dv_led_modes", SettingOptionsComponentsFiller);
+  settings->GetSettingsManager()->RegisterCallback(
+      this, {CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS});
 
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
 
@@ -361,6 +369,9 @@ bool CWinSystemAmlogic::InitWindowSystem()
 
 bool CWinSystemAmlogic::DestroyWindowSystem()
 {
+  CServiceBroker::GetSettingsComponent()->GetSettings()->GetSettingsManager()->UnregisterCallback(
+      this);
+
   return true;
 }
 
@@ -486,6 +497,14 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
   if (setting)
     setting->SetVisible(sink_dv);
 
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS);
+  if (setting)
+    setting->SetVisible(sink_dv);
+
+  // set only, the driver default is off
+  if (sink_dv && settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS))
+    SetDvSinkMinMax(true);
+
   if (IsHDRDisplay())
   {
     CServiceBroker::GetSettingsComponent()
@@ -528,6 +547,45 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
     if (setting)
       setting->SetVisible(false);
   }
+}
+
+void CWinSystemAmlogic::SetDvSinkMinMax(bool enable)
+{
+  CSysfsPath dvFlags{"/sys/module/aml_media/parameters/dolby_vision_flags"};
+  if (!dvFlags.Exists())
+    return;
+
+  // the driver changes other bits of this word per frame without a lock, a racing write
+  // can be lost
+  try
+  {
+    for (int attempt = 0; attempt < 3; attempt++)
+    {
+      const std::optional<unsigned int> flags = dvFlags.Get<unsigned int>();
+      if (!flags || ((*flags & AMDV_FLAG_USE_SINK_MIN_MAX) != 0) == enable)
+        return;
+
+      if (attempt < 2)
+        dvFlags.Set(enable ? *flags | AMDV_FLAG_USE_SINK_MIN_MAX
+                           : *flags & ~AMDV_FLAG_USE_SINK_MIN_MAX);
+    }
+  }
+  catch (const std::exception& e)
+  {
+    CLog::Log(LOGERROR, "CWinSystemAmlogic::{} - {}", __FUNCTION__, e.what());
+    return;
+  }
+
+  CLog::Log(LOGWARNING, "CWinSystemAmlogic::{} - failed to {} DV sink min/max", __FUNCTION__,
+            enable ? "enable" : "disable");
+}
+
+void CWinSystemAmlogic::OnSettingChanged(const std::shared_ptr<const CSetting>& setting)
+{
+  if (!setting || setting->GetId() != CSettings::SETTING_COREELEC_AMLOGIC_DV_ADAPT_GRAPHICS)
+    return;
+
+  SetDvSinkMinMax(std::static_pointer_cast<const CSettingBool>(setting)->GetValue());
 }
 
 bool CWinSystemAmlogic::IsHDRDisplay()
