@@ -907,9 +907,12 @@ void CVideoPlayerVideo::Flush(bool sync)
 
 void CVideoPlayerVideo::ProcessOverlays(const VideoPicture* pSource, double pts)
 {
+  // match at mid-frame so a start rounded just past the frame pts binds to it
+  const double matchPts = pts + pSource->iDuration / 2;
+
   // remove any overlays that are out of time
   if (m_syncState == IDVDStreamPlayer::SYNC_INSYNC)
-    m_pOverlayContainer->CleanUp(pts - m_iSubtitleDelay);
+    m_pOverlayContainer->CleanUp(matchPts - m_iSubtitleDelay);
 
   VecOverlays overlays;
 
@@ -927,7 +930,7 @@ void CVideoPlayerVideo::ProcessOverlays(const VideoPicture* pSource, double pts)
       if(!pOverlay->bForced && !m_bRenderSubs)
         continue;
 
-      double pts2 = pOverlay->bForced ? pts : pts - m_iSubtitleDelay;
+      double pts2 = pOverlay->bForced ? matchPts : matchPts - m_iSubtitleDelay;
 
       if((pOverlay->iPTSStartTime <= pts2 && (pOverlay->iPTSStopTime > pts2 || pOverlay->iPTSStopTime == 0LL)))
       {
