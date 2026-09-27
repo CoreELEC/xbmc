@@ -26,6 +26,7 @@
 #include "windowing/WinSystem.h"
 
 #include <cmath>
+#include <memory>
 
 // GLES2.0 cant do CLAMP, but can do CLAMP_TO_EDGE.
 #define GL_CLAMP GL_CLAMP_TO_EDGE
@@ -172,19 +173,19 @@ COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSour
       paletteOverride = &convertedPalette;
     }
 
-    std::vector<uint32_t> rgba(o.width * o.height);
     m_pma = !!USE_PREMULTIPLIED_ALPHA;
-    convert_rgba(o, m_pma, rgba, paletteOverride);
+    uint32_t lut[256];
+    BuildRGBALut(paletteOverride ? *paletteOverride : o.palette, m_pma, lut);
 
     // the direct back-buffer draw in Render bypasses the composite's
-    // limited-range encode, so apply it to the pixels here
+    // limited-range encode, so apply it to the palette here
     //! @todo Move this into the overlay shader once limited-range and
     //! full-range GUI shader variants are kept compiled in parallel and
     //! selectable per draw; then this draw selects the limited variant.
     if (m_isHDROverlay && CServiceBroker::GetWinSystem()->IsHdrComposite() &&
         CServiceBroker::GetWinSystem()->UseLimitedColor())
     {
-      for (uint32_t& px : rgba)
+      for (uint32_t& px : lut)
       {
         const uint32_t a = (px >> PIXEL_ASHIFT) & 0xff;
         const uint32_t r = (px >> PIXEL_RSHIFT) & 0xff;
@@ -196,7 +197,9 @@ COverlayTextureGLES::COverlayTextureGLES(const CDVDOverlayImage& o, CRect& rSour
       }
     }
 
-    LoadTexture(GL_TEXTURE_2D, o.width, o.height, o.width * 4, &m_u, &m_v, false, rgba.data());
+    auto rgba = std::make_unique_for_overwrite<uint32_t[]>(static_cast<size_t>(o.width) * o.height);
+    ConvertIndices(o.pixels.data(), o.linesize, o.width, o.height, lut, rgba.get());
+    LoadTexture(GL_TEXTURE_2D, o.width, o.height, o.width * 4, &m_u, &m_v, false, rgba.get());
   }
 
   glBindTexture(GL_TEXTURE_2D, 0);
