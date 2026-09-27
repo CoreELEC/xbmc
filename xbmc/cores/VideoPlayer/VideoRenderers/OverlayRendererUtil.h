@@ -71,6 +71,20 @@ void BuildRGBALut(const std::vector<uint32_t>& palette, bool mergealpha, uint32_
 void ConvertIndices(
     const uint8_t* src, int stride, int width, int height, const uint32_t lut[256], uint32_t* dst);
 
+//! Finds the box [x0, x1) x [y0, y1) around the indices whose lut entry is
+//! not fully transparent (0), grown by one transparent texel so that linear
+//! filtering at its edges is unchanged. A bitmap with nothing visible gives
+//! a 1x1 box.
+void FindVisibleBox(const uint8_t* src,
+                    int stride,
+                    int width,
+                    int height,
+                    const uint32_t lut[256],
+                    int& x0,
+                    int& y0,
+                    int& x1,
+                    int& y1);
+
 bool convert_quad(ASS_Image* images, SQuads& quads, int max_x);
 int GetStereoscopicDepth(bool isPgs, int subtitleDepth);
 
