@@ -49,6 +49,23 @@ static uint32_t build_rgba(const int yuv[3], int alpha, bool mergealpha)
 }
 #undef clamp
 
+void BuildRGBALut(const std::vector<uint32_t>& palette, bool mergealpha, uint32_t lut[256])
+{
+  std::fill(lut, lut + 256, 0);
+  for (size_t i = 0; i < palette.size() && i < 256; i++)
+    lut[i] = build_rgba((palette[i] >> PIXEL_ASHIFT) & 0xff, (palette[i] >> PIXEL_RSHIFT) & 0xff,
+                        (palette[i] >> PIXEL_GSHIFT) & 0xff, (palette[i] >> PIXEL_BSHIFT) & 0xff,
+                        mergealpha);
+}
+
+void ConvertIndices(
+    const uint8_t* src, int stride, int width, int height, const uint32_t lut[256], uint32_t* dst)
+{
+  for (int y = 0; y < height; y++, src += stride)
+    for (int x = 0; x < width; x++)
+      *dst++ = lut[src[x]];
+}
+
 void convert_rgba(const CDVDOverlayImage& o,
                   bool mergealpha,
                   std::vector<uint32_t>& rgba,
