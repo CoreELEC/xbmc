@@ -61,6 +61,16 @@ void convert_rgba(const CDVDOverlaySpu& o,
                   int& min_y,
                   int& max_y,
                   std::vector<uint32_t>& rgba);
+
+//! Premultiplies (mergealpha) and packs up to 256 palette entries into lut;
+//! entries past the palette are transparent.
+void BuildRGBALut(const std::vector<uint32_t>& palette, bool mergealpha, uint32_t lut[256]);
+
+//! Converts a rectangle of 8-bit palette indices through lut into dst,
+//! which is width * height texels without row padding.
+void ConvertIndices(
+    const uint8_t* src, int stride, int width, int height, const uint32_t lut[256], uint32_t* dst);
+
 bool convert_quad(ASS_Image* images, SQuads& quads, int max_x);
 int GetStereoscopicDepth(bool isPgs, int subtitleDepth);
 
