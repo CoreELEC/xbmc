@@ -1299,6 +1299,7 @@ void CGUIWindowManager::Process(unsigned int currentTime)
   std::unique_lock lock(CServiceBroker::GetWinSystem()->GetGfxContext());
 
   m_dirtyregions.clear();
+  m_markedDirty = false;
 
   CGUIWindow* pWindow = GetWindow(GetActiveWindow());
   if (pWindow)
@@ -1342,6 +1343,7 @@ void CGUIWindowManager::MarkDirty()
 void CGUIWindowManager::MarkDirty(const CRect& rect)
 {
   m_tracker.MarkDirtyRegion(CDirtyRegion(rect));
+  m_markedDirty = true;
 
   CGUIWindow* pWindow = GetWindow(GetActiveWindow());
   if (pWindow)
