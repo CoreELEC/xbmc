@@ -105,12 +105,13 @@ public:
    */
   void InvalidateSurround() { m_guiSurround.Invalidate(); }
 
-  /*! \brief True if Process() collected any dirty regions this frame.
+  /*! \brief True if Process() collected any dirty regions this frame or
+   *   MarkDirty() was called since.
    *   Callable after Process() to decide whether the render pass needs
    *   to run; used by the dirty-driven skip in CApplication::FrameMove
    *   (currently gated to D2P plane and HDR GUI compositing FBO contexts).
    */
-  bool HasDirtyRegions() const { return !m_dirtyregions.empty(); }
+  bool HasDirtyRegions() const { return m_markedDirty || !m_dirtyregions.empty(); }
 
   /*! \brief Rendering of the current window and any dialogs
    Render is called every frame to draw the current window and any dialogs.
@@ -312,6 +313,7 @@ private:
   mutable CGUISurroundRenderer m_guiSurround;
 
   CDirtyRegionList m_dirtyregions;
+  bool m_markedDirty{false};
   CDirtyRegionTracker m_tracker;
   bool m_presentedFrame{false};
 };
