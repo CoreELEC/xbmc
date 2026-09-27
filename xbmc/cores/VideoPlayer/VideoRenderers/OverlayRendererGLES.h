@@ -38,6 +38,9 @@ public:
   float m_u;
   float m_v;
   bool m_pma; /*< is alpha in texture premultiplied in the values */
+  CRect m_crop; /*< part of the bitmap in the texture, empty if all of it */
+  float m_bitmapWidth{0.0f};
+  float m_bitmapHeight{0.0f};
 };
 
 class COverlayGlyphGLES : public COverlay
