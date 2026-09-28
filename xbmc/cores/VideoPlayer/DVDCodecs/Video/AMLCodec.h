@@ -88,6 +88,8 @@ public:
   int           ReleaseFrame(const uint32_t index, bool bDrop = false);
 
   static int    PollFrame();
+  static void   DeferPollFrame();
+  static void   PollDeferredFrame();
   static void   SetPollDevice(int device);
 
 private:
@@ -137,6 +139,7 @@ private:
 
   static std::atomic_flag  m_pollSync;
   static int m_pollDevice;
+  static std::atomic<bool> m_pollDeferred;
   static double m_ttd;
   CProcessInfo &m_processInfo;
   int m_decoder_timeout;

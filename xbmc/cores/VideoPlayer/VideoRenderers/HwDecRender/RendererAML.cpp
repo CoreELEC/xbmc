@@ -244,5 +244,5 @@ void CRendererAML::RenderUpdate(int index, int index2, bool clear, unsigned int 
       m_prevVPts = pts;
     }
   }
-  CAMLCodec::PollFrame();
+  CAMLCodec::DeferPollFrame();
 }

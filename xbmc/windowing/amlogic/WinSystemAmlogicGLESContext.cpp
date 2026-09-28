@@ -8,6 +8,7 @@
 
 #include "VideoSyncAML.h"
 #include "WinSystemAmlogicGLESContext.h"
+#include "cores/VideoPlayer/DVDCodecs/Video/AMLCodec.h"
 #include "platform/linux/SysfsPath.h"
 #include "ServiceBroker.h"
 #include "settings/Settings.h"
@@ -278,6 +279,7 @@ void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
 {
   if (IsHotplugPending() || !IsPresentationReady())
   {
+    CAMLCodec::PollDeferredFrame();
     KODI::TIME::Sleep(10ms);
     return;
   }
@@ -320,6 +322,8 @@ void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
   {
     m_amlDisplay->aml_drmDevice_vsync();
   }
+
+  CAMLCodec::PollDeferredFrame();
 
   if (m_delayDispReset && m_dispResetTimer.IsTimePast())
   {

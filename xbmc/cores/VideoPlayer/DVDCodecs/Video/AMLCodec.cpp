@@ -2787,6 +2787,7 @@ int CAMLCodec::AddHDR10PData(uint8_t *pData, size_t iSize)
 }
 
 int CAMLCodec::m_pollDevice;
+std::atomic<bool> CAMLCodec::m_pollDeferred{false};
 
 int CAMLCodec::PollFrame()
 {
@@ -2805,6 +2806,22 @@ int CAMLCodec::PollFrame()
   int elapsed = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - now).count();
   CLog::Log(LOGDEBUG, LOGAVTIMING, "CAMLCodec::PollFrame elapsed:{:.3f}ms", elapsed / 1000.0);
   return 1;
+}
+
+// A frame queued by the renderer is taken at the next vsync. The wait runs
+// after the GUI present: a present that already ran into that vsync leaves
+// the poll flag set, and the wait then returns at once.
+void CAMLCodec::DeferPollFrame()
+{
+  // a second RenderUpdate in one loop keeps its own wait
+  if (m_pollDeferred.exchange(true))
+    PollFrame();
+}
+
+void CAMLCodec::PollDeferredFrame()
+{
+  if (m_pollDeferred.exchange(false))
+    PollFrame();
 }
 
 void CAMLCodec::SetPollDevice(int dev)
