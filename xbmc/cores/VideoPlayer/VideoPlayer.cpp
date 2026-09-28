@@ -1299,7 +1299,9 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
 {
 
   // check if we should read from subtitle demuxer
-  if (m_pSubtitleDemuxer && m_VideoPlayerSubtitle->AcceptsData())
+  if (m_pSubtitleDemuxer &&
+      STREAM_SOURCE_MASK(m_CurrentSubtitle.source) == STREAM_SOURCE_DEMUX_SUB &&
+      m_VideoPlayerSubtitle->AcceptsData())
   {
     const bool valid = ReadSubtitlePacket(packet, stream);
     if (packet)
