@@ -3411,6 +3411,8 @@ void CVideoPlayer::HandleMessages()
         FlushBuffers(start, true, true);
         if (start != DVD_NOPTS_VALUE)
         {
+          if (m_pSubtitleDemuxer)
+            m_pSubtitleDemuxer->SeekTime(DVD_TIME_TO_MSEC(start), true);
           const int64_t targetTime{
               m_Edl.GetTimeWithoutCuts(std::chrono::milliseconds(DVD_TIME_TO_MSEC(start))).count()};
           offset = targetTime - beforeSeek;
