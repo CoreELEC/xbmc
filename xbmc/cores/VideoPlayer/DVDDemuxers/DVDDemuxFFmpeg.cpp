@@ -1468,6 +1468,10 @@ bool CDVDDemuxFFmpeg::SeekTime(double time, bool backwards, double* startpts)
       ret = av_seek_frame(m_pFormatContext, m_seekStream, seek_pts,
                           backwards ? AVSEEK_FLAG_BACKWARD : 0);
 
+    // a .sup target can lie before the first packet, where a backward seek fails
+    if (ret < 0 && m_bSup && seek_pts < m_pFormatContext->start_time)
+      ret = av_seek_frame(m_pFormatContext, m_seekStream, seek_pts, 0);
+
     if (ret < 0)
     {
       // demuxer can return failure, if seeking behind eof
