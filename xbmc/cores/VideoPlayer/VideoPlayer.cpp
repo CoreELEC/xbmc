@@ -1246,35 +1246,64 @@ void CVideoPlayer::OpenDefaultStreams(bool reset)
     SynchronizeDemuxer();
 }
 
+bool CVideoPlayer::ReadSubtitlePacket(DemuxPacket*& packet, CDemuxStream*& stream)
+{
+  packet = m_pSubtitleDemuxer->Read();
+  if (!packet)
+    return false;
+
+  UpdateCorrection(packet, m_offset_pts);
+  if (packet->iStreamId < 0)
+    return true;
+
+  stream = m_pSubtitleDemuxer->GetStream(packet->demuxerId, packet->iStreamId);
+  if (!stream)
+  {
+    CLog::Log(LOGERROR, "{} - Error demux packet doesn't belong to a valid stream", __FUNCTION__);
+    return false;
+  }
+  if (stream->source == STREAM_SOURCE_NONE)
+  {
+    m_SelectionStreams.Clear(StreamType::NONE, STREAM_SOURCE_DEMUX_SUB);
+    m_SelectionStreams.Update(nullptr, m_pSubtitleDemuxer.get());
+    UpdateContent();
+  }
+  return true;
+}
+
+void CVideoPlayer::ProcessSubtitleDemuxer()
+{
+  // a display set is several packets, so this covers a few sets per call
+  constexpr int MAX_PACKETS = 16;
+
+  if (!m_pSubtitleDemuxer ||
+      STREAM_SOURCE_MASK(m_CurrentSubtitle.source) != STREAM_SOURCE_DEMUX_SUB || IsInMenuInternal())
+    return;
+
+  for (int i = 0; i < MAX_PACKETS && !m_bAbortRequest && m_VideoPlayerSubtitle->AcceptsData(); ++i)
+  {
+    DemuxPacket* packet = nullptr;
+    CDemuxStream* stream = nullptr;
+    ReadSubtitlePacket(packet, stream);
+    if (!packet)
+      break;
+
+    if (stream)
+      ProcessPacket(stream, packet);
+    else
+      CDVDDemuxUtils::FreeDemuxPacket(packet);
+  }
+}
+
 bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
 {
 
   // check if we should read from subtitle demuxer
   if (m_pSubtitleDemuxer && m_VideoPlayerSubtitle->AcceptsData())
   {
-    packet = m_pSubtitleDemuxer->Read();
-
-    if(packet)
-    {
-      UpdateCorrection(packet, m_offset_pts);
-      if(packet->iStreamId < 0)
-        return true;
-
-      stream = m_pSubtitleDemuxer->GetStream(packet->demuxerId, packet->iStreamId);
-      if (!stream)
-      {
-        CLog::Log(LOGERROR, "{} - Error demux packet doesn't belong to a valid stream",
-                  __FUNCTION__);
-        return false;
-      }
-      if (stream->source == STREAM_SOURCE_NONE)
-      {
-        m_SelectionStreams.Clear(StreamType::NONE, STREAM_SOURCE_DEMUX_SUB);
-        m_SelectionStreams.Update(NULL, m_pSubtitleDemuxer.get());
-        UpdateContent();
-      }
-      return true;
-    }
+    const bool valid = ReadSubtitlePacket(packet, stream);
+    if (packet)
+      return valid;
   }
 
   // read a data frame from stream.
@@ -1841,6 +1870,8 @@ void CVideoPlayer::Process()
           m_pDemuxer->SetSpeed(DVD_PLAYSPEED_PAUSE);
         m_demuxerSpeed = DVD_PLAYSPEED_PAUSE;
       }
+      // subtitle files are not limited by the a/v queues
+      ProcessSubtitleDemuxer();
       CThread::Sleep(10ms);
       continue;
     }
