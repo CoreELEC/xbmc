@@ -61,6 +61,7 @@ public:
   void ClearBackBuffer(bool guiWillRender) override;
   void CompositeGui() override;
   bool IsHdrComposite() const override { return m_guiCompositing; }
+  bool GuiWillRender() const override { return m_guiWillRender; }
 
   EGLDisplay GetEGLDisplay() const;
   EGLSurface GetEGLSurface() const;
@@ -80,7 +81,8 @@ private:
   int m_guiFboHeight{0};
   // True when the GUI FBO is empty (no draws this frame); CompositeGui skips composite when true.
   bool m_guiFboClean{false};
-  // Whether the GUI render pass will run this frame; set by BeginGuiComposite.
+  // Whether the GUI render pass will run this frame; set by ClearBackBuffer
+  // and BeginGuiComposite.
   bool m_guiWillRender{true};
   // Transfer function the LUTs were built for, and the GUI reference white
   // (PQ-normalized) baked into them - kept so a live guipeakluminance change can

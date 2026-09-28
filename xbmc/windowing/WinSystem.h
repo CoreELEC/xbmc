@@ -273,6 +273,9 @@ public:
   virtual bool BeginGuiComposite(bool guiWillRender) { return false; }
   virtual void EndGuiComposite() { ClearBackBuffer(false); }
   virtual void ClearBackBuffer(bool guiWillRender) {}
+  // False when the frame being built has no GUI render and will not be
+  // presented, as last hinted by ClearBackBuffer()
+  virtual bool GuiWillRender() const { return true; }
   virtual void CompositeGui() {}
 
   // True when GUI is rendered to an FBO that is then color-transformed
