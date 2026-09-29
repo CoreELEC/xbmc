@@ -101,6 +101,8 @@ private:
   std::string   GetVfmMap(const std::string &name);
   void          SetVfmMap(const std::string &name, const std::string &map);
   int           DequeueBuffer();
+  int           QueueBuffer(const PosixFilePtr &amlVideoFile, uint32_t index, bool drop);
+  void          DropQueuedFrames();
   unsigned int  GetDecoderVideoRate();
   std::string   GetHDRStaticMetadata(bool dv_enable);
 
@@ -133,6 +135,16 @@ private:
 
   PosixFilePtr     m_amlVideoFile;
   std::mutex       m_amlVideoFileMutex;
+
+  // frames taken from amlvideo and not yet given back, in dequeue order
+  struct QueuedFrame
+  {
+    uint32_t index{0};
+    bool released{false};
+    bool drop{false};
+  };
+  std::deque<QueuedFrame> m_queuedFrames;
+  std::mutex       m_queuedFramesMutex;
   std::string      m_defaultVfmMap;
 
   static std::atomic_flag  m_pollSync;
