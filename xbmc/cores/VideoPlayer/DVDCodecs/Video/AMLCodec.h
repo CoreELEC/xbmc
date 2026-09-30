@@ -87,6 +87,7 @@ public:
   static int    OMXDurationToNs(int duration);
   int           GetAmlDuration() const;
   int           ReleaseFrame(const uint32_t index, bool bDrop = false);
+  bool          IsOpen() const { return m_opened; }
 
   static int    PollFrame();
   static void   SetPollDevice(int device);
@@ -113,6 +114,13 @@ public:
   //! Ends the current or next wait with STEP; dropped without a poll device or in a change
   static void   RequestVsyncStep();
   static void   StopVsyncWait();
+  //! Signals the end of a vsync thread step; `vsync` if it followed a real vsync
+  static void   PublishPresentStep(bool vsync);
+  static uint64_t PresentSteps();
+  //! Waits for `fenceFd`, the out-fence of the GUI flip just issued (-1 for none), and for a
+  //! step after `seen`. False while the vsync thread runs without a vsync to pace on (no poll
+  //! device, missed vsyncs): the caller then waits for the vblank itself
+  static bool   WaitPresentStep(uint64_t& seen, int fenceFd);
 
 private:
   void          ShowMainVideo(const bool show);
@@ -129,7 +137,7 @@ private:
   std::string   GetHDRStaticMetadata(bool dv_enable);
 
   DllLibAmCodec   *m_dll;
-  bool             m_opened;
+  std::atomic<bool> m_opened;
   bool             m_drain = false;
   am_private_t    *am_private;
   CDVDStreamInfo   m_hints;
