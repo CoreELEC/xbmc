@@ -91,6 +91,29 @@ public:
   static int    PollFrame();
   static void   SetPollDevice(int device);
 
+  enum class VsyncWake
+  {
+    VSYNC,
+    STEP,
+    TIMEOUT,
+    NO_DEVICE,
+    HANDOVER,
+    INTERRUPTED,
+    STOPPED,
+  };
+  //! Waits for the next amvideo vsync, interruptible by StopVsyncWait(),
+  //! RequestVsyncStep() and a poll device change. Only one thread may wait while armed.
+  //! After VSYNC, STEP or TIMEOUT the caller may pick until its next call, and a device
+  //! change waits for that; a vsync that comes with a device change is HANDOVER, no pick.
+  //! NO_DEVICE comes at once when the device goes, then once per bound without one.
+  static VsyncWake PollVsync();
+  //! Clears a vsync flag latched since the last wait; true if one was set
+  static bool   ConsumeVsyncFlag();
+  static bool   ArmVsyncWait();
+  //! Ends the current or next wait with STEP; dropped without a poll device or in a change
+  static void   RequestVsyncStep();
+  static void   StopVsyncWait();
+
 private:
   void          ShowMainVideo(const bool show);
   void          SetVideoZoom(const float zoom);
