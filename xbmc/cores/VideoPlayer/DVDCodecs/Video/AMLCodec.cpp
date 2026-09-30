@@ -32,6 +32,7 @@
 #include "platform/linux/SysfsPath.h"
 
 #include <unistd.h>
+#include <algorithm>
 #include <queue>
 #include <vector>
 #include <signal.h>
@@ -2639,6 +2640,10 @@ void CAMLCodec::CloseDecoder()
 
   ShowMainVideo(false);
 
+  {
+    std::lock_guard<std::mutex> lock(m_queuedFramesMutex);
+    m_queuedFrames.clear();
+  }
   CloseAmlVideo();
 }
 
@@ -2682,6 +2687,8 @@ void CAMLCodec::Reset()
     m_dll->codec_set_cntl_mode(&am_private->vcodec, TRICKMODE_NONE);
   }
   m_dll->codec_pause(&am_private->vcodec);
+
+  DropQueuedFrames();
 
   // reset the decoder
   m_dll->codec_reset(&am_private->vcodec);
@@ -2895,13 +2902,27 @@ void CAMLCodec::SetPollDevice(int dev)
   m_pollDevice = dev;
 }
 
-int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
+int CAMLCodec::QueueBuffer(const PosixFilePtr &amlVideoFile, uint32_t index, bool drop)
 {
-  int ret;
   v4l2_buffer vbuf = v4l2_buffer();
   vbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   vbuf.index = index;
 
+  if (drop)
+    vbuf.flags |= V4L2_BUF_FLAG_DONE;
+
+  CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::ReleaseFrame idx:{:d}, drop:{:d}", index, static_cast<int>(drop));
+
+  int ret;
+  if ((ret = amlVideoFile->IOControl(VIDIOC_QBUF, &vbuf)) < 0)
+    CLog::Log(LOGERROR, "CAMLCodec::ReleaseFrame - VIDIOC_QBUF failed: {}", strerror(errno));
+  return ret;
+}
+
+// amlvideo releases every frame dequeued up to the queued index, so frames
+// go back in dequeue order
+int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
+{
   PosixFilePtr amlVideoFile;
   {
     std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
@@ -2911,14 +2932,37 @@ int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
   if (!amlVideoFile)
     return 0;
 
-  if (drop)
-    vbuf.flags |= V4L2_BUF_FLAG_DONE;
+  std::lock_guard<std::mutex> lock(m_queuedFramesMutex);
+  auto frame = std::find_if(m_queuedFrames.begin(), m_queuedFrames.end(),
+                            [index](const QueuedFrame& f) { return f.index == index; });
+  // already given back by a decoder reset
+  if (frame == m_queuedFrames.end())
+    return 0;
 
-  CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::ReleaseFrame idx:{:d}, drop:{:d}", index, static_cast<int>(drop));
+  frame->released = true;
+  frame->drop = drop;
 
-  if ((ret = amlVideoFile->IOControl(VIDIOC_QBUF, &vbuf)) < 0)
-    CLog::Log(LOGERROR, "CAMLCodec::ReleaseFrame - VIDIOC_QBUF failed: {}", strerror(errno));
+  int ret = 0;
+  while (!m_queuedFrames.empty() && m_queuedFrames.front().released)
+  {
+    ret = QueueBuffer(amlVideoFile, m_queuedFrames.front().index, m_queuedFrames.front().drop);
+    m_queuedFrames.pop_front();
+  }
   return ret;
+}
+
+void CAMLCodec::DropQueuedFrames()
+{
+  PosixFilePtr amlVideoFile;
+  {
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    amlVideoFile = m_amlVideoFile;
+  }
+
+  std::lock_guard<std::mutex> lock(m_queuedFramesMutex);
+  if (amlVideoFile && !m_queuedFrames.empty())
+    QueueBuffer(amlVideoFile, m_queuedFrames.back().index, true);
+  m_queuedFrames.clear();
 }
 
 float CAMLCodec::GetBufferLevel(int new_chunk, int &data_len, int &free_len, int &size)
@@ -2969,6 +3013,9 @@ int CAMLCodec::DequeueBuffer()
   			static_cast<double>(m_cur_pts) /  DVD_TIME_BASE, vbuf.index);
 
     m_bufferIndex = vbuf.index;
+
+    std::lock_guard<std::mutex> lock(m_queuedFramesMutex);
+    m_queuedFrames.push_back({vbuf.index, false, false});
   }
   else if (ret != EAGAIN)
   {
