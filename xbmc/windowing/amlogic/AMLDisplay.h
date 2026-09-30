@@ -111,6 +111,7 @@ public:
     int fd{-1};
     return std::exchange(m_outFenceFd, fd);
   }
+  int GetOutFenceFd() const { return m_outFenceFd; }
 private:
   void CleanAndClose();
   void aml_init_drmDevice_display();
@@ -184,6 +185,8 @@ public:
       m_stereo_mode, true, active); }
   void SetInFenceFd(int fd) { m_amlDRMUtils->SetInFenceFd(fd); }
   int TakeOutFenceFd() const { return m_amlDRMUtils->TakeOutFenceFd(); }
+  //! Out-fence of the last flip, still owned by the display
+  int GetOutFenceFd() const { return m_amlDRMUtils->GetOutFenceFd(); }
   bool GetHotPlug() { bool ret = m_bHotPlug; m_bHotPlug = false; return ret; }
   void SetHotPlug() { m_bHotPlug = true; }
 
