@@ -104,6 +104,9 @@ bool CDVDVideoCodecAmlogic::Register()
 
 bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
 {
+  bool user_dv_disable = true;
+  bool zeroLevel5 = false;
+
   if (!CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEAMCODEC))
     return false;
   if ((hints.stills && hints.fpsrate == 0) || hints.width == 0)
@@ -122,6 +125,24 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
   m_metadataSequencer.Reset();
 
   CLog::Log(LOGDEBUG, "CDVDVideoCodecAmlogic::Opening: codec {:d} profile:{:d} extra_size:{:d}", m_hints.codec, hints.profile, hints.extradata.GetSize());
+
+  if (aml_support_dolby_vision())
+  {
+    user_dv_disable = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+        CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
+
+    if (!m_hints.cryptoSession)
+    {
+      if (!user_dv_disable && CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+              CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_TV_LED)
+      {
+        zeroLevel5 = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+            CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5);
+        if (zeroLevel5)
+          m_streamMeta.flags.push_back("l5-zeroed");
+      }
+    }
+  }
 
   switch(m_hints.codec)
   {
@@ -323,32 +344,16 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       // check for hevc-hvcC and convert to h265-annex-b
       if (m_hints.extradata && !m_hints.cryptoSession)
       {
-        if (aml_support_dolby_vision())
+        if ((m_hints.dovi.dv_profile == 4 || m_hints.dovi.dv_profile == 7) && !user_dv_disable &&
+             aml_get_cpufamily_id() == AML_S5)
         {
-          bool user_dv_disable = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
-              CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
+          CLog::Log(LOGINFO, "{}::{} - HEVC bitstream profile {} will be converted to profile 8.1", __MODULE_NAME__, __FUNCTION__,
+            m_hints.dovi.dv_profile);
 
-          if (!user_dv_disable && CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
-                  CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_TV_LED)
-          {
-            const bool zeroLevel5 = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
-                CSettings::SETTING_VIDEOPLAYER_DOVIZEROLEVEL5);
-            m_bitstream->SetDoviZeroLevel5(zeroLevel5);
-            if (zeroLevel5)
-              m_streamMeta.flags.push_back("l5-zeroed");
-          }
-
-          if ((m_hints.dovi.dv_profile == 4 || m_hints.dovi.dv_profile == 7) && !user_dv_disable &&
-               aml_get_cpufamily_id() == AML_S5)
-          {
-            CLog::Log(LOGINFO, "{}::{} - HEVC bitstream profile {} will be converted to profile 8.1", __MODULE_NAME__, __FUNCTION__,
-              m_hints.dovi.dv_profile);
-
-            m_hints.dovi.dv_profile = 8;
-            m_hints.dovi.el_present_flag = false;
-            m_bitstream->SetConvertDovi(true);
-            m_streamMeta.flags.push_back("converted");
-          }
+          m_hints.dovi.dv_profile = 8;
+          m_hints.dovi.el_present_flag = false;
+          m_bitstream->SetConvertDovi(true);
+          m_streamMeta.flags.push_back("converted");
         }
       }
 
@@ -382,6 +387,10 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
     CLog::Log(LOGERROR, "{}: Failed to create Amlogic Codec", __MODULE_NAME__);
     goto FAIL;
   }
+
+  m_Codec->SetDoviZeroLevel5(zeroLevel5);
+  if (m_bitstream)
+    m_bitstream->SetDoviZeroLevel5(zeroLevel5);
 
   // allocate a dummy VideoPicture buffer.
   m_videobuffer.Reset();
