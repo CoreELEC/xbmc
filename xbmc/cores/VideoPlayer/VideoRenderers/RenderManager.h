@@ -24,6 +24,7 @@
 #include <deque>
 #include <list>
 #include <memory>
+#include <mutex>
 
 #include "PlatformDefs.h"
 
@@ -115,7 +116,7 @@ public:
    *  Must be called after CRenderManager::FrameMove has run this frame
    *  (which calls PrepareOverlays). Reads cached state; cheap.
    */
-  bool HasVisibleOverlay() const { return m_overlays.HasVisibleOverlay(m_presentsource); }
+  bool HasVisibleOverlay() const { return m_overlays.HasVisibleOverlay(GuiSource()); }
 
   /**
    * If player uses buffering it has to wait for a buffer before it calls
@@ -143,11 +144,13 @@ public:
   void SetVideoSettings(const CVideoSettings& settings);
 
 protected:
+  class CPresentThread;
 
   void PresentSingle(bool clear, DWORD flags, DWORD alpha);
   void PresentFields(bool clear, DWORD flags, DWORD alpha);
   void PresentBlend(bool clear, DWORD flags, DWORD alpha);
 
+  void PrepareNextStep();
   void PrepareNextRender();
   bool IsPresenting();
   bool IsGuiLayer();
@@ -161,6 +164,12 @@ protected:
 
   void UpdateLatencyTweak();
   void CheckEnableClockSync();
+
+  //! The vsync thread picks and presents; the render loop draws the frame it last presented
+  void StartPresentThread();
+  void StopPresentThread();
+  void PresentFromVsync();
+  int GuiSource() const { return m_presenting ? m_guiPresentSource : m_presentsource; }
 
   CBaseRenderer *m_pRenderer = nullptr;
   //! Owns the video tap's private FBO; render-thread only, reset in UnInit
@@ -205,7 +214,7 @@ protected:
 
   /// Display latency tweak value from AdvancedSettings for the current refresh rate
   /// in milliseconds
-  double m_latencyTweak = 0.0;
+  std::atomic<double> m_latencyTweak{0.0};
   /// Display latency updated in PrepareNextRender in DVD clock units, includes m_latencyTweak
   double m_displayLatency = 0.0;
   std::atomic_int m_videoDelay = {};
@@ -258,4 +267,14 @@ protected:
 
   std::chrono::time_point<std::chrono::system_clock> m_videostarted;
   bool m_displayReset = false;
+
+  //! Held across every start and stop of the thread and the renderer deletes that follow;
+  //! never taken by the thread itself or while holding another render manager lock
+  std::mutex m_presentThreadLock;
+  std::unique_ptr<CPresentThread> m_presentThread;
+  std::atomic_bool m_presenting{false};
+  //! Set by the render loop around a display mode switch, under m_statelock; the vsync thread
+  //! does not pick meanwhile
+  bool m_switching{false};
+  int m_guiPresentSource{-1};
 };

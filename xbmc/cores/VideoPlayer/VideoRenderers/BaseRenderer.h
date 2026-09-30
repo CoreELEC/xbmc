@@ -79,6 +79,18 @@ public:
   {
     return false;
   }
+  //! Renderers whose display plane latches frames on its own vsync can have
+  //! frames presented from a thread woken by that vsync. Returns false to
+  //! keep presenting from the render loop.
+  virtual bool StartVsyncPresent() { return false; }
+  //! Interrupts WaitVsync(); it returns false from then on
+  virtual void StopVsyncPresent() {}
+  //! Blocks until the plane's next vsync, a wake or a liveness bound; false when stopped
+  virtual bool WaitVsync() { return false; }
+  //! Hands the frame at `index` to the plane, from the vsync thread
+  virtual void PresentFrame(int index) {}
+  //! Makes the vsync thread run a step now instead of at the next vsync
+  virtual void WakeVsyncPresent() {}
   // Render info, can be called before configure
   virtual CRenderInfo GetRenderInfo() { return CRenderInfo(); }
   virtual void Update() = 0;
