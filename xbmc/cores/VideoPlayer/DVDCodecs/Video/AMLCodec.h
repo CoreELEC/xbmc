@@ -77,6 +77,7 @@ public:
 
   void          SetSpeed(int speed);
   void          SetDrain(bool drain){m_drain = drain;};
+  void          SetDoviZeroLevel5(bool value);
   void          SetVideoRect(const CRect &SrcRect, const CRect &DestRect);
   void          SetVideoRate(int videoRate);
   uint64_t      GetOMXPts() const { return m_cur_pts; }
