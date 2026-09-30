@@ -182,7 +182,9 @@ void CRenderer::Render(int idx, float depth)
 // FBO's sRGB->HDR conversion
 void CRenderer::RenderHDROverlays(int idx)
 {
-  if (!CServiceBroker::GetWinSystem()->IsHdrComposite())
+  // an unpresented frame gets no draws
+  if (!CServiceBroker::GetWinSystem()->IsHdrComposite() ||
+      !CServiceBroker::GetWinSystem()->GuiWillRender())
     return;
 
   std::unique_lock lock(m_section);
