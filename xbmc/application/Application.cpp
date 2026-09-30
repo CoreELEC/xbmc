@@ -908,14 +908,10 @@ void CApplication::Render()
   if (!CServiceBroker::GetRenderSystem()->BeginRender())
     return;
 
-  const bool guiWillRender = appPower->GetRenderGUI() && !m_skipGuiRender;
-  CServiceBroker::GetWinSystem()->ClearBackBuffer(guiWillRender);
-
-  // render video layer
-  CServiceBroker::GetGUI()->GetWindowManager().RenderEx();
-
   // render gui layer
+  const bool guiWillRender = appPower->GetRenderGUI() && !m_skipGuiRender;
   bool compositing = CServiceBroker::GetWinSystem()->BeginGuiComposite(guiWillRender);
+
   if (guiWillRender)
   {
     if (CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode() != RenderStereoMode::OFF)
@@ -941,10 +937,13 @@ void CApplication::Render()
   }
 
   if (compositing)
-  {
     CServiceBroker::GetWinSystem()->EndGuiComposite();
+
+  // render video layer
+  CServiceBroker::GetGUI()->GetWindowManager().RenderEx();
+
+  if (compositing)
     CServiceBroker::GetWinSystem()->CompositeGui();
-  }
 
   // serve pending requests from the finished frame, then fail any left
   // unserved. Both need a frame that really drew: on a skipped frame nothing

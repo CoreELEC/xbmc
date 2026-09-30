@@ -58,7 +58,6 @@ public:
   void ReleaseHdrGuiSession(uint64_t owner) override;
   bool BeginGuiComposite(bool guiWillRender) override;
   void EndGuiComposite() override;
-  void ClearBackBuffer(bool guiWillRender) override;
   void CompositeGui() override;
   bool IsHdrComposite() const override { return m_guiCompositing; }
 
