@@ -42,7 +42,9 @@
 #include <sys/utsname.h>
 #include <linux/videodev2.h>
 #include <sys/poll.h>
+#include <sys/eventfd.h>
 #include <chrono>
+#include <condition_variable>
 #include <thread>
 #include "aom_integer.h"
 #include "obu_util.h"
@@ -51,6 +53,37 @@ namespace
 {
 
 std::mutex pollSyncMutex;
+
+// interrupts a presenter blocked in PollVsync(); created at the first arm
+int vsyncKick = -1;
+std::atomic<bool> vsyncArmed{false};
+std::atomic<bool> vsyncStop{false};
+std::atomic<bool> vsyncStep{false};
+// poll device swaps in progress; the presenter parks on pollHandover meanwhile
+std::atomic<int> pollChanging{0};
+// under pollSyncMutex: the presenter may pick for the current device until its next wait
+bool vsyncPicking = false;
+// under pollSyncMutex: the device the presenter last polled
+int vsyncPolledDevice = -1;
+std::condition_variable pollHandover;
+
+void KickVsyncWait()
+{
+  eventfd_write(vsyncKick, 1);
+}
+
+void DrainVsyncKick()
+{
+  eventfd_t value = 0;
+  eventfd_read(vsyncKick, &value);
+}
+
+// the kernel reports no missing vsync; this is the VideoSyncAML bound for the same flag
+std::chrono::milliseconds VsyncLivenessBound()
+{
+  const float fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
+  return std::chrono::milliseconds(static_cast<int>(3000.0f / (fps > 1.0f ? fps : 60.0f)));
+}
 
 }
 
@@ -2889,8 +2922,125 @@ int CAMLCodec::PollFrame()
 
 void CAMLCodec::SetPollDevice(int dev)
 {
-  std::lock_guard<std::mutex> lock(pollSyncMutex);
+  const bool handover = vsyncArmed;
+  if (handover)
+  {
+    ++pollChanging;
+    KickVsyncWait();
+  }
+  std::unique_lock<std::mutex> lock(pollSyncMutex);
+  // a presenter step in flight picks and queues for the current device: let it end first
+  pollHandover.wait(lock, [] { return !vsyncPicking; });
   m_pollDevice = dev;
+  if (handover)
+  {
+    --pollChanging;
+    pollHandover.notify_all();
+  }
+}
+
+CAMLCodec::VsyncWake CAMLCodec::PollVsync()
+{
+  const std::chrono::milliseconds bound = VsyncLivenessBound();
+  std::unique_lock<std::mutex> lock(pollSyncMutex);
+  // the caller's previous step has ended
+  if (vsyncPicking)
+  {
+    vsyncPicking = false;
+    pollHandover.notify_all();
+  }
+  pollHandover.wait(lock, [] { return pollChanging == 0 || vsyncStop; });
+  if (vsyncStop)
+    return VsyncWake::STOPPED;
+
+  // the device just went away: report it now, not a bound later
+  if (m_pollDevice < 0 && vsyncPolledDevice >= 0)
+  {
+    vsyncPolledDevice = -1;
+    return VsyncWake::NO_DEVICE;
+  }
+  vsyncPolledDevice = m_pollDevice;
+
+  // poll() skips a negative fd, so without a device only the kick or the bound ends the wait
+  struct pollfd fds[2] = {{m_pollDevice, POLLOUT, 0}, {vsyncKick, POLLIN, 0}};
+  const int ret = poll(fds, 2, static_cast<int>(bound.count()));
+  const bool kicked = (fds[1].revents & POLLIN) != 0;
+  if (kicked)
+    DrainVsyncKick();
+  // a device change waits for this lock: nothing is picked for a device about to go
+  const bool changing = pollChanging > 0;
+
+  // amvideo_poll already cleared the flag, so a vsync reported with a kick is still a vsync
+  if (fds[0].revents & POLLOUT)
+  {
+    g_aml_sync_event.Set();
+    vsyncStep = false;
+    vsyncPicking = !changing;
+    return changing ? VsyncWake::HANDOVER : VsyncWake::VSYNC;
+  }
+  // one read drains every kick, so a step request can arrive with a stop or handover kick
+  if (kicked && vsyncStep.exchange(false) && m_pollDevice >= 0 && !changing)
+  {
+    vsyncPicking = true;
+    return VsyncWake::STEP;
+  }
+  if (kicked || changing || (ret < 0 && errno == EINTR))
+    return VsyncWake::INTERRUPTED;
+  if (m_pollDevice < 0)
+    return VsyncWake::NO_DEVICE;
+  vsyncPicking = true;
+  return VsyncWake::TIMEOUT;
+}
+
+bool CAMLCodec::ConsumeVsyncFlag()
+{
+  std::lock_guard<std::mutex> lock(pollSyncMutex);
+  if (m_pollDevice < 0)
+    return false;
+
+  struct pollfd fd = {m_pollDevice, POLLOUT, 0};
+  if (poll(&fd, 1, 0) <= 0 || !(fd.revents & POLLOUT))
+    return false;
+
+  g_aml_sync_event.Set();
+  return true;
+}
+
+bool CAMLCodec::ArmVsyncWait()
+{
+  if (vsyncKick < 0)
+    vsyncKick = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+  if (vsyncKick < 0)
+    return false;
+
+  DrainVsyncKick();
+  vsyncStep = false;
+  vsyncStop = false;
+  vsyncArmed = true;
+  return true;
+}
+
+void CAMLCodec::RequestVsyncStep()
+{
+  if (!vsyncArmed)
+    return;
+
+  vsyncStep = true;
+  KickVsyncWait();
+}
+
+void CAMLCodec::StopVsyncWait()
+{
+  vsyncArmed = false;
+  vsyncStop = true;
+  KickVsyncWait();
+  // the waiter tests vsyncStop under pollSyncMutex: after this it has either
+  // seen it or is inside poll() with the kick pending
+  {
+    std::lock_guard<std::mutex> lock(pollSyncMutex);
+    vsyncPicking = false;
+  }
+  pollHandover.notify_all();
 }
 
 int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
