@@ -32,6 +32,7 @@
 #include "platform/linux/SysfsPath.h"
 
 #include <unistd.h>
+#include <algorithm>
 #include <queue>
 #include <vector>
 #include <signal.h>
@@ -67,6 +68,17 @@ bool vsyncPicking = false;
 int vsyncPolledDevice = -1;
 std::condition_variable pollHandover;
 
+// the presenter queued a shown frame and no vsync has latched it yet; only the presenter
+// thread reads and writes it
+std::atomic<bool> presentedSinceVsync{false};
+
+// the GUI paces on the vsync thread's steps only after a step that followed a real vsync
+std::mutex paceMutex;
+std::condition_variable paceCond;
+uint64_t paceSteps = 0;
+bool paceArmed = false;
+bool paceStopped = true;
+
 void KickVsyncWait()
 {
   eventfd_write(vsyncKick, 1);
@@ -83,6 +95,21 @@ std::chrono::milliseconds VsyncLivenessBound()
 {
   const float fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
   return std::chrono::milliseconds(static_cast<int>(3000.0f / (fps > 1.0f ? fps : 60.0f)));
+}
+
+void StartPacing()
+{
+  std::lock_guard<std::mutex> lock(paceMutex);
+  paceStopped = false;
+  paceArmed = false;
+}
+
+void StopPacing()
+{
+  std::lock_guard<std::mutex> lock(paceMutex);
+  paceStopped = true;
+  paceArmed = false;
+  paceCond.notify_all();
 }
 
 }
@@ -2975,12 +3002,18 @@ CAMLCodec::VsyncWake CAMLCodec::PollVsync()
   {
     g_aml_sync_event.Set();
     vsyncStep = false;
+    presentedSinceVsync = false;
     vsyncPicking = !changing;
     return changing ? VsyncWake::HANDOVER : VsyncWake::VSYNC;
   }
   // one read drains every kick, so a step request can arrive with a stop or handover kick
   if (kicked && vsyncStep.exchange(false) && m_pollDevice >= 0 && !changing)
   {
+    // a frame already waits for this vsync: a second one would put two frames into one
+    // vsync. The next vsync picks as usual.
+    if (presentedSinceVsync)
+      return VsyncWake::INTERRUPTED;
+
     vsyncPicking = true;
     return VsyncWake::STEP;
   }
@@ -2988,6 +3021,10 @@ CAMLCodec::VsyncWake CAMLCodec::PollVsync()
     return VsyncWake::INTERRUPTED;
   if (m_pollDevice < 0)
     return VsyncWake::NO_DEVICE;
+
+  // no vsync for a whole bound: the pending frame is as latched as it will get
+  presentedSinceVsync = false;
+
   vsyncPicking = true;
   return VsyncWake::TIMEOUT;
 }
@@ -3015,6 +3052,7 @@ bool CAMLCodec::ArmVsyncWait()
 
   DrainVsyncKick();
   vsyncStep = false;
+  StartPacing();
   vsyncStop = false;
   vsyncArmed = true;
   return true;
@@ -3031,6 +3069,7 @@ void CAMLCodec::RequestVsyncStep()
 
 void CAMLCodec::StopVsyncWait()
 {
+  StopPacing();
   vsyncArmed = false;
   vsyncStop = true;
   KickVsyncWait();
@@ -3041,6 +3080,52 @@ void CAMLCodec::StopVsyncWait()
     vsyncPicking = false;
   }
   pollHandover.notify_all();
+}
+
+void CAMLCodec::PublishPresentStep(bool vsync)
+{
+  std::lock_guard<std::mutex> lock(paceMutex);
+  ++paceSteps;
+  if (!paceStopped)
+    paceArmed = vsync;
+  paceCond.notify_all();
+}
+
+void CAMLCodec::NotePresented()
+{
+  presentedSinceVsync = true;
+}
+
+uint64_t CAMLCodec::PresentSteps()
+{
+  std::lock_guard<std::mutex> lock(paceMutex);
+  return paceSteps;
+}
+
+bool CAMLCodec::WaitPresentStep(uint64_t& seen, int fenceFd)
+{
+  if (!vsyncArmed)
+    return true;
+
+  const auto deadline = std::chrono::steady_clock::now() + VsyncLivenessBound();
+  std::unique_lock<std::mutex> lock(paceMutex);
+  if (!paceArmed)
+    return false;
+
+  // start the next frame only once this flip latched
+  if (fenceFd >= 0)
+  {
+    lock.unlock();
+    const auto left =
+        std::chrono::ceil<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
+    struct pollfd fd = {fenceFd, POLLIN, 0};
+    poll(&fd, 1, std::max(0, static_cast<int>(left.count())));
+    lock.lock();
+  }
+
+  paceCond.wait_until(lock, deadline, [&seen] { return paceSteps > seen || !paceArmed; });
+  seen = paceSteps;
+  return true;
 }
 
 int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
