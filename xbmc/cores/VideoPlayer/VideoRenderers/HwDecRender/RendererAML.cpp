@@ -195,6 +195,11 @@ void CRendererAML::Reset()
   std::array<int, 2> reset_arr[m_numRenderBuffers];
   m_prevVPts = DVD_NOPTS_VALUE;
 
+  {
+    std::lock_guard<std::mutex> lock(m_pendingGeometryLock);
+    m_pendingGeometry.reset();
+  }
+
   for (int i = 0 ; i < m_numRenderBuffers ; ++i)
   {
     reset_arr[i][0] = i;
@@ -228,10 +233,8 @@ bool CRendererAML::Flush(bool saveBuffers)
   return saveBuffers;
 };
 
-void CRendererAML::RenderUpdate(int index, int index2, bool clear, unsigned int flags, unsigned int alpha)
+std::shared_ptr<CAMLCodec> CRendererAML::QueueFrame(int index, bool setVideoRect)
 {
-  ManageRenderArea();
-
   CAMLVideoBuffer *amli = dynamic_cast<CAMLVideoBuffer *>(m_buffers[index].videoBuffer);
   if(amli && amli->m_amlCodec)
   {
@@ -239,10 +242,100 @@ void CRendererAML::RenderUpdate(int index, int index2, bool clear, unsigned int 
     if (pts != m_prevVPts)
     {
       amli->m_amlCodec->ReleaseFrame(amli->m_bufferIndex, m_prevVPts == DVD_NOPTS_VALUE);
-      amli->m_amlCodec->SetVideoRect(m_sourceRect, m_destRect);
-      amli->m_amlCodec = nullptr; //Mark frame as processed
+      if (setVideoRect)
+        amli->m_amlCodec->SetVideoRect(m_sourceRect, m_destRect);
+      std::shared_ptr<CAMLCodec> codec = std::move(amli->m_amlCodec); //Mark frame as processed
       m_prevVPts = pts;
+      return codec;
     }
   }
+  return nullptr;
+}
+
+void CRendererAML::RenderUpdate(int index, int index2, bool clear, unsigned int flags, unsigned int alpha)
+{
+  ManageRenderArea();
+
+  if (m_vsyncPresent)
+  {
+    std::shared_ptr<CAMLCodec> codec;
+    {
+      std::lock_guard<std::mutex> lock(m_pendingGeometryLock);
+      codec.swap(m_pendingGeometry);
+    }
+    if (codec && codec->IsOpen())
+      codec->SetVideoRect(m_sourceRect, m_destRect);
+    return;
+  }
+
+  QueueFrame(index, true);
   CAMLCodec::PollFrame();
+}
+
+bool CRendererAML::StartVsyncPresent()
+{
+  m_lastWakeVsync = false;
+  m_vsyncPresent = CAMLCodec::ArmVsyncWait();
+  return m_vsyncPresent;
+}
+
+void CRendererAML::StopVsyncPresent()
+{
+  m_vsyncPresent = false;
+  CAMLCodec::StopVsyncWait();
+}
+
+bool CRendererAML::WaitVsync()
+{
+  CAMLCodec::PublishPresentStep(m_lastWakeVsync);
+  for (;;)
+  {
+    const CAMLCodec::VsyncWake wake = CAMLCodec::PollVsync();
+    switch (wake)
+    {
+      case CAMLCodec::VsyncWake::STOPPED:
+        return false;
+      case CAMLCodec::VsyncWake::VSYNC:
+      case CAMLCodec::VsyncWake::TIMEOUT:
+        m_lastWakeVsync = wake == CAMLCodec::VsyncWake::VSYNC;
+        return true;
+      case CAMLCodec::VsyncWake::STEP:
+        // a requested step leaves the GUI pacing as it is
+        return true;
+      case CAMLCodec::VsyncWake::HANDOVER:
+      case CAMLCodec::VsyncWake::NO_DEVICE:
+        // no frame goes out and the first vsync after the handover picks again; only a
+        // real vsync keeps the GUI paced
+        m_lastWakeVsync = wake == CAMLCodec::VsyncWake::HANDOVER;
+        CAMLCodec::PublishPresentStep(m_lastWakeVsync);
+        break;
+      case CAMLCodec::VsyncWake::INTERRUPTED:
+        break;
+    }
+  }
+}
+
+void CRendererAML::WakeVsyncPresent()
+{
+  CAMLCodec::RequestVsyncStep();
+}
+
+void CRendererAML::PresentFrame(int index)
+{
+  // the first frame after a reset is queued as a drop and never shows
+  const bool drop = m_prevVPts == DVD_NOPTS_VALUE;
+  std::shared_ptr<CAMLCodec> codec = QueueFrame(index, false);
+  if (!codec)
+    return;
+
+  // a vsync that fired during this step must not wake the next one: hold, never double.
+  // A drop never shows, so it does not occupy the next vsync.
+  if (!drop)
+  {
+    CAMLCodec::ConsumeVsyncFlag();
+    CAMLCodec::NotePresented();
+  }
+
+  std::lock_guard<std::mutex> lock(m_pendingGeometryLock);
+  m_pendingGeometry.swap(codec);
 }
