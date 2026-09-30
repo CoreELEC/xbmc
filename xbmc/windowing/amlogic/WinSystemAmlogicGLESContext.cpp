@@ -315,7 +315,11 @@ void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
 #endif
 
     if (m_amlGBMUtils && m_amlGBMUtils->LockFrontBuffer(m_amlDisplay->aml_get_Device_handle()))
+    {
+      // this flip latches no earlier than the vsync after the last step: pace on the next one
+      m_presentStepSeen = CAMLCodec::PresentSteps();
       m_amlDisplay->FlipPage(m_amlGBMUtils->GetFBId());
+    }
   }
   else if (!videoLayer)
   {
@@ -324,7 +328,9 @@ void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
 
   // video frames reach the plane from the vsync thread, so the loop paces on its steps; while
   // it has no vsync, a loop that did not flip waits for the vblank as it does without video
-  if (!CAMLCodec::WaitPresentStep(m_presentStepSeen) && !rendered && videoLayer)
+  if (!CAMLCodec::WaitPresentStep(m_presentStepSeen,
+                                  rendered ? m_amlDisplay->GetOutFenceFd() : -1) &&
+      !rendered && videoLayer)
     m_amlDisplay->aml_drmDevice_vsync();
 
   if (m_delayDispReset && m_dispResetTimer.IsTimePast())

@@ -116,9 +116,11 @@ public:
   static void   StopVsyncWait();
   //! Signals the end of a vsync thread step; `vsync` if it followed a real vsync
   static void   PublishPresentStep(bool vsync);
-  //! Waits for a step after `seen`. False while the vsync thread runs without a vsync to
-  //! pace on (no poll device, missed vsyncs): the caller then waits for the vblank itself
-  static bool   WaitPresentStep(uint64_t& seen);
+  static uint64_t PresentSteps();
+  //! Waits for `fenceFd`, the out-fence of the GUI flip just issued (-1 for none), and for a
+  //! step after `seen`. False while the vsync thread runs without a vsync to pace on (no poll
+  //! device, missed vsyncs): the caller then waits for the vblank itself
+  static bool   WaitPresentStep(uint64_t& seen, int fenceFd);
 
 private:
   void          ShowMainVideo(const bool show);

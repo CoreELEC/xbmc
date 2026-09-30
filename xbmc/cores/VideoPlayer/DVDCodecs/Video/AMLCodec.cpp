@@ -32,6 +32,7 @@
 #include "platform/linux/SysfsPath.h"
 
 #include <unistd.h>
+#include <algorithm>
 #include <queue>
 #include <vector>
 #include <signal.h>
@@ -3077,17 +3078,34 @@ void CAMLCodec::PublishPresentStep(bool vsync)
   paceCond.notify_all();
 }
 
-bool CAMLCodec::WaitPresentStep(uint64_t& seen)
+uint64_t CAMLCodec::PresentSteps()
+{
+  std::lock_guard<std::mutex> lock(paceMutex);
+  return paceSteps;
+}
+
+bool CAMLCodec::WaitPresentStep(uint64_t& seen, int fenceFd)
 {
   if (!vsyncArmed)
     return true;
 
-  const std::chrono::milliseconds bound = VsyncLivenessBound();
+  const auto deadline = std::chrono::steady_clock::now() + VsyncLivenessBound();
   std::unique_lock<std::mutex> lock(paceMutex);
   if (!paceArmed)
     return false;
 
-  paceCond.wait_for(lock, bound, [&seen] { return paceSteps > seen || !paceArmed; });
+  // start the next frame only once this flip latched
+  if (fenceFd >= 0)
+  {
+    lock.unlock();
+    const auto left =
+        std::chrono::ceil<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
+    struct pollfd fd = {fenceFd, POLLIN, 0};
+    poll(&fd, 1, std::max(0, static_cast<int>(left.count())));
+    lock.lock();
+  }
+
+  paceCond.wait_until(lock, deadline, [&seen] { return paceSteps > seen || !paceArmed; });
   seen = paceSteps;
   return true;
 }
