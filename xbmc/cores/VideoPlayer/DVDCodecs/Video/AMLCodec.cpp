@@ -349,6 +349,7 @@ typedef struct am_private_t
 
   int               dumpfile;
   bool              dumpdemux;
+  bool              dovi_zero_level5{false};
 } am_private_t;
 
 typedef struct vframe_states
@@ -1101,19 +1102,8 @@ typedef struct DataBuffer {
     size_t size;
 } DataBuffer;
 
-int av1_parser_frame(
-    int is_annexb,
-    uint8_t *data,
-    const uint8_t *data_end,
-    uint8_t *dst_data,
-    uint32_t *frame_len,
-    uint8_t *meta_buf,
-    uint32_t *meta_len) {
-    int frame_decoding_finished = 0;
-    uint32_t obu_size = 0;
-    ObuHeader obu_header;
-    memset(&obu_header, 0, sizeof(obu_header));
-    int seen_frame_header = 0;
+static size_t av1_write_obu_with_header(uint8_t *dst, const uint8_t *obu, size_t len, size_t *header_size, bool is_annexb)
+{
     uint8_t header[20] = {
         0x00, 0x00, 0x01, 0x54,
         0xFF, 0xFF, 0xFE, 0xAB,
@@ -1121,6 +1111,96 @@ int av1_parser_frame(
         0x41, 0x4D, 0x4C, 0x56,
         0xD0, 0x82, 0x80, 0x00
     };
+    uint32_t obu_size;
+
+    if (!is_annexb) {
+        size_t bytes_written = 0;
+        obu_size = len + 4;
+        *header_size = 20;
+        aom_uleb_encode_fixed_size(obu_size, 4, 4, header + 16, &bytes_written);
+    }
+    else {
+        obu_size = len;
+        *header_size = 16;
+    }
+
+    const uint32_t total = obu_size + 4;
+    header[0] = (total >> 24) & 0xff;
+    header[1] = (total >> 16) & 0xff;
+    header[2] = (total >> 8) & 0xff;
+    header[3] = (total >> 0) & 0xff;
+    header[4] = header[0] ^ 0xff;
+    header[5] = header[1] ^ 0xff;
+    header[6] = header[2] ^ 0xff;
+    header[7] = header[3] ^ 0xff;
+
+    memcpy(dst, header, *header_size);
+    memcpy(dst + *header_size, obu, len);
+
+    return *header_size + len;
+}
+
+#ifdef HAVE_LIBDOVI
+static bool av1_dovi_zero_level5_obu(const uint8_t *obu, const uint8_t *payload,
+                                     size_t type_len, size_t payload_size,
+                                     std::vector<uint8_t> &out)
+{
+    const uint8_t *t35 = payload + type_len;
+    const size_t t35_len = payload_size - type_len - 1 /* trailing_bits() (1 byte) */;
+    DoviRpuOpaque *rpu = dovi_parse_itu_t35_dovi_metadata_obu(t35, t35_len);
+    const DoviData *rpu_data = NULL;
+
+    if (rpu && !dovi_rpu_get_error(rpu) &&
+        dovi_rpu_set_active_area_offsets(rpu, 0, 0, 0, 0) == 0)
+        rpu_data = dovi_write_av1_rpu_metadata_obu_t35_complete(rpu);
+    if (rpu)
+        dovi_rpu_free(rpu);
+
+    if (!rpu_data || !rpu_data->data || !rpu_data->len)
+    {
+        if (rpu_data)
+            dovi_data_free(rpu_data);
+        return false;
+    }
+
+    // metadata_type + itu_t_t35 bytes + trailing_bits()
+    uint64_t size = type_len + rpu_data->len + 1;
+
+    out.clear();
+    out.push_back(obu[0] | 0x02); // obu_has_size_field
+    if (obu[0] & 0x04)
+        out.push_back(obu[1]);    // obu_extension_header
+    do
+    {
+        uint8_t b = size & 0x7f;
+        size >>= 7;
+        if (size)
+            b |= 0x80;
+        out.push_back(b);
+    } while (size);
+    out.insert(out.end(), payload, payload + type_len);
+    out.insert(out.end(), rpu_data->data, rpu_data->data + rpu_data->len);
+    // add trailing_bits() (1 byte)
+    out.push_back(0x80);
+
+    dovi_data_free(rpu_data);
+    return true;
+}
+#endif
+
+int av1_parser_frame(
+    int is_annexb,
+    uint8_t *data,
+    const uint8_t *data_end,
+    uint8_t *dst_data,
+    uint32_t *frame_len,
+    uint8_t *meta_buf,
+    uint32_t *meta_len,
+    bool dovi_zero_level5) {
+    int frame_decoding_finished = 0;
+    ObuHeader obu_header;
+    memset(&obu_header, 0, sizeof(obu_header));
+    int seen_frame_header = 0;
     uint8_t *p = NULL;
     uint32_t rpu_size = 0;
 
@@ -1130,7 +1210,6 @@ int av1_parser_frame(
         size_t payload_size = 0;
         size_t header_size = 0;
         size_t bytes_read = 0;
-        size_t bytes_written = 0;
         const size_t bytes_available = data_end - data;
         unsigned int i;
         OBU_METADATA_TYPE meta_type;
@@ -1139,6 +1218,9 @@ int av1_parser_frame(
         if (bytes_available == 0 && !seen_frame_header) {
             break;
         }
+
+        const uint8_t *obu_src = data;
+        uint8_t *obu_dst = dst_data;
 
         int status =
             aom_read_obu_header_and_size(data, bytes_available, is_annexb,
@@ -1157,29 +1239,7 @@ int av1_parser_frame(
 
         CLog::Log(LOGDEBUG, "\tobu {} len {:d}+{:d}", obu_type_name[obu_header.type], bytes_read, payload_size);
 
-        obu_size = bytes_read + payload_size + 4;
-
-        if (!is_annexb) {
-            obu_size = bytes_read + payload_size + 4;
-            header_size = 20;
-            aom_uleb_encode_fixed_size(obu_size, 4, 4, header + 16, &bytes_written);
-        }
-        else {
-            obu_size = bytes_read + payload_size;
-            header_size = 16;
-        }
-        header[0] = ((obu_size + 4) >> 24) & 0xff;
-        header[1] = ((obu_size + 4) >> 16) & 0xff;
-        header[2] = ((obu_size + 4) >> 8) & 0xff;
-        header[3] = ((obu_size + 4) >> 0) & 0xff;
-        header[4] = header[0] ^ 0xff;
-        header[5] = header[1] ^ 0xff;
-        header[6] = header[2] ^ 0xff;
-        header[7] = header[3] ^ 0xff;
-        memcpy(dst_data, header, header_size);
-        dst_data += header_size;
-        memcpy(dst_data, data, bytes_read + payload_size);
-        dst_data += bytes_read + payload_size;
+        dst_data += av1_write_obu_with_header(dst_data, data, bytes_read + payload_size, &header_size, is_annexb);
 
         data += bytes_read;
         *frame_len += 20 + bytes_read + payload_size;
@@ -1243,38 +1303,53 @@ int av1_parser_frame(
                       type < 6 ? meta_type_name[type] : "RESERVED", bytes_read,
                       payload_size - bytes_read);
 
-            if (meta_type == OBU_METADATA_TYPE_ITUT_T35 && meta_buf != NULL) {
+            if (meta_type == OBU_METADATA_TYPE_ITUT_T35) {
                 if ((p[0] == 0xb5) /* country code */
                     && ((p[1] == 0x00) && (p[2] == 0x3b)) /* terminal_provider_code */
                     && ((p[3] == 0x00) && (p[4] == 0x00) && (p[5] == 0x08) && (p[6] == 0x00))) { /* terminal_provider_oriented_code */
                     CLog::Log(LOGDEBUG, "\t\tdolbyvison rpu");
-                    meta_buf[0] = meta_buf[1] = meta_buf[2] = 0;
-                    meta_buf[3] = 0x01;    meta_buf[4] = 0x19;
+#if HAVE_LIBDOVI
+                    if (dovi_zero_level5) {
+                      std::vector<uint8_t> obu;
+                      if (av1_dovi_zero_level5_obu(obu_src, data, bytes_read, payload_size, obu)) {
+                          const size_t old_len = (data - obu_src) + payload_size;
+                          CLog::Log(LOGDEBUG, "\t\tdolbyvison rpu level 5 zeroed ({:d} -> {:d})",
+                                    old_len, obu.size());
+                          *frame_len -= header_size + old_len;
+                          dst_data = obu_dst + av1_write_obu_with_header(obu_dst, obu.data(), obu.size(), &header_size, is_annexb);
+                          *frame_len += header_size + obu.size();
+                      }
+                    }
+#endif
+                    if (meta_buf != NULL) {
+                      meta_buf[0] = meta_buf[1] = meta_buf[2] = 0;
+                      meta_buf[3] = 0x01;    meta_buf[4] = 0x19;
 
-                    if (p[11] & 0x10) {
-                        rpu_size = 0x100;
-                        rpu_size |= (p[11] & 0x0f) << 4;
-                        rpu_size |= (p[12] >> 4) & 0x0f;
-                        if (p[12] & 0x08) {
-                            CLog::Log(LOGDEBUG, "\tmeta rpu in obu exceed 512 bytes");
-                            break;
-                        }
-                        for (i = 0; i < rpu_size; i++) {
-                            meta_buf[5 + i] = (p[12 + i] & 0x07) << 5;
-                            meta_buf[5 + i] |= (p[13 + i] >> 3) & 0x1f;
-                        }
-                        rpu_size += 5;
+                      if (p[11] & 0x10) {
+                          rpu_size = 0x100;
+                          rpu_size |= (p[11] & 0x0f) << 4;
+                          rpu_size |= (p[12] >> 4) & 0x0f;
+                          if (p[12] & 0x08) {
+                              CLog::Log(LOGDEBUG, "\tmeta rpu in obu exceed 512 bytes");
+                              break;
+                          }
+                          for (i = 0; i < rpu_size; i++) {
+                              meta_buf[5 + i] = (p[12 + i] & 0x07) << 5;
+                              meta_buf[5 + i] |= (p[13 + i] >> 3) & 0x1f;
+                          }
+                          rpu_size += 5;
+                      }
+                      else {
+                          rpu_size = (p[10] & 0x1f) << 3;
+                          rpu_size |= (p[11] >> 5) & 0x07;
+                          for (i = 0; i < rpu_size; i++) {
+                              meta_buf[5 + i] = (p[11 + i] & 0x0f) << 4;
+                              meta_buf[5 + i] |= (p[12 + i] >> 4) & 0x0f;
+                          }
+                          rpu_size += 5;
+                      }
+                      *meta_len = rpu_size;
                     }
-                    else {
-                        rpu_size = (p[10] & 0x1f) << 3;
-                        rpu_size |= (p[11] >> 5) & 0x07;
-                        for (i = 0; i < rpu_size; i++) {
-                            meta_buf[5 + i] = (p[11 + i] & 0x0f) << 4;
-                            meta_buf[5 + i] |= (p[12 + i] >> 4) & 0x0f;
-                        }
-                        rpu_size += 5;
-                    }
-                    *meta_len = rpu_size;
                 }
             }
             else if (meta_type == OBU_METADATA_TYPE_HDR_CLL) {
@@ -1293,7 +1368,7 @@ int av1_parser_frame(
                 CLog::Log(LOGDEBUG, "\t\tmaxl = {:x}", (p[16] << 24) | (p[17] << 16) | (p[18] << 8) | p[19]);
                 CLog::Log(LOGDEBUG, "\t\tminl = {:x}", (p[20] << 24) | (p[21] << 16) | (p[22] << 8) | p[23]);
             }
-                break;
+            break;
         case OBU_TILE_LIST:
             break;
         case OBU_PADDING:
@@ -1316,7 +1391,8 @@ int av1_add_frame_dec_info(am_private_t *para)
 
   unsigned int dst_frame_size = 0;
   uint8_t *dst_data = (uint8_t *)calloc(1, pkt->data_size + 4096);
-  av1_parser_frame(0, pkt->data, pkt->data + pkt->data_size, dst_data, &dst_frame_size, NULL, NULL);
+  av1_parser_frame(0, pkt->data, pkt->data + pkt->data_size, dst_data, &dst_frame_size, NULL, NULL,
+                   para->dovi_zero_level5);
 
   if (dst_frame_size - pkt->data_size > 0)
   {
@@ -2013,6 +2089,12 @@ int CAMLCodec::GetAmlDuration() const
 {
   return am_private ? (am_private->video_rate * PTS_FREQ) / UNIT_FREQ : 0;
 };
+
+void CAMLCodec::SetDoviZeroLevel5(bool value)
+{
+  if (am_private)
+    am_private->dovi_zero_level5 = value;
+}
 
 bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
 {
