@@ -25,6 +25,7 @@
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "threads/SingleLock.h"
+#include "threads/Thread.h"
 #include "utils/AMLUtils.h"
 #include "utils/StreamDetails.h"
 #include "utils/StringUtils.h"
@@ -36,6 +37,28 @@
 #include <mutex>
 
 using namespace std::chrono_literals;
+
+class CRenderManager::CPresentThread : public CThread
+{
+public:
+  explicit CPresentThread(CRenderManager& renderManager)
+    : CThread("VideoPresent"),
+      m_renderManager(renderManager)
+  {
+  }
+
+protected:
+  void Process() override
+  {
+    SetPriority(ThreadPriority::ABOVE_NORMAL);
+    // every step ends in WaitVsync(), which returns false once stopped
+    while (m_renderManager.m_pRenderer->WaitVsync())
+      m_renderManager.PresentFromVsync();
+  }
+
+private:
+  CRenderManager& m_renderManager;
+};
 
 void CRenderManager::CClockSync::Reset()
 {
@@ -54,6 +77,8 @@ CRenderManager::CRenderManager(CDVDClock &clock, IRenderMsg *player) :
 
 CRenderManager::~CRenderManager()
 {
+  std::unique_lock threadLock(m_presentThreadLock);
+  StopPresentThread();
   delete m_pRenderer;
 }
 
@@ -231,6 +256,7 @@ bool CRenderManager::Configure()
     m_free.clear();
     m_presentsource = -1;
     m_presentsourcePast = -1;
+    m_guiPresentSource = -1;
     for (int i = 0; i < m_QueueSize; i++)
       m_free.push_back(i);
 
@@ -311,49 +337,49 @@ void CRenderManager::FrameMove()
     else if (m_renderState == STATE_CONFIGURING)
     {
       lock.unlock();
+      std::unique_lock threadLock(m_presentThreadLock);
+      lock.lock();
+      if (m_renderState != STATE_CONFIGURING)
+        return;
+      lock.unlock();
+      StopPresentThread();
       if (!Configure())
         return;
       UpdateLatencyTweak();
+      StartPresentThread();
+      threadLock.unlock();
       firstFrame = true;
       FrameWait(50ms);
     }
 
-    CheckEnableClockSync();
+    if (!m_presenting)
+      CheckEnableClockSync();
   }
   {
     std::unique_lock lock2(m_presentlock);
 
-    if (m_queued.empty())
+    if (m_presenting)
     {
-      m_presentstep = PRESENT_IDLE;
+      m_guiPresentSource = m_presentsource;
     }
     else
     {
-      m_presentTimer.Set(1000ms);
-    }
+      PrepareNextStep();
 
-    if (m_presentstep == PRESENT_READY)
-      PrepareNextRender();
-
-    if (m_presentstep == PRESENT_FLIP)
-    {
-      m_presentstep = PRESENT_FRAME;
-      m_presentevent.notifyAll();
-    }
-
-    // release all previous
-    for (std::deque<int>::iterator it = m_discard.begin(); it != m_discard.end(); )
-    {
-      // renderer may want to keep the frame for postprocessing
-      if (!m_pRenderer->NeedBuffer(*it) || !m_bRenderGUI)
+      // release all previous
+      for (std::deque<int>::iterator it = m_discard.begin(); it != m_discard.end(); )
       {
-        m_pRenderer->ReleaseBuffer(*it);
-        m_overlays.Release(*it);
-        m_free.push_back(*it);
-        it = m_discard.erase(it);
+        // renderer may want to keep the frame for postprocessing
+        if (!m_pRenderer->NeedBuffer(*it) || !m_bRenderGUI)
+        {
+          m_pRenderer->ReleaseBuffer(*it);
+          m_overlays.Release(*it);
+          m_free.push_back(*it);
+          it = m_discard.erase(it);
+        }
+        else
+          ++it;
       }
-      else
-        ++it;
     }
 
     m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
@@ -366,7 +392,91 @@ void CRenderManager::FrameMove()
   // Run libass for the current PTS and cache the output for ConvertLibass
   // to use during the render pass. PrepareOverlays MarkDirty's on libass
   // changes and on PGS/DVB/SPU arrival/disappearance.
-  m_overlays.PrepareOverlays(m_presentsource);
+  m_overlays.PrepareOverlays(GuiSource());
+}
+
+void CRenderManager::PrepareNextStep()
+{
+  if (m_queued.empty())
+  {
+    m_presentstep = PRESENT_IDLE;
+  }
+  else
+  {
+    m_presentTimer.Set(1000ms);
+  }
+
+  if (m_presentstep == PRESENT_READY)
+    PrepareNextRender();
+
+  if (m_presentstep == PRESENT_FLIP)
+  {
+    m_presentstep = PRESENT_FRAME;
+    m_presentevent.notifyAll();
+  }
+}
+
+void CRenderManager::StartPresentThread()
+{
+  if (m_presentThread || !m_pRenderer || !m_pRenderer->StartVsyncPresent())
+    return;
+
+  m_presentThread = std::make_unique<CPresentThread>(*this);
+  m_presenting = true;
+  m_presentThread->Create();
+}
+
+void CRenderManager::StopPresentThread()
+{
+  if (!m_presentThread)
+    return;
+
+  m_presenting = false;
+  m_pRenderer->StopVsyncPresent();
+  m_presentThread->StopThread(true);
+  m_presentThread.reset();
+}
+
+void CRenderManager::PresentFromVsync()
+{
+  std::unique_lock lock(m_statelock);
+  // no frame goes out on the old mode while the render loop switches it
+  if (m_renderState != STATE_CONFIGURED || m_switching)
+    return;
+
+  CheckEnableClockSync();
+
+  std::unique_lock lock2(m_presentlock);
+  PrepareNextStep();
+
+  // frames go back to the plane in the order it handed them out, so skipped ones go first
+  for (int idx : m_discard)
+  {
+    if (!m_pRenderer->NeedBuffer(idx) || !m_bRenderGUI)
+      m_pRenderer->ReleaseBuffer(idx);
+  }
+
+  if (m_presentstep == PRESENT_FRAME)
+  {
+    m_pRenderer->PresentFrame(m_presentsource);
+    m_presentstep = m_queued.empty() ? PRESENT_IDLE : PRESENT_READY;
+  }
+
+  // the render loop still draws the overlays of its frame; WaitForBuffer
+  // releases those of a free slot before it is reused
+  for (auto it = m_discard.begin(); it != m_discard.end();)
+  {
+    if (*it != m_guiPresentSource && (!m_pRenderer->NeedBuffer(*it) || !m_bRenderGUI))
+    {
+      m_free.push_back(*it);
+      it = m_discard.erase(it);
+    }
+    else
+      ++it;
+  }
+
+  m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
+  m_presentevent.notifyAll();
 }
 
 void CRenderManager::PreInit()
@@ -418,6 +528,9 @@ void CRenderManager::UnInit()
     }
   }
 
+  std::unique_lock threadLock(m_presentThreadLock);
+  StopPresentThread();
+
   std::unique_lock lock(m_statelock);
 
   m_overlays.UnInit();
@@ -464,6 +577,7 @@ bool CRenderManager::Flush(bool wait, bool saveBuffers)
         m_free.clear();
         m_presentsource = -1;
         m_presentsourcePast = -1;
+        m_guiPresentSource = -1;
         m_presentstep = PRESENT_IDLE;
         for (int i = 0; i < m_QueueSize; i++)
           m_free.push_back(i);
@@ -624,7 +738,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
 
   {
     std::unique_lock lock(m_statelock);
-    if (m_presentsource == -1 || (m_renderState != STATE_CONFIGURED))
+    if (GuiSource() == -1 || (m_renderState != STATE_CONFIGURED))
       return;
   }
 
@@ -634,7 +748,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
   bool presented = false;
   if (!gui || m_pRenderer->IsGuiLayer())
   {
-    SPresent& m = m_Queue[m_presentsource];
+    SPresent& m = m_Queue[GuiSource()];
 
     if( m.presentmethod == PRESENT_METHOD_BOB )
       PresentFields(clear, flags, alpha);
@@ -655,7 +769,7 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
     CRect src, dst, view;
     m_pRenderer->GetVideoRect(src, dst, view);
     m_overlays.SetVideoRect(src, dst, view);
-    m_overlays.RenderHDROverlays(m_presentsource);
+    m_overlays.RenderHDROverlays(GuiSource());
   }
 
   if (gui || m_renderDebug)
@@ -666,13 +780,13 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
     CRect src, dst, view;
     m_pRenderer->GetVideoRect(src, dst, view);
     m_overlays.SetVideoRect(src, dst, view);
-    m_overlays.Render(m_presentsource);
+    m_overlays.Render(GuiSource());
 
     if (m_renderDebug)
     {
       if (m_renderDebugVideo)
       {
-        DEBUG_INFO_VIDEO video = m_pRenderer->GetDebugInfo(m_presentsource);
+        DEBUG_INFO_VIDEO video = m_pRenderer->GetDebugInfo(GuiSource());
         DEBUG_INFO_RENDER render = CServiceBroker::GetWinSystem()->GetDebugInfo();
 
         m_debugRenderer.SetInfo(video, render);
@@ -703,6 +817,9 @@ void CRenderManager::Render(bool clear, DWORD flags, DWORD alpha, bool gui)
       m_renderedDebugOverlay = true;
     }
   }
+
+  if (m_presenting)
+    return;
 
   const SPresent& m = m_Queue[m_presentsource];
 
@@ -737,7 +854,9 @@ bool CRenderManager::IsGuiLayer()
     if (!m_pRenderer)
       return false;
 
-    int index = (m_presentsource != -1) ? m_presentsource : 0;
+    int index = GuiSource();
+    if (index == -1)
+      index = 0;
     if ((m_pRenderer->IsGuiLayer() && IsPresenting()) || m_renderedDebugOverlay ||
         m_overlays.HasVisibleOverlay(index))
       return true;
@@ -751,14 +870,17 @@ bool CRenderManager::IsGuiLayer()
 /* simple present method */
 void CRenderManager::PresentSingle(bool clear, DWORD flags, DWORD alpha)
 {
-  const SPresent& m = m_Queue[m_presentsource];
+  const int source = GuiSource();
+  // the vsync thread owns the past frame while presenting; that renderer draws no video here
+  const int past = m_presenting ? -1 : m_presentsourcePast;
+  const SPresent& m = m_Queue[source];
 
   if (m.presentfield == FS_BOT)
-    m_pRenderer->RenderUpdate(m_presentsource, m_presentsourcePast, clear, flags | RENDER_FLAG_BOT, alpha);
+    m_pRenderer->RenderUpdate(source, past, clear, flags | RENDER_FLAG_BOT, alpha);
   else if (m.presentfield == FS_TOP)
-    m_pRenderer->RenderUpdate(m_presentsource, m_presentsourcePast, clear, flags | RENDER_FLAG_TOP, alpha);
+    m_pRenderer->RenderUpdate(source, past, clear, flags | RENDER_FLAG_TOP, alpha);
   else
-    m_pRenderer->RenderUpdate(m_presentsource, m_presentsourcePast, clear, flags, alpha);
+    m_pRenderer->RenderUpdate(source, past, clear, flags, alpha);
 }
 
 /* new simpler method of handling interlaced material, *
@@ -814,7 +936,7 @@ void CRenderManager::UpdateLatencyTweak()
           refresh, isHDRUsed, res.iScreenHeight));
 
   CLog::Log(LOGDEBUG, "CRenderManager::UpdateLatencyTweak - got latency tweak of {:.1f}ms with a refresh rate of {:.3f}Hz and resolution of {:d}, HDR used: {}",
-    m_latencyTweak, refresh, res.iScreenHeight, isHDRUsed);
+    m_latencyTweak.load(), refresh, res.iScreenHeight, isHDRUsed);
 }
 
 void CRenderManager::UpdateResolution()
@@ -847,6 +969,11 @@ void CRenderManager::UpdateResolution()
         if (m_bTriggerUpdateResolution &&
           CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) != ADJUST_REFRESHRATE_OFF && m_fps > 0.0f)
         {
+          {
+            // a vsync step already past its m_switching test finishes its queue first
+            std::unique_lock lock(m_statelock);
+            m_switching = true;
+          }
           RESOLUTION res = CResolutionUtils::ChooseBestResolution(
               m_fps, m_picture.iWidth, m_picture.iHeight, !m_picture.stereoMode.empty());
           CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_picture.hdrType);
@@ -854,6 +981,10 @@ void CRenderManager::UpdateResolution()
           UpdateLatencyTweak();
           if (m_pRenderer)
             m_pRenderer->Update();
+          std::unique_lock lock(m_statelock);
+          m_switching = false;
+          if (m_presenting)
+            m_pRenderer->WakeVsyncPresent();
         }
         m_bTriggerUpdateResolution = false;
         m_playerPort->VideoParamsChange();
@@ -1059,11 +1190,17 @@ int CRenderManager::WaitForBuffer(volatile std::atomic_bool& bStop,
     }
   }
 
+  const int level = m_queued.size() + m_discard.size();
+  const int index = m_free.front();
+  // the vsync thread never waits behind the overlay lock
+  if (m_presenting)
+    lock.unlock();
+
   // make sure overlay buffer is released, this won't happen on AddOverlay
-  m_overlays.Release(m_free.front());
+  m_overlays.Release(index);
 
   // return buffer level
-  return m_queued.size() + m_discard.size();
+  return level;
 }
 
 void CRenderManager::PrepareNextRender()
