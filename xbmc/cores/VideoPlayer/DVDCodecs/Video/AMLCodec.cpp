@@ -67,6 +67,13 @@ bool vsyncPicking = false;
 int vsyncPolledDevice = -1;
 std::condition_variable pollHandover;
 
+// the GUI paces on the vsync thread's steps only after a step that followed a real vsync
+std::mutex paceMutex;
+std::condition_variable paceCond;
+uint64_t paceSteps = 0;
+bool paceArmed = false;
+bool paceStopped = true;
+
 void KickVsyncWait()
 {
   eventfd_write(vsyncKick, 1);
@@ -83,6 +90,21 @@ std::chrono::milliseconds VsyncLivenessBound()
 {
   return std::chrono::milliseconds(
       static_cast<int>(3000 / CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()));
+}
+
+void StartPacing()
+{
+  std::lock_guard<std::mutex> lock(paceMutex);
+  paceStopped = false;
+  paceArmed = false;
+}
+
+void StopPacing()
+{
+  std::lock_guard<std::mutex> lock(paceMutex);
+  paceStopped = true;
+  paceArmed = false;
+  paceCond.notify_all();
 }
 
 }
@@ -3017,6 +3039,7 @@ bool CAMLCodec::ArmVsyncWait()
 
   DrainVsyncKick();
   vsyncStep = false;
+  StartPacing();
   vsyncStop = false;
   vsyncArmed = true;
   return true;
@@ -3033,6 +3056,7 @@ void CAMLCodec::RequestVsyncStep()
 
 void CAMLCodec::StopVsyncWait()
 {
+  StopPacing();
   vsyncArmed = false;
   vsyncStop = true;
   KickVsyncWait();
@@ -3042,6 +3066,30 @@ void CAMLCodec::StopVsyncWait()
     std::lock_guard<std::mutex> lock(pollSyncMutex);
   }
   pollHandover.notify_all();
+}
+
+void CAMLCodec::PublishPresentStep(bool vsync)
+{
+  std::lock_guard<std::mutex> lock(paceMutex);
+  ++paceSteps;
+  if (!paceStopped)
+    paceArmed = vsync;
+  paceCond.notify_all();
+}
+
+bool CAMLCodec::WaitPresentStep(uint64_t& seen)
+{
+  if (!vsyncArmed)
+    return true;
+
+  const std::chrono::milliseconds bound = VsyncLivenessBound();
+  std::unique_lock<std::mutex> lock(paceMutex);
+  if (!paceArmed)
+    return false;
+
+  paceCond.wait_for(lock, bound, [&seen] { return paceSteps > seen || !paceArmed; });
+  seen = paceSteps;
+  return true;
 }
 
 int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
