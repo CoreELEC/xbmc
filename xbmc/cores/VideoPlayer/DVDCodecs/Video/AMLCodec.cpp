@@ -3065,6 +3065,7 @@ void CAMLCodec::StopVsyncWait()
   // seen it or is inside poll() with the kick pending
   {
     std::lock_guard<std::mutex> lock(pollSyncMutex);
+    vsyncPicking = false;
   }
   pollHandover.notify_all();
 }
