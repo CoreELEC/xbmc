@@ -257,6 +257,7 @@ bool CRenderManager::Configure()
     m_presentsource = -1;
     m_presentsourcePast = -1;
     m_guiPresentSource = -1;
+    m_planeReleased.clear();
     for (int i = 0; i < m_QueueSize; i++)
       m_free.push_back(i);
 
@@ -361,6 +362,9 @@ void CRenderManager::FrameMove()
     if (m_presenting)
     {
       m_guiPresentSource = m_presentsource;
+      // the frame the loop drew last is no longer held: free it now, not a vsync later
+      FreeReleasedDiscards();
+      m_presentevent.notifyAll();
     }
     else
     {
@@ -450,11 +454,7 @@ void CRenderManager::PresentFromVsync()
   PrepareNextStep();
 
   // frames go back to the plane in the order it handed them out, so skipped ones go first
-  for (int idx : m_discard)
-  {
-    if (!m_pRenderer->NeedBuffer(idx) || !m_bRenderGUI)
-      m_pRenderer->ReleaseBuffer(idx);
-  }
+  ReleaseDiscardsToPlane();
 
   if (m_presentstep == PRESENT_FRAME)
   {
@@ -464,9 +464,26 @@ void CRenderManager::PresentFromVsync()
 
   // the render loop still draws the overlays of its frame; WaitForBuffer
   // releases those of a free slot before it is reused
+  FreeReleasedDiscards();
+
+  m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
+  m_presentevent.notifyAll();
+}
+
+void CRenderManager::ReleaseDiscardsToPlane()
+{
+  for (int idx : m_discard)
+  {
+    if ((!m_pRenderer->NeedBuffer(idx) || !m_bRenderGUI) && m_planeReleased.insert(idx).second)
+      m_pRenderer->ReleaseBuffer(idx);
+  }
+}
+
+void CRenderManager::FreeReleasedDiscards()
+{
   for (auto it = m_discard.begin(); it != m_discard.end();)
   {
-    if (*it != m_guiPresentSource && (!m_pRenderer->NeedBuffer(*it) || !m_bRenderGUI))
+    if (*it != m_guiPresentSource && m_planeReleased.erase(*it) > 0)
     {
       m_free.push_back(*it);
       it = m_discard.erase(it);
@@ -474,9 +491,6 @@ void CRenderManager::PresentFromVsync()
     else
       ++it;
   }
-
-  m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
-  m_presentevent.notifyAll();
 }
 
 void CRenderManager::PreInit()
@@ -578,6 +592,7 @@ bool CRenderManager::Flush(bool wait, bool saveBuffers)
         m_presentsource = -1;
         m_presentsourcePast = -1;
         m_guiPresentSource = -1;
+        m_planeReleased.clear();
         m_presentstep = PRESENT_IDLE;
         for (int i = 0; i < m_QueueSize; i++)
           m_free.push_back(i);
