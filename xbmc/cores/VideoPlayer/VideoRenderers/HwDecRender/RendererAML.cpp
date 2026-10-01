@@ -328,6 +328,8 @@ void CRendererAML::PresentFrame(int index)
   if (!codec)
     return;
 
+  CAMLCodec::NotePresented();
+
   // a vsync that fired during this step must not wake the next one: hold, never double
   if (!drop)
     CAMLCodec::ConsumeVsyncFlag();

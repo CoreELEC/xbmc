@@ -68,6 +68,9 @@ bool vsyncPicking = false;
 int vsyncPolledDevice = -1;
 std::condition_variable pollHandover;
 
+// when the vsync thread last handed a frame to amvideo, in steady_clock nanoseconds
+std::atomic<int64_t> lastPresentNs{0};
+
 // the GUI paces on the vsync thread's steps only after a step that followed a real vsync
 std::mutex paceMutex;
 std::condition_variable paceCond;
@@ -3006,6 +3009,13 @@ CAMLCodec::VsyncWake CAMLCodec::PollVsync()
   // one read drains every kick, so a step request can arrive with a stop or handover kick
   if (kicked && vsyncStep.exchange(false) && m_pollDevice >= 0 && !changing)
   {
+    // a frame went out less than half a period ago: a second one now would put two frames
+    // into one vsync. The next vsync picks as usual.
+    const auto sinceLast = std::chrono::steady_clock::now().time_since_epoch() -
+                           std::chrono::nanoseconds(lastPresentNs.load());
+    if (sinceLast < bound / 6)
+      return VsyncWake::INTERRUPTED;
+
     vsyncPicking = true;
     return VsyncWake::STEP;
   }
@@ -3077,6 +3087,13 @@ void CAMLCodec::PublishPresentStep(bool vsync)
   if (!paceStopped)
     paceArmed = vsync;
   paceCond.notify_all();
+}
+
+void CAMLCodec::NotePresented()
+{
+  lastPresentNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      std::chrono::steady_clock::now().time_since_epoch())
+                      .count();
 }
 
 uint64_t CAMLCodec::PresentSteps()
