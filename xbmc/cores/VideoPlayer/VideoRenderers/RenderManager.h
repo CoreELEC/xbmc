@@ -25,7 +25,6 @@
 #include <list>
 #include <memory>
 #include <mutex>
-#include <set>
 
 #include "PlatformDefs.h"
 
@@ -170,11 +169,6 @@ protected:
   void StartPresentThread();
   void StopPresentThread();
   void PresentFromVsync();
-  //! Under m_presentlock: hands skipped frames back to the plane, once per frame
-  void ReleaseDiscardsToPlane();
-  //! Under m_presentlock: frees skipped frames the plane already got back, except the one
-  //! the render loop still draws
-  void FreeReleasedDiscards();
   int GuiSource() const { return m_presenting ? m_guiPresentSource : m_presentsource; }
 
   CBaseRenderer *m_pRenderer = nullptr;
@@ -283,7 +277,4 @@ protected:
   //! does not pick meanwhile
   bool m_switching{false};
   int m_guiPresentSource{-1};
-  //! Under m_presentlock: frames in m_discard already handed back to the plane, so a frame
-  //! held for the GUI is released once and not at every step
-  std::set<int> m_planeReleased;
 };
