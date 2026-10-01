@@ -97,6 +97,8 @@ bool CDVDOverlayCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &optio
   m_pCodecContext->colorspace = hints.colorSpace;
   m_pCodecContext->color_primaries = hints.colorPrimaries;
   m_pCodecContext->color_trc = hints.colorTransferCharacteristic;
+  m_sdrWhiteNits = hints.sdrWhiteNits;
+  m_isHLGOverlay = hints.isHLGOverlay;
   m_pCodecContext->time_base.num = 1;
   m_pCodecContext->time_base.den = DVD_TIME_BASE;
   m_pCodecContext->pkt_timebase.num = 1;
@@ -312,6 +314,8 @@ std::shared_ptr<CDVDOverlay> CDVDOverlayCodecFFmpeg::GetOverlay()
     overlay->m_isHDROverlay = m_pCodecContext->codec_id == AV_CODEC_ID_HDMV_PGS_SUBTITLE &&
                               m_pCodecContext->colorspace == AVCOL_SPC_BT2020_NCL &&
                               m_pCodecContext->color_trc == AVCOL_TRC_SMPTE2084;
+    overlay->m_sdrWhiteNits = m_sdrWhiteNits;
+    overlay->m_isHLGOverlay = m_isHLGOverlay;
     overlay->source_width = m_width;
     overlay->source_height = m_height;
 

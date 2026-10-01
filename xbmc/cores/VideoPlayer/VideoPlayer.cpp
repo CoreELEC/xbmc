@@ -4505,6 +4505,11 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
           hint.colorPrimaries = m_CurrentVideo.hint.colorPrimaries;
           hint.colorTransferCharacteristic = m_CurrentVideo.hint.colorTransferCharacteristic;
         }
+        hint.sdrWhiteNits = aml_pgs_sdr_white_nits(m_CurrentVideo.hint.hdrType,
+                                                   m_CurrentVideo.hint.colorTransferCharacteristic,
+                                                   videoHdrType, hint.colorTransferCharacteristic);
+        hint.isHLGOverlay = aml_pgs_hlg_raw(m_CurrentVideo.hint.hdrType, hint.colorSpace,
+                                            hint.colorTransferCharacteristic);
       }
       res = OpenSubtitleStream(hint);
       break;

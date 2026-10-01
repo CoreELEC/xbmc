@@ -25,6 +25,11 @@
 
 #include <amcodec/codec.h>
 
+extern "C"
+{
+#include <libavutil/pixfmt.h>
+}
+
 int aml_get_cpufamily_id()
 {
   static int aml_cpufamily_id = -1;
@@ -264,6 +269,42 @@ bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)
                             ->GetAmlDisplay()->aml_display_support_dv());
 
   return ((convert_to_dv && !!user_convert_to_dv && !!dv_user_enabled) == 1);
+}
+
+static bool aml_pgs_hdr_output(StreamHdrType hdrType)
+{
+  // hdr2sdr output is SDR even while the GUI composite runs as PQ or HLG,
+  // unless Dolby Vision output takes precedence, as in RendererAML
+  const bool hdr2sdr = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+      CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
+  const bool dvOutput =
+      hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && aml_dolby_vision_enabled();
+  return !hdr2sdr || dvOutput;
+}
+
+int aml_pgs_sdr_white_nits(StreamHdrType hdrType,
+                           int videoTransfer,
+                           StreamHdrType sourceHdrType,
+                           int pgsTransfer)
+{
+  if ((hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION || videoTransfer == AVCOL_TRC_SMPTE2084) &&
+      pgsTransfer != AVCOL_TRC_SMPTE2084 && pgsTransfer != AVCOL_TRC_ARIB_STD_B67)
+  {
+    // the DV driver's SDR graphics level under DV output, else BT.2408 graphics white
+    constexpr int DV_SDR_GRAPHICS_WHITE = 300;
+    constexpr int REFERENCE_WHITE = 203;
+    if (sourceHdrType == StreamHdrType::HDR_TYPE_NONE)
+      return DV_SDR_GRAPHICS_WHITE;
+    if (aml_pgs_hdr_output(hdrType))
+      return REFERENCE_WHITE;
+  }
+  return 0;
+}
+
+bool aml_pgs_hlg_raw(StreamHdrType hdrType, int pgsColorSpace, int pgsTransfer)
+{
+  return pgsColorSpace == AVCOL_SPC_BT2020_NCL && pgsTransfer == AVCOL_TRC_ARIB_STD_B67 &&
+         aml_pgs_hdr_output(hdrType);
 }
 
 bool aml_video_started()
