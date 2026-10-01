@@ -68,8 +68,9 @@ bool vsyncPicking = false;
 int vsyncPolledDevice = -1;
 std::condition_variable pollHandover;
 
-// when the vsync thread last handed a frame to amvideo, in steady_clock nanoseconds
-std::atomic<int64_t> lastPresentNs{0};
+// the presenter queued a shown frame and no vsync has latched it yet; only the presenter
+// thread reads and writes it
+std::atomic<bool> presentedSinceVsync{false};
 
 // the GUI paces on the vsync thread's steps only after a step that followed a real vsync
 std::mutex paceMutex;
@@ -3003,17 +3004,16 @@ CAMLCodec::VsyncWake CAMLCodec::PollVsync()
   {
     g_aml_sync_event.Set();
     vsyncStep = false;
+    presentedSinceVsync = false;
     vsyncPicking = !changing;
     return changing ? VsyncWake::HANDOVER : VsyncWake::VSYNC;
   }
   // one read drains every kick, so a step request can arrive with a stop or handover kick
   if (kicked && vsyncStep.exchange(false) && m_pollDevice >= 0 && !changing)
   {
-    // a frame went out less than half a period ago: a second one now would put two frames
-    // into one vsync. The next vsync picks as usual.
-    const auto sinceLast = std::chrono::steady_clock::now().time_since_epoch() -
-                           std::chrono::nanoseconds(lastPresentNs.load());
-    if (sinceLast < bound / 6)
+    // a frame already waits for this vsync: a second one would put two frames into one
+    // vsync. The next vsync picks as usual.
+    if (presentedSinceVsync)
       return VsyncWake::INTERRUPTED;
 
     vsyncPicking = true;
@@ -3023,6 +3023,10 @@ CAMLCodec::VsyncWake CAMLCodec::PollVsync()
     return VsyncWake::INTERRUPTED;
   if (m_pollDevice < 0)
     return VsyncWake::NO_DEVICE;
+
+  // no vsync for a whole bound: the pending frame is as latched as it will get
+  presentedSinceVsync = false;
+
   vsyncPicking = true;
   return VsyncWake::TIMEOUT;
 }
@@ -3091,9 +3095,7 @@ void CAMLCodec::PublishPresentStep(bool vsync)
 
 void CAMLCodec::NotePresented()
 {
-  lastPresentNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                      std::chrono::steady_clock::now().time_since_epoch())
-                      .count();
+  presentedSinceVsync = true;
 }
 
 uint64_t CAMLCodec::PresentSteps()

@@ -116,7 +116,8 @@ public:
   static void   StopVsyncWait();
   //! Signals the end of a vsync thread step; `vsync` if it followed a real vsync
   static void   PublishPresentStep(bool vsync);
-  //! Marks that the vsync thread just handed a frame to amvideo (see PollVsync STEP)
+  //! Marks that the vsync thread queued a shown frame; PollVsync refuses a STEP until the
+  //! next vsync (or timeout) so one vsync never gets two frames
   static void   NotePresented();
   static uint64_t PresentSteps();
   //! Waits for `fenceFd`, the out-fence of the GUI flip just issued (-1 for none), and for a

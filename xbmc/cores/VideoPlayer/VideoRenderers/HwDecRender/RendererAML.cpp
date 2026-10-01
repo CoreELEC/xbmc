@@ -328,11 +328,13 @@ void CRendererAML::PresentFrame(int index)
   if (!codec)
     return;
 
-  CAMLCodec::NotePresented();
-
-  // a vsync that fired during this step must not wake the next one: hold, never double
+  // a vsync that fired during this step must not wake the next one: hold, never double.
+  // A drop never shows, so it does not occupy the next vsync.
   if (!drop)
+  {
     CAMLCodec::ConsumeVsyncFlag();
+    CAMLCodec::NotePresented();
+  }
 
   std::lock_guard<std::mutex> lock(m_pendingGeometryLock);
   m_pendingGeometry.swap(codec);
