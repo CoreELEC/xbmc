@@ -274,36 +274,43 @@ void CRendererAML::RenderUpdate(int index, int index2, bool clear, unsigned int 
 
 bool CRendererAML::StartVsyncPresent()
 {
+  m_lastWakeVsync = false;
   m_vsyncPresent = CAMLCodec::ArmVsyncWait();
   return m_vsyncPresent;
 }
 
 void CRendererAML::StopVsyncPresent()
 {
+  m_vsyncPresent = false;
   CAMLCodec::StopVsyncWait();
 }
 
 bool CRendererAML::WaitVsync()
 {
-  CAMLCodec::PublishPresentStep(m_vsyncWake);
+  CAMLCodec::PublishPresentStep(m_lastWakeVsync);
   for (;;)
   {
     const CAMLCodec::VsyncWake wake = CAMLCodec::PollVsync();
-    if (wake == CAMLCodec::VsyncWake::STOPPED)
-      return false;
-    // without a poll device, or with one about to go, no frame goes out and the first vsync
-    // after the handover picks again; only a real vsync keeps the GUI paced
-    if (wake == CAMLCodec::VsyncWake::NO_DEVICE || wake == CAMLCodec::VsyncWake::HANDOVER)
+    switch (wake)
     {
-      m_vsyncWake = wake == CAMLCodec::VsyncWake::HANDOVER;
-      CAMLCodec::PublishPresentStep(m_vsyncWake);
-    }
-    else if (wake != CAMLCodec::VsyncWake::INTERRUPTED)
-    {
-      // a requested step leaves the GUI pacing as it is
-      if (wake != CAMLCodec::VsyncWake::STEP)
-        m_vsyncWake = wake == CAMLCodec::VsyncWake::VSYNC;
-      return true;
+      case CAMLCodec::VsyncWake::STOPPED:
+        return false;
+      case CAMLCodec::VsyncWake::VSYNC:
+      case CAMLCodec::VsyncWake::TIMEOUT:
+        m_lastWakeVsync = wake == CAMLCodec::VsyncWake::VSYNC;
+        return true;
+      case CAMLCodec::VsyncWake::STEP:
+        // a requested step leaves the GUI pacing as it is
+        return true;
+      case CAMLCodec::VsyncWake::HANDOVER:
+      case CAMLCodec::VsyncWake::NO_DEVICE:
+        // no frame goes out and the first vsync after the handover picks again; only a
+        // real vsync keeps the GUI paced
+        m_lastWakeVsync = wake == CAMLCodec::VsyncWake::HANDOVER;
+        CAMLCodec::PublishPresentStep(m_lastWakeVsync);
+        break;
+      case CAMLCodec::VsyncWake::INTERRUPTED:
+        break;
     }
   }
 }

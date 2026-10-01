@@ -68,7 +68,8 @@ private:
   bool m_bConfigured;
 
   std::atomic<bool> m_vsyncPresent{false};
-  bool m_vsyncWake{false};
+  //! Vsync thread only: whether its last wake was a real vsync (what the GUI may pace on)
+  bool m_lastWakeVsync{false};
   //! Codec of the frame last queued from the vsync thread, for the render loop to apply geometry
   std::mutex m_pendingGeometryLock;
   std::shared_ptr<CAMLCodec> m_pendingGeometry;

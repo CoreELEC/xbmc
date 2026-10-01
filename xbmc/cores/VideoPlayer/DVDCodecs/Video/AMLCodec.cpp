@@ -89,8 +89,8 @@ void DrainVsyncKick()
 // the kernel reports no missing vsync; this is the VideoSyncAML bound for the same flag
 std::chrono::milliseconds VsyncLivenessBound()
 {
-  return std::chrono::milliseconds(
-      static_cast<int>(3000 / CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()));
+  const float fps = CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS();
+  return std::chrono::milliseconds(static_cast<int>(3000.0f / (fps > 1.0f ? fps : 60.0f)));
 }
 
 void StartPacing()
