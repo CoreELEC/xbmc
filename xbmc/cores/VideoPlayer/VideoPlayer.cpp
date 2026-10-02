@@ -4493,7 +4493,7 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
                  (videoHdrType == StreamHdrType::HDR_TYPE_DOLBYVISION ||
                   videoHdrType == StreamHdrType::HDR_TYPE_HDR10))
         {
-          // dolby vision may expose ICtCp or unspecified base-layer fields,
+          // dolby vision may expose IPT or unspecified base-layer fields,
           // while its associated PGS is authored as BT.2020/PQ graphics
           hint.colorSpace = AVCOL_SPC_BT2020_NCL;
           hint.colorPrimaries = AVCOL_PRI_BT2020;

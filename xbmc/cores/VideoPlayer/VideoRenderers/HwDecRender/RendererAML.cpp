@@ -96,6 +96,7 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
     }
 
     case AVCOL_SPC_ICTCP:
+    case AVCOL_SPC_IPT_C2:
     {
       auto hdr_cap = CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities();
       switch (picture.color_transfer)
