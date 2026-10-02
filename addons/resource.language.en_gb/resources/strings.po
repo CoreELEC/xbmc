@@ -9013,7 +9013,7 @@ msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14407"
-msgid "Intended for SDR displays. Turn this On to have HDR content tone mapped to SDR. This improves color saturation and contrast of HDR content on SDR displays. Requires reboot."
+msgid "Intended for SDR displays. Turn this On to have HDR content tone mapped to SDR. This improves color saturation and contrast of HDR content on SDR displays."
 msgstr ""
 
 #: system/settings/settings.xml

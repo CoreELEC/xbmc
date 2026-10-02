@@ -339,8 +339,9 @@ bool CWinSystemAmlogic::InitWindowSystem()
 
   CServiceBroker::GetSettingsComponent()->GetSettings()->
     GetSettingsManager()->RegisterSettingOptionsFiller("dv_led_modes", SettingOptionsComponentsFiller);
-  settings->GetSettingsManager()->RegisterCallback(this,
-                                                   {CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR});
+  settings->GetSettingsManager()->RegisterCallback(
+      this,
+      {CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR, CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR});
   settings->GetSettingsManager()->RegisterSettingsHandler(this);
 
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
@@ -537,10 +538,7 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
         ->GetSettings()
         ->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
     if (hdr2sdr)
-    {
-      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::{} -- setting hdr2sdr mode to {:d}", __FUNCTION__, hdr2sdr);
-      CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", hdr2sdr);
-    }
+      SetHdrToSdrMode(hdr2sdr);
   }
   else
   {
@@ -559,7 +557,9 @@ void CWinSystemAmlogic::OnSettingChanged(const std::shared_ptr<const CSetting>& 
   if (!setting)
     return;
 
-  if (setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR && IsHDRDisplay())
+  if (setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR && IsHDRDisplay())
+    SetHdrToSdrMode(std::static_pointer_cast<const CSettingBool>(setting)->GetValue());
+  else if (setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR && IsHDRDisplay())
     SetSdrToHdrMode(std::static_pointer_cast<const CSettingBool>(setting)->GetValue());
 }
 
@@ -568,11 +568,23 @@ void CWinSystemAmlogic::OnSettingsLoaded()
   // a profile load replaces the value without calling OnSettingChanged
   if (IsHDRDisplay())
   {
-    const bool sdr2hdr = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
-        CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
+    const std::shared_ptr<CSettings> settings =
+        CServiceBroker::GetSettingsComponent()->GetSettings();
+    const bool sdr2hdr = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
     if (sdr2hdr || m_sdrToHdr)
       SetSdrToHdrMode(sdr2hdr);
+    const bool hdr2sdr = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
+    if (hdr2sdr || m_hdrToSdr)
+      SetHdrToSdrMode(hdr2sdr);
   }
+}
+
+void CWinSystemAmlogic::SetHdrToSdrMode(int hdr2sdr)
+{
+  CLog::Log(LOGDEBUG, "CWinSystemAmlogic::{} -- setting hdr2sdr mode to {:d}", __FUNCTION__,
+            hdr2sdr);
+  CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", hdr2sdr);
+  m_hdrToSdr = hdr2sdr != 0;
 }
 
 void CWinSystemAmlogic::SetSdrToHdrMode(int sdr2hdr)

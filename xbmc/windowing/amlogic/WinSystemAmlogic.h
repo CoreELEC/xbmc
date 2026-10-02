@@ -97,6 +97,7 @@ private:
   void RefreshResolutions();
   void HotplugEvent();
   void RefreshDisplayCapabilities();
+  void SetHdrToSdrMode(int hdr2sdr);
   void SetSdrToHdrMode(int sdr2hdr);
   static void FDEventCallback(int id, int fd, short revents, void *data);
 
@@ -105,5 +106,6 @@ private:
   struct udev *m_udev;
   struct callback_data m_callback_data;
   std::atomic<bool> m_hotplugPending{false};
+  std::atomic<bool> m_hdrToSdr{false};
   std::atomic<bool> m_sdrToHdr{false};
 };
