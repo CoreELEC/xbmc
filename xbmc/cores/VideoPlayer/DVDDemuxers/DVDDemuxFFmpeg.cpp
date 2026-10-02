@@ -2043,8 +2043,6 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         st->colorTransferCharacteristic = pStream->codecpar->color_trc;
         st->colorRange = pStream->codecpar->color_range;
         st->hdr_type = DetermineHdrType(pStream);
-        if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION)
-          st->colorSpace = AVCOL_SPC_ICTCP;
 
         // https://github.com/FFmpeg/FFmpeg/blob/release/7.0/doc/APIchanges
         const AVPacketSideData* sideData = nullptr;
@@ -2171,6 +2169,16 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
 
             if (sideData && sideData->size)
               st->dovi = *reinterpret_cast<const AVDOVIDecoderConfigurationRecord*>(sideData->data);
+
+            // base layers without backward compatibility are IPTPQc2, PQ and HLG ones are BT.2020
+            if (st->dovi.dv_profile == 5 ||
+                ((st->dovi.dv_profile == 10 || st->dovi.dv_profile == 20) &&
+                 st->dovi.dv_bl_signal_compatibility_id == 0))
+              st->colorSpace = AVCOL_SPC_IPT_C2;
+            else if (st->colorSpace == AVCOL_SPC_UNSPECIFIED &&
+                     (st->colorTransferCharacteristic == AVCOL_TRC_SMPTE2084 ||
+                      st->colorTransferCharacteristic == AVCOL_TRC_ARIB_STD_B67))
+              st->colorSpace = AVCOL_SPC_BT2020_NCL;
           }
         }
 
