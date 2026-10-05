@@ -11,6 +11,8 @@
 
 #include "platform/linux/input/LibInputHandler.h"
 #include "rendering/gles/RenderSystemGLES.h"
+#include "settings/lib/ISettingCallback.h"
+#include "settings/lib/ISettingsHandler.h"
 #include "threads/CriticalSection.h"
 #include "windowing/WinSystem.h"
 #include "threads/SystemClock.h"
@@ -23,7 +25,7 @@
 
 class IDispResource;
 
-class CWinSystemAmlogic : public CWinSystemBase
+class CWinSystemAmlogic : public CWinSystemBase, public ISettingCallback, public ISettingsHandler
 {
 public:
   CWinSystemAmlogic();
@@ -43,6 +45,9 @@ public:
   CHDRCapabilities GetDisplayHDRCapabilities() const override;
   float GetGuiSdrPeakLuminance() const override;
   HDR_STATUS GetOSHDRStatus() override;
+
+  void OnSettingChanged(const std::shared_ptr<const CSetting>& setting) override;
+  void OnSettingsLoaded() override;
 
   // prevent a stale renderer from restoring HDR GUI state owned by a newer session
   virtual uint64_t ConfigureHdrGuiSession(uint64_t owner, int colorTransfer, bool dvGraphics) = 0;
@@ -92,6 +97,7 @@ private:
   void RefreshResolutions();
   void HotplugEvent();
   void RefreshDisplayCapabilities();
+  void SetSdrToHdrMode(int sdr2hdr);
   static void FDEventCallback(int id, int fd, short revents, void *data);
 
   int m_fdMonitorId;
@@ -99,4 +105,5 @@ private:
   struct udev *m_udev;
   struct callback_data m_callback_data;
   std::atomic<bool> m_hotplugPending{false};
+  std::atomic<bool> m_sdrToHdr{false};
 };

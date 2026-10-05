@@ -45,6 +45,22 @@
 
 using namespace KODI;
 
+namespace
+{
+constexpr unsigned int AMDV_FORCE_OUTPUT_MODE = 2;
+
+// kodi's sdr2hdr also sets dolby_vision_policy, a hand-set sdr_mode and hdr_policy leave it at
+// follow source
+bool HasSdrToHdrState()
+{
+  CSysfsPath sdrMode{"/sys/module/aml_media/parameters/sdr_mode"};
+  CSysfsPath hdrPolicy{"/sys/module/aml_media/parameters/hdr_policy"};
+  CSysfsPath dvPolicy{"/sys/module/aml_media/parameters/dolby_vision_policy"};
+  return sdrMode.Exists() && hdrPolicy.Exists() && dvPolicy.Exists() && sdrMode.Get<int>() == 1 &&
+         hdrPolicy.Get<int>() == 0 && dvPolicy.Get<int>() == 0;
+}
+} // namespace
+
 std::unique_ptr<CAMLDisplay> CWinSystemAmlogic::m_amlDisplay = nullptr;
 
 CWinSystemAmlogic::CWinSystemAmlogic()
@@ -81,6 +97,10 @@ CWinSystemAmlogic::CWinSystemAmlogic()
 CWinSystemAmlogic::~CWinSystemAmlogic()
 {
   MonitorStop();
+  CSettingsManager* settingsManager =
+      CServiceBroker::GetSettingsComponent()->GetSettings()->GetSettingsManager();
+  settingsManager->UnregisterSettingsHandler(this);
+  settingsManager->UnregisterCallback(this);
 }
 
 void CWinSystemAmlogic::SettingOptionsComponentsFiller(const SettingConstPtr& setting,
@@ -302,6 +322,12 @@ bool CWinSystemAmlogic::InitWindowSystem()
     CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 1);
   }
 
+  // the driver keeps an earlier session's sdr2hdr state across a Kodi restart,
+  // values set by anyone else stay
+  if (IsHDRDisplay() && !settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR) &&
+      HasSdrToHdrState())
+    SetSdrToHdrMode(0);
+
   if (!aml_support_dolby_vision())
   {
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE, false);
@@ -313,6 +339,9 @@ bool CWinSystemAmlogic::InitWindowSystem()
 
   CServiceBroker::GetSettingsComponent()->GetSettings()->
     GetSettingsManager()->RegisterSettingOptionsFiller("dv_led_modes", SettingOptionsComponentsFiller);
+  settings->GetSettingsManager()->RegisterCallback(this,
+                                                   {CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR});
+  settings->GetSettingsManager()->RegisterSettingsHandler(this);
 
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
 
@@ -497,12 +526,7 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
         ->GetSettings()
         ->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
     if (sdr2hdr)
-    {
-      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::{} -- setting sdr2hdr mode to {:d}", __FUNCTION__, sdr2hdr);
-      CSysfsPath("/sys/module/aml_media/parameters/sdr_mode", sdr2hdr);
-      CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", 0);
-      CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 0);
-    }
+      SetSdrToHdrMode(sdr2hdr);
 
     CServiceBroker::GetSettingsComponent()
         ->GetSettings()
@@ -528,6 +552,52 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
     if (setting)
       setting->SetVisible(false);
   }
+}
+
+void CWinSystemAmlogic::OnSettingChanged(const std::shared_ptr<const CSetting>& setting)
+{
+  if (!setting)
+    return;
+
+  if (setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR && IsHDRDisplay())
+    SetSdrToHdrMode(std::static_pointer_cast<const CSettingBool>(setting)->GetValue());
+}
+
+void CWinSystemAmlogic::OnSettingsLoaded()
+{
+  // a profile load replaces the value without calling OnSettingChanged
+  if (IsHDRDisplay())
+  {
+    const bool sdr2hdr = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+        CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
+    if (sdr2hdr || m_sdrToHdr)
+      SetSdrToHdrMode(sdr2hdr);
+  }
+}
+
+void CWinSystemAmlogic::SetSdrToHdrMode(int sdr2hdr)
+{
+  CLog::Log(LOGDEBUG, "CWinSystemAmlogic::{} -- setting sdr2hdr mode to {:d}", __FUNCTION__,
+            sdr2hdr);
+  // a forced dolby vision output owns the policy until its title closes
+  CSysfsPath dvPolicy{"/sys/module/aml_media/parameters/dolby_vision_policy"};
+  const bool dvForced = dvPolicy.Exists() && dvPolicy.Get<unsigned int>() == AMDV_FORCE_OUTPUT_MODE;
+  // follow source with sdr_mode set takes a broken driver path, so never pass through it
+  if (sdr2hdr)
+  {
+    CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 0);
+    if (!dvForced)
+      CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", 0);
+    CSysfsPath("/sys/module/aml_media/parameters/sdr_mode", 1);
+  }
+  else
+  {
+    CSysfsPath("/sys/module/aml_media/parameters/sdr_mode", 0);
+    if (!dvForced)
+      CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", 1);
+    CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 1);
+  }
+  m_sdrToHdr = sdr2hdr != 0;
 }
 
 bool CWinSystemAmlogic::IsHDRDisplay()
