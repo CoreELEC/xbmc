@@ -88,6 +88,7 @@ public:
   int           GetAmlDuration() const;
   int           ReleaseFrame(const uint32_t index, bool bDrop = false);
   bool          IsOpen() const { return m_opened; }
+  bool          IsRealtimeStream() const { return m_processInfo.IsRealtimeStream(); }
 
   static int    PollFrame();
   static void   SetPollDevice(int device);

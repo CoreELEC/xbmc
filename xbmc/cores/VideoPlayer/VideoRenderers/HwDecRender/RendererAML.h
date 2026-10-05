@@ -52,7 +52,7 @@ public:
 
 private:
   void Reset();
-  std::shared_ptr<CAMLCodec> QueueFrame(int index, bool setVideoRect);
+  std::shared_ptr<CAMLCodec> QueueFrame(int index, bool setVideoRect, bool* drop = nullptr);
 
   static const int m_numRenderBuffers = NUM_BUFFERS;
 
