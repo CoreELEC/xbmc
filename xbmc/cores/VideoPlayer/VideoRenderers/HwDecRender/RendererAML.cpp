@@ -233,7 +233,7 @@ bool CRendererAML::Flush(bool saveBuffers)
   return saveBuffers;
 };
 
-std::shared_ptr<CAMLCodec> CRendererAML::QueueFrame(int index, bool setVideoRect)
+std::shared_ptr<CAMLCodec> CRendererAML::QueueFrame(int index, bool setVideoRect, bool* drop)
 {
   CAMLVideoBuffer *amli = dynamic_cast<CAMLVideoBuffer *>(m_buffers[index].videoBuffer);
   if(amli && amli->m_amlCodec)
@@ -241,7 +241,12 @@ std::shared_ptr<CAMLCodec> CRendererAML::QueueFrame(int index, bool setVideoRect
     uint64_t pts = amli->m_omxPts;
     if (pts != m_prevVPts)
     {
-      amli->m_amlCodec->ReleaseFrame(amli->m_bufferIndex, m_prevVPts == DVD_NOPTS_VALUE);
+      const bool dropFrame =
+          m_prevVPts == DVD_NOPTS_VALUE && amli->m_amlCodec->IsRealtimeStream();
+      if (drop)
+        *drop = dropFrame;
+
+      amli->m_amlCodec->ReleaseFrame(amli->m_bufferIndex, dropFrame);
       if (setVideoRect)
         amli->m_amlCodec->SetVideoRect(m_sourceRect, m_destRect);
       std::shared_ptr<CAMLCodec> codec = std::move(amli->m_amlCodec); //Mark frame as processed
@@ -322,9 +327,9 @@ void CRendererAML::WakeVsyncPresent()
 
 void CRendererAML::PresentFrame(int index)
 {
-  // the first frame after a reset is queued as a drop and never shows
-  const bool drop = m_prevVPts == DVD_NOPTS_VALUE;
-  std::shared_ptr<CAMLCodec> codec = QueueFrame(index, false);
+  // the first frame after a reset is queued as a drop on live stream and never shows
+  bool drop = false;
+  std::shared_ptr<CAMLCodec> codec = QueueFrame(index, false, &drop);
   if (!codec)
     return;
 
