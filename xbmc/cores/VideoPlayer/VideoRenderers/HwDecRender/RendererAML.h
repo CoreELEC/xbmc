@@ -54,8 +54,10 @@ private:
   void Reset();
   std::shared_ptr<CAMLCodec> QueueFrame(int index, bool setVideoRect, bool* drop = nullptr);
   int GetGuiColorTransfer() const;
-  void UpdateHdrGuiSession(int colorTransfer);
+  bool GetGuiDvGraphics(int guiColorTransfer) const;
+  void UpdateHdrGuiSession(int colorTransfer, bool dvGraphics);
   void FollowGuiColorTransfer();
+  void FollowOutputMode();
 
   static const int m_numRenderBuffers = NUM_BUFFERS;
 
@@ -71,7 +73,10 @@ private:
   int m_colorTransfer{0};
   int m_guiColorTransfer{0};
   bool m_dvGraphics{false};
+  bool m_guiDvGraphics{false};
   bool m_dvCore{false};
+  bool m_dvOutputActive{false};
+  int m_dvOutputMode{-1};
   bool m_bConfigured;
 
   std::atomic<bool> m_vsyncPresent{false};

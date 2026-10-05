@@ -24,6 +24,11 @@
 #include "windowing/WinSystem.h"
 #include "windowing/amlogic/WinSystemAmlogic.h"
 
+namespace
+{
+constexpr int AMDV_OUTPUT_MODE_BYPASS = 5;
+} // namespace
+
 CRendererAML::CRendererAML()
  : m_prevVPts(DVD_NOPTS_VALUE)
  , m_bConfigured(false)
@@ -127,7 +132,8 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
              static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())
                      ->GetAmlDisplay()
                      ->aml_get_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC) != 0;
-  UpdateHdrGuiSession(GetGuiColorTransfer());
+  const int guiColorTransfer = GetGuiColorTransfer();
+  UpdateHdrGuiSession(guiColorTransfer, GetGuiDvGraphics(guiColorTransfer));
   m_bConfigured = true;
 
   return true;
@@ -141,14 +147,24 @@ int CRendererAML::GetGuiColorTransfer() const
   return (m_dvCore || !winSystem->IsHdrToSdr()) ? m_colorTransfer : 0;
 }
 
-void CRendererAML::UpdateHdrGuiSession(int colorTransfer)
+bool CRendererAML::GetGuiDvGraphics(int guiColorTransfer) const
+{
+  // kodi starts the dolby vision core for dolby vision titles only, so for any other
+  // title an active core was forced on and converts the GUI plane by its declared format
+  if (!m_dvGraphics && m_dvOutputActive)
+    return guiColorTransfer == AVCOL_TRC_SMPTE2084;
+  return m_dvGraphics;
+}
+
+void CRendererAML::UpdateHdrGuiSession(int colorTransfer, bool dvGraphics)
 {
   m_guiColorTransfer = colorTransfer;
+  m_guiDvGraphics = dvGraphics;
 
   const auto winSystem = static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem());
   if (colorTransfer != 0)
   {
-    m_hdrGuiOwner = winSystem->ConfigureHdrGuiSession(m_hdrGuiOwner, colorTransfer, m_dvGraphics);
+    m_hdrGuiOwner = winSystem->ConfigureHdrGuiSession(m_hdrGuiOwner, colorTransfer, dvGraphics);
     if (m_hdrGuiOwner == 0)
       CLog::Log(LOGWARNING, "CRendererAML: HDR GUI composite unavailable; using normal GUI path");
   }
@@ -283,6 +299,7 @@ std::shared_ptr<CAMLCodec> CRendererAML::QueueFrame(int index, bool setVideoRect
 void CRendererAML::RenderUpdate(int index, int index2, bool clear, unsigned int flags, unsigned int alpha)
 {
   ManageRenderArea();
+  FollowOutputMode();
 
   if (m_vsyncPresent)
   {
@@ -308,9 +325,30 @@ void CRendererAML::FollowGuiColorTransfer()
 {
   // the driver applies hdr_mode on new frames only, so switch the GUI with it
   const int guiColorTransfer = GetGuiColorTransfer();
-  if (guiColorTransfer != m_guiColorTransfer)
+  const bool guiDvGraphics = GetGuiDvGraphics(guiColorTransfer);
+  if (guiColorTransfer != m_guiColorTransfer || guiDvGraphics != m_guiDvGraphics)
   {
-    UpdateHdrGuiSession(guiColorTransfer);
+    UpdateHdrGuiSession(guiColorTransfer, guiDvGraphics);
+    CServiceBroker::GetGUI()->GetWindowManager().MarkDirty();
+  }
+}
+
+void CRendererAML::FollowOutputMode()
+{
+  // the dolby vision policy can force its output during playback, outside kodi
+  const auto winSystem = static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem());
+  const int dvOutputMode = winSystem->GetDvOutputMode();
+  if (dvOutputMode == m_dvOutputMode)
+    return;
+
+  m_dvOutputMode = dvOutputMode;
+  m_dvOutputActive =
+      dvOutputMode != -1 && dvOutputMode != AMDV_OUTPUT_MODE_BYPASS && aml_dolby_vision_enabled();
+
+  const bool guiDvGraphics = GetGuiDvGraphics(m_guiColorTransfer);
+  if (guiDvGraphics != m_guiDvGraphics)
+  {
+    UpdateHdrGuiSession(m_guiColorTransfer, guiDvGraphics);
     CServiceBroker::GetGUI()->GetWindowManager().MarkDirty();
   }
 }
