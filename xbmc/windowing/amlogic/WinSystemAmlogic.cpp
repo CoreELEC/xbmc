@@ -39,6 +39,7 @@
 
 #include <linux/fb.h>
 #include <poll.h>
+#include <string_view>
 #include <unistd.h>
 
 #include "system_egl.h"
@@ -58,6 +59,12 @@ bool HasSdrToHdrState()
   CSysfsPath dvPolicy{"/sys/module/aml_media/parameters/dolby_vision_policy"};
   return sdrMode.Exists() && hdrPolicy.Exists() && dvPolicy.Exists() && sdrMode.Get<int>() == 1 &&
          hdrPolicy.Get<int>() == 0 && dvPolicy.Get<int>() == 0;
+}
+
+bool IsDolbyVisionConversion(std::string_view id)
+{
+  return id == CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV ||
+         id == CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV;
 }
 } // namespace
 
@@ -341,7 +348,8 @@ bool CWinSystemAmlogic::InitWindowSystem()
     GetSettingsManager()->RegisterSettingOptionsFiller("dv_led_modes", SettingOptionsComponentsFiller);
   settings->GetSettingsManager()->RegisterCallback(
       this,
-      {CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR, CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR});
+      {CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR, CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR,
+       CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV, CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV});
   settings->GetSettingsManager()->RegisterSettingsHandler(this);
 
   m_nativeDisplay = EGL_DEFAULT_DISPLAY;
@@ -556,6 +564,21 @@ void CWinSystemAmlogic::OnSettingChanged(const std::shared_ptr<const CSetting>& 
 {
   if (!setting)
     return;
+
+  const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  // the dialog disables conflicting rows, JSON-RPC and add-ons do not
+  if (std::static_pointer_cast<const CSettingBool>(setting)->GetValue())
+  {
+    for (const char* other :
+         {CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR, CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR,
+          CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV, CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV})
+    {
+      if (setting->GetId() != other &&
+          !(IsDolbyVisionConversion(setting->GetId()) && IsDolbyVisionConversion(other)) &&
+          settings->GetBool(other))
+        settings->SetBool(other, false);
+    }
+  }
 
   if (setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR && IsHDRDisplay())
     SetHdrToSdrMode(std::static_pointer_cast<const CSettingBool>(setting)->GetValue());
