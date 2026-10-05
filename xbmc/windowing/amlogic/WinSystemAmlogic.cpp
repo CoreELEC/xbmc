@@ -10,6 +10,7 @@
 
 #include <string.h>
 #include <float.h>
+#include <cstdlib>
 #include <exception>
 
 #include "ServiceBroker.h"
@@ -162,6 +163,14 @@ void CWinSystemAmlogic::MonitorStart()
       goto err_unref_udev;
     }
 
+    err = udev_monitor_filter_add_match_subsystem_devtype(m_callback_data.udevMonitor,
+                                                          "amdolby_vision", NULL);
+    if (err)
+    {
+      CLog::Log(LOGERROR, "CWinSystemAmlogic::Start - udev_monitor_filter_add_match_subsystem_devtype() failed");
+      goto err_unref_udev;
+    }
+
     err = udev_monitor_enable_receiving(m_callback_data.udevMonitor);
     if (err)
     {
@@ -289,11 +298,15 @@ void CWinSystemAmlogic::FDEventCallback(int id, int fd, short revents, void *dat
     const char* syspath = udev_device_get_syspath(device);
     const char* devpath = udev_device_get_devpath(device);
     const char* hotplug = udev_device_get_property_value(device, "HOTPLUG");
+    const char* dvOutputMode = udev_device_get_property_value(device, "AMDV_OUTPUT_MODE");
     CLog::Log(LOGDEBUG, "CWinSystemAmlogic - FDEventCallback (\"{}\", \"{}\"), action: {}",
       syspath ? syspath : "<null>", devpath ? devpath : "<null>", action ? action : "<null>");
 
     const bool isHotplug = action && hotplug && StringUtils::EqualsNoCase(action, "change") &&
                            strcmp(hotplug, "1") == 0;
+
+    if (dvOutputMode)
+      winSystem->m_dvOutputMode.store(std::atoi(dvOutputMode));
 
     udev_device_unref(device);
 

@@ -50,6 +50,7 @@ public:
   void OnSettingsLoaded() override;
 
   bool IsHdrToSdr() const { return m_hdrToSdr.load(); }
+  int GetDvOutputMode() const { return m_dvOutputMode.load(); }
 
   // prevent a stale renderer from restoring HDR GUI state owned by a newer session
   virtual uint64_t ConfigureHdrGuiSession(uint64_t owner, int colorTransfer, bool dvGraphics) = 0;
@@ -108,6 +109,7 @@ private:
   struct udev *m_udev;
   struct callback_data m_callback_data;
   std::atomic<bool> m_hotplugPending{false};
+  std::atomic<int> m_dvOutputMode{-1};
   std::atomic<bool> m_hdrToSdr{false};
   std::atomic<bool> m_sdrToHdr{false};
 };
