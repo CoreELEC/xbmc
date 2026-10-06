@@ -353,9 +353,21 @@ typedef struct hdr_buf {
 #define AMDV_FOLLOW_SOURCE      (unsigned int)(1)
 #define AMDV_FORCE_OUTPUT_MODE  (unsigned int)(2)
 
+#define HDR_FOLLOW_SINK         AMDV_FOLLOW_SINK
+#define HDR_FOLLOW_SOURCE       AMDV_FOLLOW_SOURCE
+
 #define AMDV_OUTPUT_MODE_IPT         (unsigned int)(0)
 #define AMDV_OUTPUT_MODE_IPT_TUNNEL  (unsigned int)(1)
 #define AMDV_OUTPUT_MODE_BYPASS      (unsigned int)(5)
+
+#define FORCE_OUTPUT_DISABLED              (unsigned int)(0)
+#define FORCE_OUTPUT_BT709                 (unsigned int)(1)
+#define FORCE_OUTPUT_BT2020                (unsigned int)(2)
+#define FORCE_OUTPUT_BT2020_PQ             (unsigned int)(3)
+#define FORCE_OUTPUT_BT2020_PQ_DYNAMIC     (unsigned int)(4)
+#define FORCE_OUTPUT_BT2020_HLG            (unsigned int)(5)
+#define FORCE_OUTPUT_BT2100_IPT            (unsigned int)(6)
+#define FORCE_OUTPUT_BT_BYPASS             (unsigned int)(7)
 
 typedef struct am_packet {
     AVPacket      avpkt;
@@ -2322,9 +2334,10 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
   am_private->gcodec.video_path  = FRAME_BASE_PATH_AMLVIDEO_AMVIDEO;
 
   // enable Dolby Vision driver when 'dovi.ko' is available
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
   bool device_support_dv(aml_support_dolby_vision());
   bool display_support_dv(static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_dv());
-  bool user_dv_disable(CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
+  bool user_dv_disable(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
   bool dv_enable(device_support_dv && !user_dv_disable &&
     hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && (display_support_dv || hints.dovi.dv_profile == 5));
   CLog::Log(LOGINFO, "CAMLCodec::OpenDecoder Amlogic device {} support DV, DV is {} by user, display {} support DV, DV system is {}",
@@ -2340,7 +2353,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
     AmlDisplay->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 1);
 
     // use player led mode when enabled
-    if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+    if (settings->GetInt(
             CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED ||
         !display_support_dv)
       AmlDisplay->aml_set_drmProperty("dv_ll_policy", DRM_MODE_OBJECT_CRTC, DOLBY_VISION_LL_YUV422);
@@ -2352,7 +2365,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
     if (hints.dovi.dv_profile == 0)
     {
       AmlDisplay->aml_set_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC, AMDV_FORCE_OUTPUT_MODE);
-      if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED)
+      if (settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED)
         AmlDisplay->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC, AMDV_OUTPUT_MODE_IPT);
       else
         AmlDisplay->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC,
@@ -2373,7 +2386,23 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
     }
   }
   else
+  {
+    int forceOutput = FORCE_OUTPUT_DISABLED;
+
     AmlDisplay->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 0);
+    if (settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR) &&
+        hints.hdrType == StreamHdrType::HDR_TYPE_HDR10 && !m_processInfo.GetIsHdr10Plus())
+      forceOutput = FORCE_OUTPUT_BT2020_PQ;
+    else if (settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR))
+      forceOutput = FORCE_OUTPUT_BT709;
+
+    if (forceOutput != FORCE_OUTPUT_DISABLED)
+    {
+      AmlDisplay->aml_set_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC, AMDV_FOLLOW_SINK);
+      AmlDisplay->aml_set_drmProperty("hdr_policy", DRM_MODE_OBJECT_CRTC, AMDV_FOLLOW_SINK);
+      AmlDisplay->aml_set_drmProperty("force_output", DRM_MODE_OBJECT_CRTC, forceOutput);
+    }
+  }
 
   // DEC_CONTROL_FLAG_DISABLE_FAST_POC
   CSysfsPath("/sys/module/amvdec_h264/parameters/dec_control", 4);
@@ -2689,6 +2718,13 @@ void CAMLCodec::CloseDecoder()
       AmlDisplay->aml_set_drmProperty("enable_hdr10plus", DRM_MODE_OBJECT_CRTC, 1);
 
     AmlDisplay->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 0);
+  }
+  else if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR) ||
+           CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR))
+  {
+    AmlDisplay->aml_set_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC, AMDV_FOLLOW_SOURCE);
+    AmlDisplay->aml_set_drmProperty("hdr_policy", DRM_MODE_OBJECT_CRTC, HDR_FOLLOW_SOURCE);
+    AmlDisplay->aml_set_drmProperty("force_output", DRM_MODE_OBJECT_CRTC, FORCE_OUTPUT_BT709);
   }
 
   AmlDisplay->aml_set_drmProperty("dv_debug", DRM_MODE_OBJECT_CRTC, "enable_fel 0");
