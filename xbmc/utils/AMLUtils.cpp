@@ -248,6 +248,30 @@ bool aml_dolby_vision_enabled()
   return ((dv_enabled && !!dv_user_enabled) == 1);
 }
 
+bool aml_convert_to_sdr(StreamHdrType hdrType)
+{
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  bool user_convert_to_sdr = false;
+
+  if (hdrType != StreamHdrType::HDR_TYPE_NONE)
+    user_convert_to_sdr = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
+
+  return ((!!user_convert_to_sdr) == 1);
+}
+
+bool aml_convert_to_hdr(StreamHdrType hdrType)
+{
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  bool user_convert_to_hdr = false;
+
+  if (hdrType == StreamHdrType::HDR_TYPE_NONE)
+    user_convert_to_hdr = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
+
+  bool convert_to_hdr = CServiceBroker::GetWinSystem()->IsHDRDisplay();
+
+  return ((convert_to_hdr && !!user_convert_to_hdr) == 1);
+}
+
 bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)
 {
   const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
