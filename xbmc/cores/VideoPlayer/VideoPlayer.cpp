@@ -4453,6 +4453,10 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
       // fake Dolby Vision type when using Dolby Vision VS-Engine
       if (aml_convert_to_dv_by_vs_engine(hint.hdrType))
         hint.hdrType = StreamHdrType::HDR_TYPE_DOLBYVISION;
+      else if (aml_convert_to_sdr(hint.hdrType))
+        hint.hdrType = StreamHdrType::HDR_TYPE_NONE;
+      else if (aml_convert_to_hdr(hint.hdrType))
+        hint.hdrType = StreamHdrType::HDR_TYPE_HDR10;
       res = OpenVideoStream(hint, reset);
       // Set the m_bFullScreenVideo flag now, before streamsReady, so the
       // renderer's Configure() sees a valid viewport via GetViewWindow().
