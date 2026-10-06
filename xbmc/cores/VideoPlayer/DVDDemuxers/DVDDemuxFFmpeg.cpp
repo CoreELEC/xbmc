@@ -2192,6 +2192,20 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
               }
             }
           }
+          else if (aml_convert_to_hdr(st->hdr_type))
+          {
+            st->colorPrimaries = AVCOL_PRI_BT2020;
+            st->colorSpace = AVCOL_SPC_BT2020_NCL;
+            st->colorTransferCharacteristic = AVCOL_TRC_SMPTE2084;
+            st->colorRange = AVCOL_RANGE_MPEG;
+          }
+          else if (aml_convert_to_sdr(st->hdr_type))
+          {
+            st->colorPrimaries = AVCOL_PRI_BT709;
+            st->colorSpace = AVCOL_SPC_BT709;
+            st->colorTransferCharacteristic = AVCOL_TRC_BT709;
+            st->colorRange = AVCOL_RANGE_MPEG;
+          }
         }
 
         sideData = av_packet_side_data_get(pStream->codecpar->coded_side_data,
