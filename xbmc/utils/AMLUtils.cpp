@@ -25,6 +25,11 @@
 
 #include <amcodec/codec.h>
 
+extern "C"
+{
+#include <libavutil/pixfmt.h>
+}
+
 int aml_get_cpufamily_id()
 {
   static int aml_cpufamily_id = -1;
@@ -264,6 +269,18 @@ bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)
                             ->GetAmlDisplay()->aml_display_support_dv());
 
   return ((convert_to_dv && !!user_convert_to_dv && !!dv_user_enabled) == 1);
+}
+
+int aml_pgs_sdr_white_nits(StreamHdrType sourceHdrType, int pgsTransfer)
+{
+  if (pgsTransfer == AVCOL_TRC_SMPTE2084 || pgsTransfer == AVCOL_TRC_ARIB_STD_B67)
+    return 0;
+
+  // an SDR source reaches PQ output only converted to DV, whose driver draws SDR graphics
+  // at 300 nits; else BT.2408 graphics white
+  constexpr int DV_SDR_GRAPHICS_WHITE = 300;
+  constexpr int REFERENCE_WHITE = 203;
+  return sourceHdrType == StreamHdrType::HDR_TYPE_NONE ? DV_SDR_GRAPHICS_WHITE : REFERENCE_WHITE;
 }
 
 bool aml_video_started()

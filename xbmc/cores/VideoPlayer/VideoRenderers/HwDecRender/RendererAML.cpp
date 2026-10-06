@@ -13,6 +13,8 @@
 #include "cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecAmlogic.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFactory.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFlags.h"
+#include "guilib/GUIComponent.h"
+#include "guilib/GUIWindowManager.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/MediaSettings.h"
 #include "utils/AMLUtils.h"
@@ -119,10 +121,34 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
   if (dv_graphics)
     color_transfer = AVCOL_TRC_SMPTE2084;
 
+  m_colorTransfer = color_transfer;
+  m_dvGraphics = dv_graphics;
+  m_dvCore = picture.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION &&
+             static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())
+                     ->GetAmlDisplay()
+                     ->aml_get_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC) != 0;
+  UpdateHdrGuiSession(GetGuiColorTransfer());
+  m_bConfigured = true;
+
+  return true;
+}
+
+int CRendererAML::GetGuiColorTransfer() const
+{
+  // hdr2sdr tone maps the video and passes the GUI plane through unconverted,
+  // unless the dolby vision core owns the output
   const auto winSystem = static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem());
-  if (color_transfer != 0)
+  return (m_dvCore || !winSystem->IsHdrToSdr()) ? m_colorTransfer : 0;
+}
+
+void CRendererAML::UpdateHdrGuiSession(int colorTransfer)
+{
+  m_guiColorTransfer = colorTransfer;
+
+  const auto winSystem = static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem());
+  if (colorTransfer != 0)
   {
-    m_hdrGuiOwner = winSystem->ConfigureHdrGuiSession(m_hdrGuiOwner, color_transfer, dv_graphics);
+    m_hdrGuiOwner = winSystem->ConfigureHdrGuiSession(m_hdrGuiOwner, colorTransfer, m_dvGraphics);
     if (m_hdrGuiOwner == 0)
       CLog::Log(LOGWARNING, "CRendererAML: HDR GUI composite unavailable; using normal GUI path");
   }
@@ -131,9 +157,6 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
     winSystem->ReleaseHdrGuiSession(m_hdrGuiOwner);
     m_hdrGuiOwner = 0;
   }
-  m_bConfigured = true;
-
-  return true;
 }
 
 CRenderInfo CRendererAML::GetRenderInfo()
@@ -270,11 +293,26 @@ void CRendererAML::RenderUpdate(int index, int index2, bool clear, unsigned int 
     }
     if (codec && codec->IsOpen())
       codec->SetVideoRect(m_sourceRect, m_destRect);
+    // a pending codec means the vsync thread queued a new frame
+    if (codec)
+      FollowGuiColorTransfer();
     return;
   }
 
-  QueueFrame(index, true);
+  if (QueueFrame(index, true))
+    FollowGuiColorTransfer();
   CAMLCodec::PollFrame();
+}
+
+void CRendererAML::FollowGuiColorTransfer()
+{
+  // the driver applies hdr_mode on new frames only, so switch the GUI with it
+  const int guiColorTransfer = GetGuiColorTransfer();
+  if (guiColorTransfer != m_guiColorTransfer)
+  {
+    UpdateHdrGuiSession(guiColorTransfer);
+    CServiceBroker::GetGUI()->GetWindowManager().MarkDirty();
+  }
 }
 
 bool CRendererAML::StartVsyncPresent()
