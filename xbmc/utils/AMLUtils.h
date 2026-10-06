@@ -59,6 +59,8 @@ bool aml_support_avs2();
 bool aml_support_avs3();
 bool aml_support_dolby_vision();
 bool aml_dolby_vision_enabled();
+bool aml_convert_to_sdr(StreamHdrType hdrType);
+bool aml_convert_to_hdr(StreamHdrType hdrType);
 bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType);
 bool aml_video_started();
 int aml_amdv_wait(StreamHdrType hdrType);
