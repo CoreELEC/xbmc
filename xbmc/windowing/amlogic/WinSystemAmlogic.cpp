@@ -300,6 +300,9 @@ bool CWinSystemAmlogic::InitWindowSystem()
     CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", 0);
     CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", 1);
     CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 1);
+
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR, false);
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR, false);
   }
 
   if (!aml_support_dolby_vision())
@@ -486,48 +489,14 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
   if (setting)
     setting->SetVisible(sink_dv);
 
-  if (IsHDRDisplay())
-  {
-    CServiceBroker::GetSettingsComponent()
-        ->GetSettings()
-        ->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR)
-        ->SetVisible(true);
+  const bool use_hdr_module = IsHDRDisplay() && !sink_dv;
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
+  if (setting)
+    setting->SetVisible(use_hdr_module);
 
-    int sdr2hdr = CServiceBroker::GetSettingsComponent()
-        ->GetSettings()
-        ->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
-    if (sdr2hdr)
-    {
-      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::{} -- setting sdr2hdr mode to {:d}", __FUNCTION__, sdr2hdr);
-      CSysfsPath("/sys/module/aml_media/parameters/sdr_mode", sdr2hdr);
-      CSysfsPath("/sys/module/aml_media/parameters/dolby_vision_policy", 0);
-      CSysfsPath("/sys/module/aml_media/parameters/hdr_policy", 0);
-    }
-
-    CServiceBroker::GetSettingsComponent()
-        ->GetSettings()
-        ->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR)
-        ->SetVisible(true);
-
-    int hdr2sdr = CServiceBroker::GetSettingsComponent()
-        ->GetSettings()
-        ->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
-    if (hdr2sdr)
-    {
-      CLog::Log(LOGDEBUG, "CWinSystemAmlogic::{} -- setting hdr2sdr mode to {:d}", __FUNCTION__, hdr2sdr);
-      CSysfsPath("/sys/module/aml_media/parameters/hdr_mode", hdr2sdr);
-    }
-  }
-  else
-  {
-    setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR);
-    if (setting)
-      setting->SetVisible(false);
-
-    setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
-    if (setting)
-      setting->SetVisible(false);
-  }
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR);
+  if (setting)
+    setting->SetVisible(use_hdr_module);
 }
 
 bool CWinSystemAmlogic::IsHDRDisplay()
