@@ -159,7 +159,8 @@ public:
   /*!
    * \brief Get the in time and start time (90 kHz) of the clip a byte was read from.
    * \param readPos The position of the byte in the bytes Read returned since Open
-   * \return The clip time, or nothing without a clip and in navigation mode
+   * \return The clip time, or nothing without a clip, in navigation mode and on a playlist with
+   *         an MVC extension
    */
   std::optional<ClipTime> GetClipTime(uint64_t readPos) const;
 
@@ -328,4 +329,5 @@ protected:
     size_t m_clipStartOffset{0};
     bool m_clipStartHeld{false};
     uint64_t m_clipStartEnd{0};
+    bool m_hasMVCExtension{false};
 };

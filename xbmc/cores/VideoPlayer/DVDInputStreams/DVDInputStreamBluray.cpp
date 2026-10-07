@@ -453,6 +453,7 @@ void CDVDInputStreamBluray::Close()
   m_readPos = 0;
   m_clipSpans.clear();
   m_clipStart.clear();
+  m_hasMVCExtension = false;
 
 #if defined(HAS_UDFREAD)
   // Released last, as the files opened from the volume are closed above
@@ -788,7 +789,7 @@ int CDVDInputStreamBluray::Read(uint8_t* buf, int buf_size)
           if(m_hold != HOLD_DATA)
           {
             m_hold = HOLD_HELD;
-            if (m_event.event == BD_EVENT_PLAYITEM && result > 0)
+            if (m_event.event == BD_EVENT_PLAYITEM && result > 0 && !m_hasMVCExtension)
             {
               HoldClipStart(buf, result);
               return 0;
@@ -820,9 +821,13 @@ int CDVDInputStreamBluray::Read(uint8_t* buf, int buf_size)
         switch (m_event.event)
         {
           case BD_EVENT_PLAYITEM:
-            m_hold = HOLD_HELD;
-            HoldClipStart(buf, result);
-            return 0;
+            if (!m_hasMVCExtension)
+            {
+              m_hold = HOLD_HELD;
+              HoldClipStart(buf, result);
+              return 0;
+            }
+            [[fallthrough]];
           case BD_EVENT_SEEK:
           case BD_EVENT_TITLE:
           case BD_EVENT_ANGLE:
@@ -862,7 +867,7 @@ int CDVDInputStreamBluray::Read(uint8_t* buf, int buf_size)
       // take for the end of the title
     } while (result == 0 && m_readErrors > readErrors);
     // the read starts the new clip, which the demuxer being reset must not consume
-    if (discontinuity && result > 0 && m_player)
+    if (discontinuity && result > 0 && m_player && !m_hasMVCExtension)
     {
       HoldClipStart(buf, result);
       return 0;
@@ -1405,6 +1410,9 @@ bool CDVDInputStreamBluray::IsDefaultStream(int pid) const
 std::optional<CDVDInputStreamBluray::ClipTime> CDVDInputStreamBluray::GetClipTime(
     uint64_t readPos) const
 {
+  if (m_hasMVCExtension)
+    return {};
+
   const auto it = std::ranges::upper_bound(m_clipSpans, readPos, {}, &ClipSpan::readPos);
   if (it == m_clipSpans.begin())
     return {};
@@ -1601,6 +1609,7 @@ bool CDVDInputStreamBluray::ProcessItem(int playitem)
           CLog::Log(LOGDEBUG, "CDVDInputStreamBluray - Enabling BD3D MVC demuxing");
           CLog::Log(LOGDEBUG, "CDVDInputStreamBluray - MVC_Base_view_R_flag: {}", m_titleInfo->mvc_base_view_r_flag);
           m_bMVCPlayback = true;
+          m_hasMVCExtension = true;
           m_nMVCSubPathIndex = i;
           m_bFlipEyes = m_titleInfo->mvc_base_view_r_flag != 0;
           break;
