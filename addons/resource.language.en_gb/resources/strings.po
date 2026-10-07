@@ -8968,25 +8968,45 @@ msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14310"
-msgid "Tone map SDR to Dolby Vision"
+msgid "Tone map Dolby Vision/HDR to SDR"
 msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14311"
-msgid "Intended for Dolby Vision enabled displays. SDR content will be tone mapped by Dolby Vision VS-Engine."
+msgid "Intended for Dolby Vision enabled displays. Dolby Vision/HDR content will be tone mapped by Dolby Vision VS-Engine."
 msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14312"
-msgid "Tone map HDR to Dolby Vision"
+msgid "Tone map Dolby Vision to HDR"
 msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14313"
+msgid "Intended for Dolby Vision enabled displays. Dolby Vision content will be tone mapped by Dolby Vision VS-Engine."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14314"
+msgid "Tone map SDR to Dolby Vision"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14315"
+msgid "Intended for Dolby Vision enabled displays. SDR content will be tone mapped by Dolby Vision VS-Engine."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14316"
+msgid "Tone map HDR to Dolby Vision"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#14317"
 msgid "Intended for Dolby Vision enabled displays. HDR content will be tone mapped by Dolby Vision VS-Engine."
 msgstr ""
 
-#empty strings from id 14305 to 15010
+#empty strings from id 14318 to 15010
 
 #: system/settings/settings.xml
 msgctxt "#14400"
@@ -25447,7 +25467,7 @@ msgid "{0} or {1}"
 msgstr ""
 
 #. List formatting: pattern used to join the already-combined partial list to the final item in a list of three or more items, e.g. "A, B" + "C" -> "A, B, or C"
-#. Note: the "or"-type list uses only TWO and END patterns; the START and MIDDLE joins for lists of three or more still use the AND-type comma pattern 
+#. Note: the "or"-type list uses only TWO and END patterns; the START and MIDDLE joins for lists of three or more still use the AND-type comma pattern
 #. (STR_LIST_AND_START / STR_LIST_AND_MIDDLE), with only the very last join switching to "or"
 #. STR_LIST_OR_END
 #: xbmc/language/i18n/ListFormatter.h
