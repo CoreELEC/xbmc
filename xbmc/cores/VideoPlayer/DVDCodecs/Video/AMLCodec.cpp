@@ -3409,6 +3409,19 @@ void CAMLCodec::SetVideoRect(const CRect &SrcRect, const CRect &DestRect)
   // do not do anything stupid here.
   bool update = false;
 
+  // Full-resolution packed 3D.
+  //
+  // Reuse Kodi's existing stereoscopic detection.  Do not parse filenames
+  // here: Kodi has already normalised the source to left_right/top_bottom.
+  const std::string full3dStereoMode = m_hints.stereo_mode;
+  const bool full3dSbs =
+      full3dStereoMode == "left_right" &&
+      m_hints.width == 3840 && m_hints.height == 1080;
+  const bool full3dTab =
+      full3dStereoMode == "top_bottom" &&
+      m_hints.width == 1920 && m_hints.height == 2160;
+  const bool full3d = full3dSbs || full3dTab;
+
   // video zoom adjustment.
   float zoom = m_processInfo.GetVideoSettings().m_CustomZoomAmount;
   if ((int)(zoom * 1000) != (int)(m_zoom * 1000))
@@ -3540,37 +3553,64 @@ void CAMLCodec::SetVideoRect(const CRect &SrcRect, const CRect &DestRect)
     // 3D frame packed output: get the screen height from the graphic context
     // (will work in fullscreen mode only)
     RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo();
-    dst_rect.y2 = info.iHeight * 2 + info.iBlanking;
+
+    if (full3d)
+    {
+      // A packed Full-SBS/TAB frame describes two complete 1920x1080 eyes,
+      // not a 32:9 or 8:9 display picture.  Use the complete HDMI
+      // frame-packed destination: 1080 + 45 blanking + 1080 = 2205.
+      dst_rect.x1 = 0;
+      dst_rect.y1 = 0;
+      dst_rect.x2 = info.iWidth;
+      dst_rect.y2 = info.iHeight * 2 + info.iBlanking;
+    }
+    else
+      dst_rect.y2 = info.iHeight * 2 + info.iBlanking;
   }
 
   if (static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_3d())
   {
     int mvc_view_mode = 3;
-    switch (am_private->video_format)
+
+    if (full3d && m_guiStereoMode == RenderStereoMode::HARDWAREBASED)
     {
-      case VFORMAT_H264MVC:
-        {
-          mvc_view_mode = m_processInfo.GetVideoStereoMode() == "block_lr" ? 3 : 2;
-          switch (m_guiStereoMode)
+      const int full3dMode = full3dSbs ? 0x05000001 : 0x06000001;
+
+      CLog::Log(LOGINFO,
+                "CAMLCodec: Full3D via Kodi stereo detection: mode={}, "
+                "source={}x{}, process_3d_type=0x{:x}",
+                full3dStereoMode, m_hints.width, m_hints.height, full3dMode);
+
+      aml_set_3d_video_mode(full3dMode, true, mvc_view_mode);
+    }
+    else
+    {
+      switch (am_private->video_format)
+      {
+        case VFORMAT_H264MVC:
           {
-            case RenderStereoMode::HARDWAREBASED:
-              aml_set_3d_video_mode(MODE_3D_ENABLE | MODE_3D_FA, true, mvc_view_mode);
-              break;
-            case RenderStereoMode::SPLIT_VERTICAL:
-              aml_set_3d_video_mode(MODE_3D_OUT_LR | MODE_3D_FA | MODE_3D_ENABLE, false, mvc_view_mode);
-              break;
-            case RenderStereoMode::SPLIT_HORIZONTAL:
-              aml_set_3d_video_mode(MODE_3D_OUT_TB | MODE_3D_FA | MODE_3D_ENABLE, false, mvc_view_mode);
-              break;
-            default:
-              aml_set_3d_video_mode(MODE_3D_TO_2D_R | MODE_3D_FA | MODE_3D_ENABLE, false, mvc_view_mode);
-              break;
+            mvc_view_mode = m_processInfo.GetVideoStereoMode() == "block_lr" ? 3 : 2;
+            switch (m_guiStereoMode)
+            {
+              case RenderStereoMode::HARDWAREBASED:
+                aml_set_3d_video_mode(MODE_3D_ENABLE | MODE_3D_FA, true, mvc_view_mode);
+                break;
+              case RenderStereoMode::SPLIT_VERTICAL:
+                aml_set_3d_video_mode(MODE_3D_OUT_LR | MODE_3D_FA | MODE_3D_ENABLE, false, mvc_view_mode);
+                break;
+              case RenderStereoMode::SPLIT_HORIZONTAL:
+                aml_set_3d_video_mode(MODE_3D_OUT_TB | MODE_3D_FA | MODE_3D_ENABLE, false, mvc_view_mode);
+                break;
+              default:
+                aml_set_3d_video_mode(MODE_3D_TO_2D_R | MODE_3D_FA | MODE_3D_ENABLE, false, mvc_view_mode);
+                break;
+            }
+            break;
           }
+        default:
+          aml_set_3d_video_mode(MODE_3D_DISABLE, false, mvc_view_mode);
           break;
-        }
-      default:
-        aml_set_3d_video_mode(MODE_3D_DISABLE, false, mvc_view_mode);
-        break;
+      }
     }
   }
 
