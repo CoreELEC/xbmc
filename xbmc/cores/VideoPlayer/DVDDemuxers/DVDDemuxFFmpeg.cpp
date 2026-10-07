@@ -2181,15 +2181,23 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
                       st->colorTransferCharacteristic == AVCOL_TRC_ARIB_STD_B67))
               st->colorSpace = AVCOL_SPC_BT2020_NCL;
 
-            if (dv_by_vs_engine)
+            if (dv_by_vs_engine ||
+                aml_convert_to_hdr_by_vs_engine(st->hdr_type))
             {
               if (st->hdr_type == StreamHdrType::HDR_TYPE_NONE)
               {
                 st->colorPrimaries = AVCOL_PRI_BT2020;
                 st->colorSpace = AVCOL_SPC_BT2020_NCL;
                 st->colorTransferCharacteristic = AVCOL_TRC_SMPTE2084;
-                st->colorRange = AVCOL_RANGE_JPEG;
+                st->colorRange = dv_by_vs_engine ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
               }
+            }
+            else if (aml_convert_to_sdr_by_vs_engine(st->hdr_type))
+            {
+              st->colorPrimaries = AVCOL_PRI_BT709;
+              st->colorSpace = AVCOL_SPC_BT709;
+              st->colorTransferCharacteristic = AVCOL_TRC_BT709;
+              st->colorRange = AVCOL_RANGE_MPEG;
             }
           }
           else if (aml_convert_to_hdr(st->hdr_type))
@@ -2199,7 +2207,8 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
             st->colorTransferCharacteristic = AVCOL_TRC_SMPTE2084;
             st->colorRange = AVCOL_RANGE_MPEG;
           }
-          else if (aml_convert_to_sdr(st->hdr_type))
+          else if (aml_convert_to_sdr(st->hdr_type) ||
+                   aml_convert_to_sdr_by_vs_engine(st->hdr_type))
           {
             st->colorPrimaries = AVCOL_PRI_BT709;
             st->colorSpace = AVCOL_SPC_BT709;
