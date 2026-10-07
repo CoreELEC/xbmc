@@ -10,6 +10,7 @@ set(SOURCES DemuxMultiSource.cpp
             DVDDemuxCDDA.cpp
             DVDDemuxClient.cpp
             DVDDemuxFFmpeg.cpp
+            DemuxDualLayer.cpp
             DemuxStreamSSIF.cpp
             DemuxMVC.cpp
             DVDDemuxUtils.cpp
@@ -31,6 +32,7 @@ set(HEADERS DemuxMultiSource.h
             DVDDemuxCDDA.h
             DVDDemuxClient.h
             DVDDemuxFFmpeg.h
+            DemuxDualLayer.h
             DemuxStreamSSIF.h
             DemuxMVC.h
             DVDDemuxUtils.h
