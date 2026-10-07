@@ -14,6 +14,7 @@
 #include "DVDVideoCodecAmlogic.h"
 #include "cores/VideoPlayer/Interface/TimingConstants.h"
 #include "DVDStreamInfo.h"
+#include "cores/VideoPlayer/DVDDemuxers/DemuxDualLayer.h"
 #include "AMLCodec.h"
 #include "ServiceBroker.h"
 #include "utils/AMLUtils.h"
@@ -548,7 +549,16 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
 
     if (m_bitstream)
     {
-      if (packet.isDualStream && aml_dolby_vision_enabled())
+      if (packet.elSize > 0 && aml_dolby_vision_enabled())
+      {
+        uint8_t* elData = CDemuxDualLayer::GetEnhancementLayer(packet);
+        m_pendingMeta = m_streamMeta;
+        if (!m_bitstream->Convert(pData, iSize, elData, packet.elSize))
+          return true;
+        AMLLatchHevcDoviRpu(elData, packet.elSize, m_nalLengthSize, m_pendingMeta);
+        AMLLatchHevcSei(pData, iSize, m_nalLengthSize, m_pendingMeta);
+      }
+      else if (packet.isDualStream && aml_dolby_vision_enabled())
       {
         CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: {} package with dts: {:.3f}, pts: {:.3f} and size {} arrived, list {} empty", __FUNCTION__,
           packet.isELPackage ? "EL" : "BL", packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, iSize, m_packages.empty() ? "is" : "is not");
