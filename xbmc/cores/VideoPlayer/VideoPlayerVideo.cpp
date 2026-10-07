@@ -612,7 +612,7 @@ void CVideoPlayerVideo::Process()
             m_packets.pop_front();
         }
 
-        m_videoStats.AddSampleBytes(pPacket->iSize);
+        m_videoStats.AddSampleBytes(pPacket->iSize + pPacket->elSize);
         UpdatePlayerInfo();
 
         if (ProcessDecoderOutput(frametime, pts))
