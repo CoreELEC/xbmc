@@ -4041,6 +4041,8 @@
           <control type="toggle" />
           <dependencies>
             <dependency type="enable" setting="coreelec.amlogic.hdr2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2hdr" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.sdr2dv" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.hdr2dv" operator="is">false</dependency>
           </dependencies>
@@ -4051,27 +4053,59 @@
           <control type="toggle" />
           <dependencies>
             <dependency type="enable" setting="coreelec.amlogic.sdr2hdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2hdr" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.sdr2dv" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.hdr2dv" operator="is">false</dependency>
           </dependencies>
         </setting>
-        <setting id="coreelec.amlogic.sdr2dv" type="boolean" label="14310" help="14311">
+        <setting id="coreelec.amlogic.dv2sdr" type="boolean" label="14310" help="14311">
           <requirement>HAVE_AMCODEC</requirement>
           <default>false</default>
           <control type="toggle" />
           <dependencies>
             <dependency type="enable" setting="coreelec.amlogic.sdr2hdr" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.hdr2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2hdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.sdr2dv" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr2dv" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.disabledolbyvision" operator="is">false</dependency>
           </dependencies>
         </setting>
-        <setting id="coreelec.amlogic.hdr2dv" type="boolean" label="14312" help="14313">
+        <setting id="coreelec.amlogic.dv2hdr" type="boolean" label="14312" help="14313">
           <requirement>HAVE_AMCODEC</requirement>
           <default>false</default>
           <control type="toggle" />
           <dependencies>
             <dependency type="enable" setting="coreelec.amlogic.sdr2hdr" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.hdr2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.sdr2dv" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr2dv" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.disabledolbyvision" operator="is">false</dependency>
+          </dependencies>
+        </setting>
+        <setting id="coreelec.amlogic.sdr2dv" type="boolean" label="14314" help="14315">
+          <requirement>HAVE_AMCODEC</requirement>
+          <default>false</default>
+          <control type="toggle" />
+          <dependencies>
+            <dependency type="enable" setting="coreelec.amlogic.sdr2hdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2hdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.disabledolbyvision" operator="is">false</dependency>
+          </dependencies>
+        </setting>
+        <setting id="coreelec.amlogic.hdr2dv" type="boolean" label="14316" help="14317">
+          <requirement>HAVE_AMCODEC</requirement>
+          <default>false</default>
+          <control type="toggle" />
+          <dependencies>
+            <dependency type="enable" setting="coreelec.amlogic.sdr2hdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.hdr2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2sdr" operator="is">false</dependency>
+            <dependency type="enable" setting="coreelec.amlogic.dv2hdr" operator="is">false</dependency>
             <dependency type="enable" setting="coreelec.amlogic.disabledolbyvision" operator="is">false</dependency>
           </dependencies>
         </setting>
