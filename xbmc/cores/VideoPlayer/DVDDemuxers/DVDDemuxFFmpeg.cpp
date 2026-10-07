@@ -810,6 +810,7 @@ void CDVDDemuxFFmpeg::Flush()
 
   if (m_pSSIF)
     m_pSSIF->Flush();
+  m_dualLayer.Flush();
 }
 
 void CDVDDemuxFFmpeg::Abort()
@@ -1117,6 +1118,7 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
   // on some cases where the received packet is invalid we will need to return an empty packet (0 length) otherwise the main loop (in CVideoPlayer)
   // would consider this the end of stream and stop.
   bool bReturnEmpty = false;
+  int64_t dualLayerKey = AV_NOPTS_VALUE;
   {
     std::unique_lock lock(m_critSection); // open lock scope
     if (m_pFormatContext)
@@ -1235,6 +1237,7 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
               ConvertTimestamp(m_pkt.pkt.pts, stream->time_base.den, stream->time_base.num);
           pPacket->dts =
               ConvertTimestamp(m_pkt.pkt.dts, stream->time_base.den, stream->time_base.num);
+          dualLayerKey = m_pkt.pkt.pts != AV_NOPTS_VALUE ? m_pkt.pkt.pts : m_pkt.pkt.dts;
           pPacket->duration = DVD_SEC_TO_TIME((double)m_pkt.pkt.duration * stream->time_base.num /
                                               stream->time_base.den);
 
@@ -1342,7 +1345,9 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
     if (stream->type == StreamType::VIDEO)
     {
       pPacket->isDualStream = static_cast<CDemuxStreamVideo*>(stream)->isDualStream;
-      pPacket->isELPackage = static_cast<CDemuxStreamVideo*>(stream)->isELStream;
+      if (pPacket->isDualStream)
+        pPacket = m_dualLayer.AddPacket(pPacket, dualLayerKey,
+                                        *static_cast<CDemuxStreamVideo*>(stream), m_streams);
     }
   }
   return pPacket;
@@ -1350,7 +1355,13 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
 
 DemuxPacket* CDVDDemuxFFmpeg::Read()
 {
-  return ReadInternal(false);
+  DemuxPacket* pPacket = ReadInternal(false);
+  while (pPacket && CDemuxDualLayer::IsHold(*pPacket))
+  {
+    CDVDDemuxUtils::FreeDemuxPacket(pPacket);
+    pPacket = ReadInternal(false);
+  }
+  return pPacket;
 }
 
 bool CDVDDemuxFFmpeg::SeekTime(double time, bool backwards, double* startpts)
@@ -1508,6 +1519,7 @@ bool CDVDDemuxFFmpeg::SeekTime(double time, bool backwards, double* startpts)
       }
       CDVDDemuxUtils::FreeDemuxPacket(pkt);
     }
+    m_dualLayer.Flush();
   }
 
   if (m_currentPts == DVD_NOPTS_VALUE)
@@ -1873,6 +1885,7 @@ void CDVDDemuxFFmpeg::DisposeStreams()
     delete it->second;
   m_streams.clear();
   m_parsers.clear();
+  m_dualLayer.Flush();
 }
 
 void CDVDDemuxFFmpeg::RemoveStream(CDemuxStream *stream)
