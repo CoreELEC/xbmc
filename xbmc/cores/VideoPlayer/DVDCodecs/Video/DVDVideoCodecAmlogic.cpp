@@ -558,7 +558,7 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
         AMLLatchHevcDoviRpu(elData, packet.elSize, m_nalLengthSize, m_pendingMeta);
         AMLLatchHevcSei(pData, iSize, m_nalLengthSize, m_pendingMeta);
       }
-      else if (packet.isDualStream && aml_dolby_vision_enabled())
+      else if (packet.isDualStream && aml_dolby_vision_enabled() && packet.isELPackage)
       {
         CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: {} package with dts: {:.3f}, pts: {:.3f} and size {} arrived, list {} empty", __FUNCTION__,
           packet.isELPackage ? "EL" : "BL", packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, iSize, m_packages.empty() ? "is" : "is not");
