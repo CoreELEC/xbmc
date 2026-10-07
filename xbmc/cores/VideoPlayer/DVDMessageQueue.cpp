@@ -144,7 +144,7 @@ MsgQueueReturnCode CDVDMessageQueue::Put(const std::shared_ptr<CDVDMsg>& pMsg,
     DemuxPacket* packet = static_cast<CDVDMsgDemuxerPacket*>(pMsg.get())->GetPacket();
     if (packet)
     {
-      m_iDataSize += packet->iSize;
+      m_iDataSize += packet->iSize + packet->elSize;
       if (front)
         UpdateTimeFront();
       else
@@ -187,7 +187,7 @@ MsgQueueReturnCode CDVDMessageQueue::Get(std::shared_ptr<CDVDMsg>& pMsg,
             std::static_pointer_cast<CDVDMsgDemuxerPacket>(item.message)->GetPacket();
         if (packet)
         {
-          m_iDataSize -= packet->iSize;
+          m_iDataSize -= packet->iSize + packet->elSize;
         }
       }
 
