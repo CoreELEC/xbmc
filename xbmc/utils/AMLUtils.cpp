@@ -272,6 +272,33 @@ bool aml_convert_to_hdr(StreamHdrType hdrType)
   return ((convert_to_hdr && !!user_convert_to_hdr) == 1);
 }
 
+bool aml_convert_to_sdr_by_vs_engine(StreamHdrType hdrType)
+{
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  bool dv_user_enabled(!settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
+  bool user_convert_to_sdr = false;
+
+  if (hdrType != StreamHdrType::HDR_TYPE_NONE)
+    user_convert_to_sdr = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV2SDR);
+
+  return ((!!aml_support_dolby_vision() && !!user_convert_to_sdr && !!dv_user_enabled) == 1);
+}
+
+bool aml_convert_to_hdr_by_vs_engine(StreamHdrType hdrType)
+{
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  bool dv_user_enabled(!settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
+  bool user_convert_to_hdr = false;
+
+  if (hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)
+    user_convert_to_hdr = settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV2HDR);
+
+  bool convert_to_hdr = (!!aml_support_dolby_vision() &&
+                         CServiceBroker::GetWinSystem()->IsHDRDisplay());
+
+  return ((convert_to_hdr && !!user_convert_to_hdr && !!dv_user_enabled) == 1);
+}
+
 bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)
 {
   const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
