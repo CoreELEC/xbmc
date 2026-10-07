@@ -308,6 +308,8 @@ bool CWinSystemAmlogic::InitWindowSystem()
   if (!aml_support_dolby_vision())
   {
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE, false);
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV2SDR, false);
+    settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV2HDR, false);
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2DV, false);
     settings->SetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2DV, false);
     settings->SetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED, AML_DV_TV_LED);
@@ -470,6 +472,14 @@ void CWinSystemAmlogic::RefreshDisplayCapabilities()
   const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
 
   auto setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE);
+  if (setting)
+    setting->SetVisible(device_dv);
+
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV2SDR);
+  if (setting)
+    setting->SetVisible(device_dv);
+
+  setting = settings->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV2HDR);
   if (setting)
     setting->SetVisible(device_dv);
 
