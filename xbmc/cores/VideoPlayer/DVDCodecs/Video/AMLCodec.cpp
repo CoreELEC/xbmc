@@ -358,6 +358,8 @@ typedef struct hdr_buf {
 
 #define AMDV_OUTPUT_MODE_IPT         (unsigned int)(0)
 #define AMDV_OUTPUT_MODE_IPT_TUNNEL  (unsigned int)(1)
+#define AMDV_OUTPUT_MODE_HDR10       (unsigned int)(2)
+#define AMDV_OUTPUT_MODE_SDR8        (unsigned int)(4)
 #define AMDV_OUTPUT_MODE_BYPASS      (unsigned int)(5)
 
 #define FORCE_OUTPUT_DISABLED              (unsigned int)(0)
@@ -2336,16 +2338,25 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
   // enable Dolby Vision driver when 'dovi.ko' is available
   const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
   bool device_support_dv(aml_support_dolby_vision());
+  bool dv2sdr(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV2SDR));
+  bool dv2hdr(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV2HDR));
   bool display_support_dv(static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_dv());
   bool user_dv_disable(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
   bool dv_enable(device_support_dv && !user_dv_disable &&
-    hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && (display_support_dv || hints.dovi.dv_profile == 5));
+      ((hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && (display_support_dv || hints.dovi.dv_profile == 5)) ||
+      ((hints.hdrType != StreamHdrType::HDR_TYPE_NONE && dv2sdr) ||
+       (hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && dv2hdr))));
   CLog::Log(LOGINFO, "CAMLCodec::OpenDecoder Amlogic device {} support DV, DV is {} by user, display {} support DV, DV system is {}",
     device_support_dv ? "does" : "does not", user_dv_disable ? "disabled" : "enabled",
     display_support_dv ? "does" : "does not", dv_enable ? "enabled" : "disabled");
 
   auto* AmlDisplay =
       static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay();
+
+  // default enable HDR10+
+  auto hdr_cap = CServiceBroker::GetWinSystem()->GetDisplayHDRCapabilities();
+  if (hdr_cap.SupportsHDR10Plus())
+    AmlDisplay->aml_set_drmProperty("enable_hdr10plus", DRM_MODE_OBJECT_CRTC, 1);
 
   if (dv_enable)
   {
@@ -2361,15 +2372,20 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
       AmlDisplay->aml_set_drmProperty("dv_ll_policy", DRM_MODE_OBJECT_CRTC,
                                       DOLBY_VISION_LL_DISABLE);
 
-    // setup Dolby Vision VS-Engine for non DV media
-    if (hints.dovi.dv_profile == 0)
+    // setup Dolby Vision VS-Engine for non DV media or for tone map to SDR/HDR
+    if (hints.dovi.dv_profile == 0 || (dv2sdr || dv2hdr))
     {
+      unsigned int dv_mode = AMDV_OUTPUT_MODE_IPT_TUNNEL;
       AmlDisplay->aml_set_drmProperty("dv_policy", DRM_MODE_OBJECT_CRTC, AMDV_FORCE_OUTPUT_MODE);
-      if (settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED)
-        AmlDisplay->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC, AMDV_OUTPUT_MODE_IPT);
+      if (!dv2sdr && !dv2hdr)
+      {
+        if (settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_LED) == AML_DV_PLAYER_LED)
+          dv_mode = AMDV_OUTPUT_MODE_IPT;
+      }
       else
-        AmlDisplay->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC,
-                                        AMDV_OUTPUT_MODE_IPT_TUNNEL);
+        dv_mode = dv2hdr ? AMDV_OUTPUT_MODE_HDR10 : AMDV_OUTPUT_MODE_SDR8;
+
+      AmlDisplay->aml_set_drmProperty("dv_mode", DRM_MODE_OBJECT_CRTC, dv_mode);
     }
 
     AmlDisplay->aml_set_drmProperty("enable_hdr10plus", DRM_MODE_OBJECT_CRTC, 0);
