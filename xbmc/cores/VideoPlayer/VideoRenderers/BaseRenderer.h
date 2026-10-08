@@ -87,8 +87,8 @@ public:
   virtual void StopVsyncPresent() {}
   //! Blocks until the plane's next vsync, a wake or a liveness bound; false when stopped
   virtual bool WaitVsync() { return false; }
-  //! Hands the frame at `index` to the plane, from the vsync thread
-  virtual void PresentFrame(int index) {}
+  //! Hands the frame at `index` to the plane, from the vsync thread; false if no new picture
+  virtual bool PresentFrame(int index) { return false; }
   //! Makes the vsync thread run a step now instead of at the next vsync
   virtual void WakeVsyncPresent() {}
   // Render info, can be called before configure

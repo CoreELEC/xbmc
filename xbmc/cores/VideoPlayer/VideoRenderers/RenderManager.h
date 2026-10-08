@@ -277,4 +277,7 @@ protected:
   //! does not pick meanwhile
   bool m_switching{false};
   int m_guiPresentSource{-1};
+  //! Vsync thread, under m_presentlock: the frame on the video plane when a GUI flip made now
+  //! latches
+  int m_planeSource{-1};
 };

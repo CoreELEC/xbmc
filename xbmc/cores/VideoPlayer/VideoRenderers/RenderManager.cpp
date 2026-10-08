@@ -257,6 +257,7 @@ bool CRenderManager::Configure()
     m_presentsource = -1;
     m_presentsourcePast = -1;
     m_guiPresentSource = -1;
+    m_planeSource = -1;
     for (int i = 0; i < m_QueueSize; i++)
       m_free.push_back(i);
 
@@ -360,7 +361,7 @@ void CRenderManager::FrameMove()
 
     if (m_presenting)
     {
-      m_guiPresentSource = m_presentsource;
+      m_guiPresentSource = m_planeSource;
     }
     else
     {
@@ -447,6 +448,8 @@ void CRenderManager::PresentFromVsync()
   CheckEnableClockSync();
 
   std::unique_lock lock2(m_presentlock);
+  // by vsync RDMA a frame queued now goes live a vsync after a GUI flip made now
+  m_planeSource = m_presentsource;
   PrepareNextStep();
 
   // frames go back to the plane in the order it handed them out, so skipped ones go first
@@ -458,7 +461,9 @@ void CRenderManager::PresentFromVsync()
 
   if (m_presentstep == PRESENT_FRAME)
   {
-    m_pRenderer->PresentFrame(m_presentsource);
+    // no new picture, or nothing shown yet: pair at once
+    if (!m_pRenderer->PresentFrame(m_presentsource) || m_planeSource == -1)
+      m_planeSource = m_presentsource;
     m_presentstep = m_queued.empty() ? PRESENT_IDLE : PRESENT_READY;
   }
 
@@ -466,7 +471,8 @@ void CRenderManager::PresentFromVsync()
   // releases those of a free slot before it is reused
   for (auto it = m_discard.begin(); it != m_discard.end();)
   {
-    if (*it != m_guiPresentSource && (!m_pRenderer->NeedBuffer(*it) || !m_bRenderGUI))
+    if (*it != m_guiPresentSource && *it != m_planeSource &&
+        (!m_pRenderer->NeedBuffer(*it) || !m_bRenderGUI))
     {
       m_free.push_back(*it);
       it = m_discard.erase(it);
@@ -578,6 +584,7 @@ bool CRenderManager::Flush(bool wait, bool saveBuffers)
         m_presentsource = -1;
         m_presentsourcePast = -1;
         m_guiPresentSource = -1;
+        m_planeSource = -1;
         m_presentstep = PRESENT_IDLE;
         for (int i = 0; i < m_QueueSize; i++)
           m_free.push_back(i);

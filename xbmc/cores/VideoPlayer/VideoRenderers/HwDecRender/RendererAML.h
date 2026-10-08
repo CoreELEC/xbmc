@@ -44,7 +44,7 @@ public:
   virtual bool StartVsyncPresent() override;
   virtual void StopVsyncPresent() override;
   virtual bool WaitVsync() override;
-  virtual void PresentFrame(int index) override;
+  virtual bool PresentFrame(int index) override;
   virtual void WakeVsyncPresent() override;
 
   // Feature support

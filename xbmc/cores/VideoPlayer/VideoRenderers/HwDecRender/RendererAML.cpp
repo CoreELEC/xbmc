@@ -341,13 +341,13 @@ void CRendererAML::WakeVsyncPresent()
   CAMLCodec::RequestVsyncStep();
 }
 
-void CRendererAML::PresentFrame(int index)
+bool CRendererAML::PresentFrame(int index)
 {
   // the first frame after a reset is queued as a drop on live stream and never shows
   bool drop = false;
   std::shared_ptr<CAMLCodec> codec = QueueFrame(index, false, &drop);
   if (!codec)
-    return;
+    return false;
 
   // a vsync that fired during this step must not wake the next one: hold, never double.
   // A drop never shows, so it does not occupy the next vsync.
@@ -359,4 +359,5 @@ void CRendererAML::PresentFrame(int index)
 
   std::lock_guard<std::mutex> lock(m_pendingGeometryLock);
   m_pendingGeometry.swap(codec);
+  return true;
 }
