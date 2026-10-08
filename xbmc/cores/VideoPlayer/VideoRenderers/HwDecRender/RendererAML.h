@@ -66,6 +66,7 @@ private:
   } m_buffers[m_numRenderBuffers];
 
   uint64_t m_prevVPts;
+  std::weak_ptr<CAMLCodec> m_prevCodec;
   uint64_t m_hdrGuiOwner{0};
   bool m_bConfigured;
 
