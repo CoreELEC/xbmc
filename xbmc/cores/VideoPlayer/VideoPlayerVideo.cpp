@@ -827,7 +827,7 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(double &frametime, double &pts)
         CServiceBroker::GetRenderSystem() &&
         CServiceBroker::GetRenderSystem()->SupportsStereo(RenderStereoMode::HARDWAREBASED))
     {
-      CLog::Log(LOGINFO,
+      CLog::Log(LOGDEBUG,
                 "Full3D: selecting hardware stereo for {}x{} source, mode='{}'",
                 m_picture.iWidth, m_picture.iHeight, m_picture.stereoMode);
 
