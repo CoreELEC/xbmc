@@ -442,6 +442,7 @@ void CDVDInputStreamBluray::Close()
   m_readPos = 0;
   m_clipSpans.clear();
   m_hasMVCExtension = false;
+  m_clipStart.clear();
 
 #if defined(HAS_UDFREAD)
   // Released last, as the files opened from the volume are closed above
@@ -723,6 +724,19 @@ void CDVDInputStreamBluray::DisableExtention()
 int CDVDInputStreamBluray::Read(uint8_t* buf, int buf_size)
 {
   int result = 0;
+  if (!m_clipStart.empty())
+  {
+    if (m_clipStartHeld)
+      return 0;
+
+    result = std::min(buf_size, static_cast<int>(m_clipStart.size() - m_clipStartOffset));
+    std::copy_n(m_clipStart.data() + m_clipStartOffset, result, buf);
+    m_clipStartOffset += result;
+    m_readPos += result;
+    if (m_clipStartOffset == m_clipStart.size())
+      m_clipStart.clear();
+    return result;
+  }
   m_dispTimeBeforeRead = static_cast<int>((bd_tell_time(m_bd) / 90));
   if(m_navmode)
   {
@@ -779,8 +793,22 @@ int CDVDInputStreamBluray::Read(uint8_t* buf, int buf_size)
   else
   {
     result = bd_read(m_bd, buf, buf_size);
+    bool discontinuity = false;
     while (bd_get_event(m_bd, &m_event))
+    {
+      if (m_event.event == BD_EVENT_DISCONTINUITY)
+        discontinuity = true;
       ProcessEvent();
+    }
+    // the read starts the new clip, which the demuxer being reset must not consume
+    if (discontinuity && result > 0 && !m_hasMVCExtension)
+    {
+      m_clipStart.assign(buf, buf + result);
+      m_clipStartOffset = 0;
+      m_clipStartHeld = true;
+      CLog::Log(LOGDEBUG, "CDVDInputStreamBluray - holding {} bytes of the new clip", result);
+      return 0;
+    }
     if (result > 0)
       m_readPos += result;
   }
@@ -1038,6 +1066,7 @@ bool CDVDInputStreamBluray::PosTime(int ms)
   if(bd_seek_time(m_bd, ms * 90) < 0)
     return false;
 
+  m_clipStart.clear();
   EMPTY_QUEUE(m_clipQueue);
   while (bd_get_event(m_bd, &m_event))
     ProcessEvent();
@@ -1087,6 +1116,7 @@ bool CDVDInputStreamBluray::SeekChapter(int ch)
   if(m_titleInfo && bd_seek_chapter(m_bd, ch-1) < 0)
     return false;
 
+  m_clipStart.clear();
   EMPTY_QUEUE(m_clipQueue);
   while (bd_get_event(m_bd, &m_event))
     ProcessEvent();
