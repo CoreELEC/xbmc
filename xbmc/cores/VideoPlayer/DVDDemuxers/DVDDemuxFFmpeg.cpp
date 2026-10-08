@@ -397,6 +397,7 @@ bool CDVDDemuxFFmpeg::Open(const std::shared_ptr<CDVDInputStream>& pInput, bool 
 #ifdef HAVE_LIBBLURAY
     if (m_pInput->IsStreamType(DVDSTREAM_TYPE_BLURAY))
     {
+      std::static_pointer_cast<CDVDInputStreamBluray>(m_pInput)->ReleaseClipStart();
       m_blurayReadBase = std::static_pointer_cast<CDVDInputStreamBluray>(m_pInput)->GetReadPos();
       m_blurayReadPos.clear();
     }
@@ -1204,6 +1205,12 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
       }
       else if (m_pkt.result == AVERROR_EOF)
       {
+#ifdef HAVE_LIBBLURAY
+        // the input holds the next clip for the reset it queued, so this is not the end
+        if (m_pInput->IsStreamType(DVDSTREAM_TYPE_BLURAY) &&
+            static_cast<CDVDInputStreamBluray*>(m_pInput.get())->IsClipStartHeld())
+          bReturnEmpty = true;
+#endif
       }
       else if (m_pkt.result < 0)
       {
