@@ -13,6 +13,7 @@
 #include "DVDCodecs/Overlay/DVDOverlay.h"
 #include "DVDCodecs/Video/DVDVideoCodecFFmpeg.h"
 #include "ServiceBroker.h"
+#include "rendering/RenderSystem.h"
 #include "cores/VideoPlayer/Interface/DemuxPacket.h"
 #include "cores/VideoPlayer/Interface/TimingConstants.h"
 #include "settings/AdvancedSettings.h"
@@ -809,6 +810,31 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(double &frametime, double &pts)
       {
         m_picture.stereoMode = stereoMode;
       }
+    }
+
+    // Full-resolution packed SBS/TAB: use Kodi's existing hardware 3D path.
+    //
+    // AMLCodec keeps the original source hint/dimensions, so it can still
+    // distinguish Full-SBS from Full-TAB when selecting the driver mode.
+    const bool full3dSbs =
+        m_picture.iWidth == 3840 && m_picture.iHeight == 1080 &&
+        (m_picture.stereoMode == "left_right" || m_picture.stereoMode == "right_left");
+    const bool full3dTab =
+        m_picture.iWidth == 1920 && m_picture.iHeight == 2160 &&
+        (m_picture.stereoMode == "top_bottom" || m_picture.stereoMode == "bottom_top");
+
+    if ((full3dSbs || full3dTab) &&
+        CServiceBroker::GetRenderSystem() &&
+        CServiceBroker::GetRenderSystem()->SupportsStereo(RenderStereoMode::HARDWAREBASED))
+    {
+      CLog::Log(LOGINFO,
+                "Full3D: selecting hardware stereo for {}x{} source, mode='{}'",
+                m_picture.iWidth, m_picture.iHeight, m_picture.stereoMode);
+
+      if (m_picture.stereoMode == "left_right" || m_picture.stereoMode == "top_bottom")
+        m_picture.stereoMode = "block_lr";
+      else
+        m_picture.stereoMode = "block_rl";
     }
 
     // if frame has a pts (usually originating from demux packet), use that
