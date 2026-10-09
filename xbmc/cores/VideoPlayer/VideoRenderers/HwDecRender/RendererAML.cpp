@@ -247,6 +247,11 @@ std::shared_ptr<CAMLCodec> CRendererAML::QueueFrame(int index, bool setVideoRect
         *drop = dropFrame;
 
       amli->m_amlCodec->ReleaseFrame(amli->m_bufferIndex, dropFrame);
+      if (!dropFrame)
+      {
+        m_releasedToken = amli->m_metadataToken;
+        m_releasedMeta = amli->m_metadata;
+      }
       if (setVideoRect)
         amli->m_amlCodec->SetVideoRect(m_sourceRect, m_destRect);
       std::shared_ptr<CAMLCodec> codec = std::move(amli->m_amlCodec); //Mark frame as processed
@@ -274,7 +279,16 @@ void CRendererAML::RenderUpdate(int index, int index2, bool clear, unsigned int 
   }
 
   QueueFrame(index, true);
+  PublishReleasedFrame();
   CAMLCodec::PollFrame();
+}
+
+void CRendererAML::PublishReleasedFrame()
+{
+  if (!m_releasedMeta)
+    return;
+
+  CAMLFrameMetadataStore::GetInstance().Publish(m_releasedToken, std::move(m_releasedMeta));
 }
 
 bool CRendererAML::StartVsyncPresent()
@@ -303,6 +317,8 @@ bool CRendererAML::WaitVsync()
       case CAMLCodec::VsyncWake::VSYNC:
       case CAMLCodec::VsyncWake::TIMEOUT:
         m_lastWakeVsync = wake == CAMLCodec::VsyncWake::VSYNC;
+        // amvideo shows a released frame from the vsync after the release
+        PublishReleasedFrame();
         return true;
       case CAMLCodec::VsyncWake::STEP:
         // a requested step leaves the GUI pacing as it is
