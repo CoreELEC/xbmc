@@ -15,6 +15,7 @@
 #include <mutex>
 
 class CAMLCodec;
+struct AMLFrameMetadata;
 
 class CRendererAML : public CBaseRenderer
 {
@@ -53,6 +54,7 @@ public:
 private:
   void Reset();
   std::shared_ptr<CAMLCodec> QueueFrame(int index, bool setVideoRect, bool* drop = nullptr);
+  void PublishReleasedFrame();
 
   static const int m_numRenderBuffers = NUM_BUFFERS;
 
@@ -73,4 +75,7 @@ private:
   //! Codec of the frame last queued from the vsync thread, for the render loop to apply geometry
   std::mutex m_pendingGeometryLock;
   std::shared_ptr<CAMLCodec> m_pendingGeometry;
+  //! Frame last released to amvideo, whose metadata goes out when the frame is shown
+  uint32_t m_releasedToken{0};
+  std::shared_ptr<const AMLFrameMetadata> m_releasedMeta;
 };
