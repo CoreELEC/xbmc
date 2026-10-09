@@ -1186,6 +1186,9 @@ bool CDVDInputStreamBluray::PosTime(int ms)
 
   m_clipStart.clear();
   EMPTY_QUEUE(m_clipQueue);
+  // a held still belongs to the position the seek left
+  if (m_event.event != BD_EVENT_NONE && m_event.event != BD_EVENT_STILL_TIME)
+    ProcessEvent();
   while (bd_get_event(m_bd, &m_event))
     ProcessEvent();
   OpenClipSpan();
@@ -1236,6 +1239,9 @@ bool CDVDInputStreamBluray::SeekChapter(int ch)
 
   m_clipStart.clear();
   EMPTY_QUEUE(m_clipQueue);
+  // a held still belongs to the position the seek left
+  if (m_event.event != BD_EVENT_NONE && m_event.event != BD_EVENT_STILL_TIME)
+    ProcessEvent();
   while (bd_get_event(m_bd, &m_event))
     ProcessEvent();
   OpenClipSpan();
@@ -1458,6 +1464,9 @@ void CDVDInputStreamBluray::UserInput(bd_vk_key_e vk)
   }
   else
   {
+    // an event the input stream still holds for the player came first
+    if (m_event.event != BD_EVENT_NONE)
+      ProcessEvent();
     /* process all queued up events */
     while (bd_get_event(m_bd, &m_event))
       ProcessEvent();
