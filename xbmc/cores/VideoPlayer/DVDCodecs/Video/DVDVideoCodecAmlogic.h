@@ -32,13 +32,16 @@ class CAMLVideoBuffer : public CVideoBuffer
 {
 public:
   CAMLVideoBuffer(int id) : CVideoBuffer(id) {};
-  void Set(CDVDVideoCodecAmlogic *codec, std::shared_ptr<CAMLCodec> amlcodec, uint64_t omxPts, int amlDuration, uint32_t bufferIndex)
+  void Set(CDVDVideoCodecAmlogic *codec, std::shared_ptr<CAMLCodec> amlcodec, uint64_t omxPts, int amlDuration, uint32_t bufferIndex,
+           uint32_t metadataToken, AMLFrameMetadataPtr metadata)
   {
     m_codec = codec;
     m_amlCodec = amlcodec;
     m_omxPts = omxPts;
     m_amlDuration = amlDuration;
     m_bufferIndex = bufferIndex;
+    m_metadataToken = metadataToken;
+    m_metadata = std::move(metadata);
   }
 
   CDVDVideoCodecAmlogic* m_codec;
@@ -46,6 +49,8 @@ public:
   uint64_t m_omxPts;
   int m_amlDuration;
   uint32_t m_bufferIndex;
+  uint32_t m_metadataToken{0};
+  AMLFrameMetadataPtr m_metadata;
 };
 
 class CAMLVideoBufferPool : public IVideoBufferPool
@@ -84,8 +89,6 @@ public:
 
 protected:
   void            Close(void);
-  void            DrainMetadataToClock();
-  double          RenderDisplayLatency();
   void            FrameRateTracking(uint8_t *pData, int iSize, double dts, double pts);
   //void            RemoveInfo(CDVDAmlogicInfo* info);
 
@@ -114,13 +117,12 @@ private:
   std::list<DLDemuxPacket> m_packages;
 
   uint32_t m_metadataToken{0};
-  bool m_metaLeadLogged{false};
   bool m_stripHdr10Plus{false};
   bool m_dualLayer{false};
   int m_nalLengthSize{0};
-  double m_lastCommitPts{0.0};
   AMLFrameMetadata m_streamMeta;
   AMLFrameMetadata m_pendingMeta;
-  AMLFrameMetadata m_lastMeta;
+  AMLFrameMetadataPtr m_lastMeta;
+  AMLFrameMetadataPtr m_frameMeta;
   CAMLFrameMetadataSequencer m_metadataSequencer;
 };
