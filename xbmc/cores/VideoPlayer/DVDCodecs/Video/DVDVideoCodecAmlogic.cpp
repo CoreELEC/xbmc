@@ -10,7 +10,6 @@
 #include <math.h>
 
 #include "DVDCodecs/DVDFactoryCodec.h"
-#include "utils/MemUtils.h"
 #include "DVDVideoCodecAmlogic.h"
 #include "cores/VideoPlayer/Interface/TimingConstants.h"
 #include "DVDStreamInfo.h"
@@ -467,12 +466,6 @@ void CDVDVideoCodecAmlogic::Close(void)
 {
   CLog::Log(LOGDEBUG, "{}::{}", __MODULE_NAME__, __FUNCTION__);
 
-  while (!m_packages.empty())
-  {
-    KODI::MEMORY::AlignedFree(std::get<0>(m_packages.front()));
-    m_packages.pop_front();
-  }
-
   // a successor codec may already own the store, so Unregister only clears our own values
   if (m_metadataToken)
   {
@@ -511,7 +504,6 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
   bool doviIsFEL = false;
   bool IsHdr10Plus = false;
   int data_added = false;
-  bool dual_layer_converted = false;
 
   if (pData)
   {
@@ -557,60 +549,6 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
           return true;
         AMLLatchHevcDoviRpu(elData, packet.elSize, m_nalLengthSize, m_pendingMeta);
         AMLLatchHevcSei(pData, iSize, m_nalLengthSize, m_pendingMeta);
-      }
-      else if (packet.isDualStream && aml_dolby_vision_enabled() && packet.isELPackage)
-      {
-        CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: {} package with dts: {:.3f}, pts: {:.3f} and size {} arrived, list {} empty", __FUNCTION__,
-          packet.isELPackage ? "EL" : "BL", packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, iSize, m_packages.empty() ? "is" : "is not");
-
-        if (!m_packages.empty())
-        {
-          // convert bl and el package to single package
-          DLDemuxPacket dual_layer_packet = m_packages.front();
-          uint8_t *pDataBackup = std::get<0>(dual_layer_packet);
-          uint32_t iSizeBackup = std::get<1>(dual_layer_packet);
-          bool isELPackageBackup = std::get<2>(dual_layer_packet);
-
-          if (isELPackageBackup != packet.isELPackage)
-          {
-            if (!packet.isELPackage)
-            {
-              CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: found EL package with dts: {:.3f}, pts: {:.3f} and size {} in list", __FUNCTION__,
-                packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, iSizeBackup);
-              dual_layer_converted = m_bitstream->Convert(pData, iSize, pDataBackup, iSizeBackup);
-              if (dual_layer_converted)
-              {
-                m_pendingMeta = m_streamMeta;
-                AMLLatchHevcDoviRpu(pDataBackup, iSizeBackup, m_nalLengthSize, m_pendingMeta);
-                AMLLatchHevcSei(pData, iSize, m_nalLengthSize, m_pendingMeta);
-              }
-            }
-            else
-            {
-              CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: found BL package with dts: {:.3f}, pts: {:.3f} and size {} in list", __FUNCTION__,
-                packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, iSizeBackup);
-              dual_layer_converted = m_bitstream->Convert(pDataBackup, iSizeBackup, pData, iSize);
-              if (dual_layer_converted)
-              {
-                m_pendingMeta = m_streamMeta;
-                AMLLatchHevcDoviRpu(packet.pData, packet.iSize, m_nalLengthSize, m_pendingMeta);
-                AMLLatchHevcSei(pDataBackup, iSizeBackup, m_nalLengthSize, m_pendingMeta);
-              }
-            }
-          }
-        }
-
-        if (!dual_layer_converted)
-        {
-          // backup package and don't send to decoder yet
-          uint8_t *pDataBackup = static_cast<uint8_t*>(KODI::MEMORY::AlignedMalloc(packet.iSize + AV_INPUT_BUFFER_PADDING_SIZE, 16));
-          memcpy(pDataBackup, packet.pData, packet.iSize);
-          m_packages.push_back(std::make_tuple(pDataBackup, iSize, packet.isELPackage));
-          CLog::Log(LOGDEBUG, LOGVIDEO, "CDVDVideoCodecAmlogic::{}: did add {} package with dts: {:.3f}, pts: {:.3f} and size {} in list", __FUNCTION__,
-            packet.isELPackage ? "EL" : "BL", packet.dts/DVD_TIME_BASE, packet.pts/DVD_TIME_BASE, packet.iSize);
-
-          return true;
-        }
       }
       else
       {
@@ -711,29 +649,12 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
     m_pendingMeta = m_streamMeta;
   }
 
-  // pop package only from list if hardware decoder did accept the data
-  if (data_added && dual_layer_converted)
-  {
-    DLDemuxPacket dual_layer_packet= m_packages.front();
-    uint8_t *pDataBackup = std::get<0>(dual_layer_packet);
-    KODI::MEMORY::AlignedFree(pDataBackup);
-    m_packages.pop_front();
-  }
-
   return data_added;
 }
 
 void CDVDVideoCodecAmlogic::Reset(void)
 {
   m_Codec->Reset();
-
-  while (!m_packages.empty())
-  {
-    DLDemuxPacket dual_layer_packet= m_packages.front();
-    uint8_t *pDataBackup = std::get<0>(dual_layer_packet);
-    KODI::MEMORY::AlignedFree(pDataBackup);
-    m_packages.pop_front();
-  }
 
   m_mpeg2_sequence_pts = 0;
   m_has_keyframe = false;
