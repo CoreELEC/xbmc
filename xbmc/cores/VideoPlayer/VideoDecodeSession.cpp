@@ -115,7 +115,7 @@ bool SeekAndDecodePictureAt(CDVDDemux& demuxer,
 
     bytesLeft -= pPacket->iSize;
 
-    if (pPacket->iStreamId != videoStream || pPacket->isELPackage)
+    if (pPacket->iStreamId != videoStream)
     {
       // A read that returned nothing counts like a video packet, so that a stalled source ends too
       if (pPacket->iSize == 0)
