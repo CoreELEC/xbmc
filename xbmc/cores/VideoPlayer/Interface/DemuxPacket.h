@@ -27,7 +27,6 @@ extern "C"
       iSize = 0;
       iStreamId = -1;
       isDualStream = false;
-      isELPackage = false;
       elSize = 0;
       demuxerId = -1;
       iGroupId = -1;
@@ -51,8 +50,6 @@ extern "C"
     double m_ptsOffsetCorrection{0};
     //! @brief Indicate package is from a Dolby Vision dual stream source.
     bool isDualStream;
-    //! @brief Indicate package is from a Dolby Vision enhancement layer.
-    bool isELPackage;
     //! @brief Size of the Dolby Vision enhancement layer stored behind the padded data.
     int elSize;
     /// @brief The 3D MVC subtitle plane
