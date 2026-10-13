@@ -112,7 +112,7 @@ bool CDVDFileInfo::SeekAndDecodeFirstPicture(CDVDDemux& demuxer,
     if (!pPacket)
       break;
 
-    if (pPacket->iStreamId != videoStream || pPacket->isELPackage)
+    if (pPacket->iStreamId != videoStream)
     {
       CDVDDemuxUtils::FreeDemuxPacket(pPacket);
       continue;
