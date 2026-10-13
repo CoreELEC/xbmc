@@ -148,6 +148,19 @@ public:
    */
   bool IsDefaultStream(int pid) const;
 
+  /*!
+   * \brief Select a stream of the current play item in libbluray in navigation mode, so that the
+   *        disc program and later play items keep it.
+   * \param pid The packet identifier of the stream
+   * \param visible Whether the subtitle stream is shown
+   * \return True if the play item presents the stream, false otherwise or while an event is held
+   */
+  bool SetActiveAudioStream(int pid);
+  bool SetActiveSubtitleStream(int pid, bool visible);
+
+  //! show or hide the presentation graphic stream libbluray last reported, in navigation mode
+  void SetSubtitleVisible(bool visible);
+
   struct ClipTime
   {
     uint64_t inTime{0};
@@ -297,6 +310,7 @@ protected:
      * \return True if the clip carries the stream, false otherwise
      */
     bool GetClipStreamLanguage(int pid, std::string& language) const;
+    bool CanSelectStream() const;
     void OpenClipSpan();
 
     std::unique_ptr<CDVDInputStreamFile> m_pstream;
@@ -330,4 +344,5 @@ protected:
     bool m_clipStartHeld{false};
     uint64_t m_clipStartEnd{0};
     bool m_hasMVCExtension{false};
+    uint32_t m_pgStreamNumber{0};
 };
