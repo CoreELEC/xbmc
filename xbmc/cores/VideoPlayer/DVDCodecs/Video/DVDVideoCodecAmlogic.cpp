@@ -206,11 +206,6 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
         m_h264_sequence->ratio  = m_hints.aspect;
       }
 
-      if (m_hints.codec_tag == MKTAG('M', 'V', 'C', '1'))
-        m_pFormatName = "am-h264mvc";
-      else
-        m_pFormatName = "am-h264";
-
       // convert h264-avcC to h264-annex-b as h264-avcC
       // under streamers can have issues when seeking.
       if (m_hints.extradata && m_hints.extradata.GetData()[0] == 1)
@@ -232,6 +227,25 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
         m_bitparser = new CBitstreamParser();
         m_bitparser->Open();
       }
+
+      // MVC: the firmware corrupts the dependent view when frame_num wraps around,
+      // rewrite the Annex-B stream (header and packets) to 16 bit frame_num.
+      if (m_hints.codec_tag == MKTAG('A', 'M', 'V', 'C') ||
+          m_hints.codec_tag == MKTAG('M', 'V', 'C', '1'))
+      {
+        m_pFormatName = "am-h264mvc";
+        m_frameNumRewriter = std::make_unique<CMVCFrameNumRewriter>();
+        if (m_hints.extradata && m_frameNumRewriter->ProcessAnnexB(m_hints.extradata.GetData(),
+                                                                   m_hints.extradata.GetSize(),
+                                                                   m_frameNumBuffer))
+        {
+          m_hints.extradata = FFmpegExtraData(m_frameNumBuffer.size());
+          memcpy(m_hints.extradata.GetData(), m_frameNumBuffer.data(), m_frameNumBuffer.size());
+        }
+        CLog::Log(LOGDEBUG, "{}: MVC frame_num rewrite enabled", __MODULE_NAME__);
+      }
+      else
+        m_pFormatName = "am-h264";
 
       // if we have SD PAL content assume it is widescreen
       // correct aspect ratio will be detected later anyway
@@ -588,6 +602,20 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
       else
         m_has_keyframe = true;
     }
+
+    if (m_frameNumRewriter &&
+        m_frameNumRewriter->ProcessAnnexB(pData, iSize, m_frameNumBuffer))
+    {
+      if (m_frameNumBuffer.empty())
+      {
+        // leading picture after an inserted IDR, drop it
+        m_pendingMeta = m_streamMeta;
+        return true;
+      }
+      pData = m_frameNumBuffer.data();
+      iSize = static_cast<int>(m_frameNumBuffer.size());
+    }
+
     FrameRateTracking( pData, iSize, packet.dts, packet.pts);
 
     if (!m_opened)
@@ -658,6 +686,8 @@ void CDVDVideoCodecAmlogic::Reset(void)
 
   m_mpeg2_sequence_pts = 0;
   m_has_keyframe = false;
+  if (m_frameNumRewriter)
+    m_frameNumRewriter->ResetState();
   m_metadataSequencer.Reset();
   m_pendingMeta = m_streamMeta;
   if (m_bitstream)
