@@ -49,6 +49,7 @@ set(SOURCES ActorProtocol.cpp
             Mime.cpp
             MovingSpeed.cpp
             Mp4ChplReader.cpp
+            MVCFrameNumRewriter.cpp
             Observer.cpp
             POUtils.cpp
             PlayerUtils.cpp
@@ -157,6 +158,7 @@ set(HEADERS ActorProtocol.h
             Mime.h
             MovingSpeed.h
             Mp4ChplReader.h
+            MVCFrameNumRewriter.h
             Observer.h
             params_check_macros.h
             POUtils.h
