@@ -14,8 +14,11 @@
 #include "threads/CriticalSection.h"
 #include "cores/VideoPlayer/Buffers/VideoBuffer.h"
 #include "utils/BitstreamConverter.h"
+#include "utils/MVCFrameNumRewriter.h"
 
+#include <memory>
 #include <set>
+#include <vector>
 #include <atomic>
 
 class CAMLCodec;
@@ -108,6 +111,9 @@ protected:
 
   CBitstreamParser *m_bitparser;
   CBitstreamConverter *m_bitstream;
+  // MVC: avoid frame_num wrap-arounds in the MVC firmware
+  std::unique_ptr<CMVCFrameNumRewriter> m_frameNumRewriter;
+  std::vector<uint8_t> m_frameNumBuffer;
 private:
   std::shared_ptr<CAMLVideoBufferPool> m_videoBufferPool;
   static std::atomic<bool> m_InstanceGuard;
