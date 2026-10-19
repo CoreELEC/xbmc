@@ -100,7 +100,7 @@ public:
   void aml_set_drmProperty(std::string name, unsigned int obj_type, std::string value);
   int aml_get_drmDevice_modes_count(drmModeConnection *connection);
   std::string aml_get_drmDevice_preferred_mode();
-  bool aml_set_drmDevice_active(std::string mode, int fractional_rate,
+  bool aml_set_drmDevice_active(std::string mode,
     const RenderStereoMode stereo_mode, bool force_mode_switch, bool active);
   bool aml_get_drmDevice_connected() const { return m_connection == DRM_MODE_CONNECTED; }
   void FlipPage(uint32_t fb_id);
@@ -181,7 +181,6 @@ public:
   bool aml_set_drmDevice_active(bool active) const
     { return m_amlDRMUtils->aml_set_drmDevice_active(
       m_amlDRMUtils->aml_get_drmDevice_mode(),
-      m_amlDRMUtils->aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR),
       m_stereo_mode, true, active); }
   void SetInFenceFd(int fd) { m_amlDRMUtils->SetInFenceFd(fd); }
   int TakeOutFenceFd() const { return m_amlDRMUtils->TakeOutFenceFd(); }

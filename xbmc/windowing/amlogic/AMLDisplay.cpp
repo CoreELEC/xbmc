@@ -572,8 +572,7 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
     }
   }
 
-  int fractional_rate = (res.fRefreshRate == floor(res.fRefreshRate)) ? 0 : 1;
-  ret = aml_set_drmDevice_active(mode, fractional_rate, stereo_mode, _force_mode_switch, true);
+  ret = aml_set_drmDevice_active(mode, stereo_mode, _force_mode_switch, true);
 
   if (ret && _hotplug_mode_switch)
   {
@@ -872,7 +871,7 @@ std::string CAMLDRMUtils::aml_get_drmDevice_preferred_mode()
   return mode;
 }
 
-bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rate,
+bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode,
   const RenderStereoMode stereo_mode, bool force_mode_switch, bool active)
 {
   std::unique_lock<CCriticalSection> lock(m_drmSection);
@@ -921,7 +920,6 @@ bool CAMLDRMUtils::aml_set_drmDevice_active(std::string mode, int fractional_rat
     if (req)
     {
       set_drmProp(m_connector->connector_id, "CRTC_ID", DRM_MODE_OBJECT_CONNECTOR, m_crtc->crtc_id, req);
-      set_drmProp(m_connector->connector_id, "FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR, fractional_rate, req);
 
       if (drmModeCreatePropertyBlob(m_fd, drmDevicemode, sizeof(*drmDevicemode), &mode_blobid))
       {
@@ -1321,7 +1319,8 @@ bool CAMLDisplay::aml_get_native_resolution(RESOLUTION_INFO *res)
   std::string mode = m_amlDRMUtils->aml_get_drmDevice_mode();
   bool result = aml_mode_to_resolution(mode.c_str(), res);
 
-  if (m_amlDRMUtils->aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR) == 1)
+  if (m_amlDRMUtils->aml_get_drmProperty("FRAC_RATE_POLICY", DRM_MODE_OBJECT_CONNECTOR) == 1 &&
+      res->fRefreshRate == floor(res->fRefreshRate))
     res->fRefreshRate = FractionalRate(res->fRefreshRate);
 
   return result;
@@ -1363,6 +1362,20 @@ bool CAMLDisplay::aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolution
 
   std::vector<std::string> probe_str = StringUtils::Split(valstr, "\n");
 
+  // newer kernels list the 1000/1001 modes themselves, e.g. 1080p59hz
+  auto connectorHasMode = [this, &probe_str](const RESOLUTION_INFO& wanted)
+  {
+    RESOLUTION_INFO mode;
+    for (const auto& name : probe_str)
+    {
+      if (aml_mode_to_resolution(name.c_str(), &mode) &&
+          mode.iScreenWidth == wanted.iScreenWidth && mode.iScreenHeight == wanted.iScreenHeight &&
+          mode.dwFlags == wanted.dwFlags && mode.fRefreshRate == wanted.fRefreshRate)
+        return true;
+    }
+    return false;
+  };
+
   resolutions.clear();
   RESOLUTION_INFO res;
   for (std::vector<std::string>::const_iterator i = probe_str.begin(); i != probe_str.end(); ++i)
@@ -1384,6 +1397,9 @@ bool CAMLDisplay::aml_probe_resolutions(std::vector<RESOLUTION_INFO> &resolution
           case 30:
           case 60:
             res.fRefreshRate = FractionalRate(res.fRefreshRate);
+            // the 1000/1001 variant of a vesa mode (suffix V) is no cea mode
+            if (!StringUtils::EndsWith(res.strId, "V") && connectorHasMode(res))
+              break;
             res.strMode       = StringUtils::Format("{:d}x{:d} @ {:.2f}{} - Full Screen", res.iScreenWidth, res.iScreenHeight, res.fRefreshRate,
               res.dwFlags & D3DPRESENTFLAG_INTERLACED ? "i" : "");
             resolutions.push_back(res);
