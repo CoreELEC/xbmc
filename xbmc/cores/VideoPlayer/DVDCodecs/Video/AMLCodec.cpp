@@ -2481,9 +2481,9 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
       if (m_hints.ptsinvalid)
         am_private->gcodec.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
       if (am_private->gcodec.dec_mode == STREAM_TYPE_STREAM)
-        CSysfsPath("/sys/module/amvdec_h265/parameters/nal_skip_policy", 1);
+        CSysfsPath("/sys/module/amvdec_h265/parameters/params", "nal_skip_policy=1");
       else
-        CSysfsPath("/sys/module/amvdec_h265/parameters/nal_skip_policy", 2);
+        CSysfsPath("/sys/module/amvdec_h265/parameters/params", "nal_skip_policy=2");
       break;
     case VFORMAT_H266:
       am_private->gcodec.format = VIDEO_DEC_FORMAT_H266;
@@ -2502,9 +2502,9 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
       if (aml_get_cpufamily_id() >= AML_S5)
       {
         if (hints.width < 7680 || hints.height < 4320)
-          CSysfsPath("/sys/module/amvdec_av1_fb/parameters/front_back_mode", 0);
+          CSysfsPath("/sys/module/amvdec_av1_fb/parameters/params", "front_back_mode=0");
         else
-          CSysfsPath("/sys/module/amvdec_av1_fb/parameters/front_back_mode", 1);
+          CSysfsPath("/sys/module/amvdec_av1_fb/parameters/params", "front_back_mode=1");
       }
       break;
   }
@@ -2832,13 +2832,13 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
 
     if (streambuffer)
     {
-      CSysfsPath pre_decode_buf_level{"/sys/module/amvdec_h265/parameters/pre_decode_buf_level"};
-      if (pre_decode_buf_level.Exists())
+      CSysfsPath params{"/sys/module/amvdec_h265/parameters/params"};
+      if (params.Exists())
       {
+        uint32_t level = 0x1000;
         if (!m_buffer_level_ready)
-          pre_decode_buf_level.Set(static_cast<uint32_t>(size / m_minimum_buffer_level));
-        else
-          pre_decode_buf_level.Set(static_cast<uint32_t>(0x1000));
+          level = static_cast<uint32_t>(size / m_minimum_buffer_level);
+        params.Set("pre_decode_buf_level=" + std::to_string(level));
       }
     }
   }
