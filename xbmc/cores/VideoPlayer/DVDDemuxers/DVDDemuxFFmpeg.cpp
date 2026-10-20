@@ -787,6 +787,8 @@ void CDVDDemuxFFmpeg::Dispose()
   m_speed = DVD_PLAYSPEED_NORMAL;
 
   DisposeStreams();
+  // held layers outlive a stream rebuild, which the first EL extradata triggers mid pair
+  m_dualLayer.Flush();
 
   m_pInput = NULL;
 }
@@ -1953,7 +1955,6 @@ void CDVDDemuxFFmpeg::DisposeStreams()
     delete it->second;
   m_streams.clear();
   m_parsers.clear();
-  m_dualLayer.Flush();
 }
 
 void CDVDDemuxFFmpeg::RemoveStream(CDemuxStream *stream)
