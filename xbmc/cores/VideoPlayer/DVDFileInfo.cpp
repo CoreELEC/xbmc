@@ -488,7 +488,7 @@ bool CDVDFileInfo::CanExtract(const CFileItem& fileItem)
  * \brief Open the item pointed to by pItem and extract streamdetails
  * \return true if the stream details have changed
  */
-bool CDVDFileInfo::GetFileStreamDetails(CFileItem *pItem)
+bool CDVDFileInfo::GetFileStreamDetails(CFileItem* pItem, const std::function<bool()>& abort)
 {
   if (!pItem)
     return false;
@@ -522,8 +522,14 @@ bool CDVDFileInfo::GetFileStreamDetails(CFileItem *pItem)
   CDVDDemux* pDemuxer = CDVDFactoryDemuxer::CreateDemuxer(pInputStream, true);
   if (pDemuxer)
   {
-    bool retVal = DemuxerToStreamDetails(
-        pInputStream, pDemuxer, pItem->GetVideoInfoTag()->m_streamDetails, strFileNameAndPath);
+    bool retVal =
+        DemuxerToStreamDetails(pInputStream, pDemuxer, pItem->GetVideoInfoTag()->m_streamDetails,
+                               strFileNameAndPath, abort);
+    if (abort && abort())
+    {
+      delete pDemuxer;
+      return false;
+    }
 
     if (!pInputStream->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER))
       ProcessExternalSubtitles(pItem);
@@ -557,7 +563,8 @@ bool CDVDFileInfo::DemuxerToStreamDetails(const std::shared_ptr<CDVDInputStream>
 
 static bool GetDetailsFromFrame(CDemuxStreamVideo* stream,
                                 CDVDDemux* demuxer,
-                                CStreamDetailVideo& vDetail)
+                                CStreamDetailVideo& vDetail,
+                                const std::function<bool()>& abort)
 {
   std::unique_ptr<CProcessInfo> processInfo(CProcessInfo::CreateInstance());
   std::vector<AVPixelFormat> pixFmts;
@@ -596,6 +603,9 @@ static bool GetDetailsFromFrame(CDemuxStreamVideo* stream,
 
   do
   {
+    if (abort && abort())
+      return false;
+
     DemuxPacket* packet = demuxer->Read();
 
     if (!packet)
@@ -643,7 +653,8 @@ static bool GetDetailsFromFrame(CDemuxStreamVideo* stream,
 bool CDVDFileInfo::DemuxerToStreamDetails(const std::shared_ptr<CDVDInputStream>& pInputStream,
                                           CDVDDemux* pDemux,
                                           CStreamDetails& details,
-                                          const std::string& path)
+                                          const std::string& path,
+                                          const std::function<bool()>& abort)
 {
   bool retVal = false;
   details.Reset();
@@ -685,7 +696,7 @@ bool CDVDFileInfo::DemuxerToStreamDetails(const std::shared_ptr<CDVDInputStream>
           vstream->hdr_type != StreamHdrType::HDR_TYPE_HLG && vstream->dovi.dv_profile != 5 &&
           vstream->dovi.dv_profile <= 10 && p->m_strHdrTypeAlt != "hlg")
       {
-        if (!GetDetailsFromFrame(vstream, pDemux, *p))
+        if (!GetDetailsFromFrame(vstream, pDemux, *p, abort) && (!abort || !abort()))
           CLog::LogF(LOGERROR, "Failed to get HDR details from frame");
       }
       p->SetSource(CStreamDetail::MEDIA);
