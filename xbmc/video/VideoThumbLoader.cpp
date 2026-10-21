@@ -377,7 +377,7 @@ bool CVideoThumbLoader::LoadItemLookup(CFileItem* pItem)
       // No tag or no details set, so extract them
       CLog::LogF(LOGDEBUG, "trying to extract filestream details from video file {}",
                  CURL::GetRedacted(pItem->GetPath()));
-      if (CDVDFileInfo::GetFileStreamDetails(pItem))
+      if (CDVDFileInfo::GetFileStreamDetails(pItem, [this] { return m_bIsLoading && m_bStop; }))
       {
         CVideoInfoTag* info = pItem->GetVideoInfoTag();
         m_videoDatabase->BeginTransaction();
