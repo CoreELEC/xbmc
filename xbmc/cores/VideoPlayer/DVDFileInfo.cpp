@@ -15,12 +15,15 @@
 #include "ServiceBroker.h"
 #include "filesystem/StackDirectory.h"
 #include "guilib/Texture.h"
+#include "messaging/ApplicationMessenger.h"
 #include "network/NetworkFileItemClassify.h"
 #include "playlists/PlayListFileItemClassify.h"
 #include "pvr/utils/PVRStreamUtils.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/SettingsComponent.h"
+#include "threads/Condition.h"
 #include "threads/CriticalSection.h"
+#include "utils/MemUtils.h"
 #include "utils/URIUtils.h"
 #include "utils/log.h"
 #include "video/VideoFileItemClassify.h"
@@ -39,8 +42,10 @@
 #include "Util.h"
 #include "filesystem/File.h"
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 
 extern "C" {
@@ -140,6 +145,57 @@ bool CDVDFileInfo::SeekAndDecodeFirstPicture(CDVDDemux& demuxer,
 
 namespace
 {
+// a job holds a 64MB read cache for network files and, for 4K, about 90MB of decoded pictures;
+// the reserve is left for playback and the GUI
+constexpr uint64_t DECODE_JOB_RESERVE = 100 * 1024 * 1024;
+constexpr uint64_t DECODE_JOB_BUDGET = 150 * 1024 * 1024;
+constexpr auto DECODE_JOB_RECHECK = std::chrono::milliseconds(500);
+
+CCriticalSection decodeJobSection;
+XbmcThreads::ConditionVariable decodeJobCondition;
+int decodeJobs = 0;
+
+// admission of one job that opens a file and software decodes from it; with `wait` it waits
+// while the memory left for such jobs is below a reserve plus a budget per running job, the
+// first job and the GUI thread always start; without `wait` the job is only counted
+class CVideoDecodeJob
+{
+public:
+  explicit CVideoDecodeJob(bool wait = true)
+  {
+    std::unique_lock lock(decodeJobSection);
+
+    const auto messenger = CServiceBroker::GetAppMessenger();
+    if (wait && (!messenger || !messenger->IsProcessThread()))
+    {
+      KODI::MEMORY::MemoryStatus status{};
+      while (decodeJobs > 0)
+      {
+        // free CMA is not counted, as Linux kernels can keep tasks with a positive nice value
+        // out of it and the job threads run below normal priority
+        KODI::MEMORY::GetMemoryStatus(&status);
+        const uint64_t available =
+            status.availPhys > status.availCma ? status.availPhys - status.availCma : 0;
+        if (available >= DECODE_JOB_RESERVE + DECODE_JOB_BUDGET * (decodeJobs + 1))
+          break;
+
+        decodeJobCondition.wait(lock, DECODE_JOB_RECHECK);
+      }
+    }
+    decodeJobs++;
+  }
+
+  ~CVideoDecodeJob()
+  {
+    std::unique_lock lock(decodeJobSection);
+    decodeJobs--;
+    decodeJobCondition.notifyAll();
+  }
+
+  CVideoDecodeJob(const CVideoDecodeJob&) = delete;
+  CVideoDecodeJob& operator=(const CVideoDecodeJob&) = delete;
+};
+
 // kept across thumbnails, so files with the same format and mastering metadata reuse the
 // tone mapping graph and its 3D LUT; one tone mapping runs at a time
 CCriticalSection thumbSwsSection;
@@ -296,6 +352,7 @@ std::unique_ptr<CTexture> CDVDFileInfo::ExtractThumbToTexture(const CFileItem& f
   const std::string redactPath = CURL::GetRedacted(fileItem.GetPath());
   auto start = std::chrono::steady_clock::now();
 
+  CVideoDecodeJob decodeJob;
   CFileItem item(fileItem);
   item.SetMimeTypeForInternetFile();
   auto pInputStream = CDVDFactoryInputStream::CreateInputStream(NULL, item);
@@ -448,6 +505,7 @@ bool CDVDFileInfo::GetFileStreamDetails(CFileItem *pItem)
 
   CFileItem item(playablePath, false);
   item.SetMimeTypeForInternetFile();
+  CVideoDecodeJob decodeJob(false);
   auto pInputStream = CDVDFactoryInputStream::CreateInputStream(NULL, item);
   if (!pInputStream)
     return false;
