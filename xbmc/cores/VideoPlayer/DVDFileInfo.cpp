@@ -350,6 +350,7 @@ bool CDVDFileInfo::GetFileStreamDetails(CFileItem* pItem,
 
   CFileItem item(playablePath, false);
   item.SetMimeTypeForInternetFile();
+  CVideoDecodeJob decodeJob(false);
   auto pInputStream = CDVDFactoryInputStream::CreateInputStream(NULL, item, false, fileFlags);
   if (!pInputStream)
     return false;
