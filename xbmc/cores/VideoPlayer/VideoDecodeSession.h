@@ -21,9 +21,29 @@ class CFileItem;
 class CProcessInfo;
 struct VideoPicture;
 
+//! \brief Admission of one job that opens a file and software decodes from it. With \p wait it
+//! waits while the memory left for such jobs is below a reserve plus a budget per running job; the
+//! first job and the GUI thread always start. Without \p wait the job is only counted.
+class CVideoDecodeJob
+{
+public:
+  explicit CVideoDecodeJob(bool wait = true);
+  ~CVideoDecodeJob();
+  CVideoDecodeJob(CVideoDecodeJob&& other) noexcept;
+  CVideoDecodeJob& operator=(CVideoDecodeJob&& other) noexcept;
+  CVideoDecodeJob(const CVideoDecodeJob&) = delete;
+  CVideoDecodeJob& operator=(const CVideoDecodeJob&) = delete;
+
+private:
+  void Release();
+
+  bool m_admitted{false};
+};
+
 //! \brief An open demux-and-decode session on a file's first video stream.
 struct VideoDecodeSession
 {
+  CVideoDecodeJob decodeJob;
   std::shared_ptr<CDVDInputStream> inputStream;
   std::unique_ptr<CDVDDemux> demuxer;
   int videoStream{-1};
