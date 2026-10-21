@@ -21,6 +21,7 @@ struct MemoryStatus
 
   uint64_t totalPhys;
   uint64_t availPhys;
+  uint64_t availCma;
 };
 
 void* AlignedMalloc(size_t s, size_t alignTo);
