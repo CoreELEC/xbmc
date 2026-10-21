@@ -163,6 +163,11 @@ std::unique_ptr<CTexture> PictureToTexture(const VideoPicture& picture, const CD
   bool converted = false;
 
 #if LIBSWSCALE_BUILD >= AV_VERSION_INT(9, 0, 100)
+  // color management builds a 3D LUT per call, which takes seconds on ARM, so keep it for
+  // HDR and wide gamut sources
+  if (picture.color_transfer == AVCOL_TRC_SMPTE2084 ||
+      picture.color_transfer == AVCOL_TRC_ARIB_STD_B67 ||
+      picture.color_primaries == AVCOL_PRI_BT2020)
   {
     AVFrame* srcFrame = av_frame_alloc();
     AVFrame* dstFrame = av_frame_alloc();
@@ -225,7 +230,7 @@ std::unique_ptr<CTexture> PictureToTexture(const VideoPicture& picture, const CD
   {
     struct SwsContext* context =
         sws_getContext(picture.iWidth, picture.iHeight, picture.videoBuffer->GetFormat(), nWidth,
-                       nHeight, AV_PIX_FMT_BGRA, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+                       nHeight, AV_PIX_FMT_BGRA, SWS_BILINEAR, NULL, NULL, NULL);
 
     if (context)
     {
