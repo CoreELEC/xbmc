@@ -165,7 +165,8 @@ bool SeekAndDecodePictureAt(CDVDDemux& demuxer,
                             int64_t seekToMs,
                             const std::string& redactPath,
                             VideoPicture& picture,
-                            int& packetsTried)
+                            int& packetsTried,
+                            const std::function<bool()>& abort)
 {
   CLog::LogF(LOGDEBUG, "seeking to pos {}ms (total: {}ms) in {}", seekToMs,
              demuxer.GetStreamLength(), redactPath);
@@ -177,6 +178,9 @@ bool SeekAndDecodePictureAt(CDVDDemux& demuxer,
 
   for (int attemptsLeft = demuxer.GetNrOfStreams() * 160; attemptsLeft >= 0; attemptsLeft--)
   {
+    if (abort && abort())
+      return false;
+
     DemuxPacket* pPacket = demuxer.Read();
     packetsTried++;
 
