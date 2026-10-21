@@ -329,7 +329,8 @@ bool CDVDFileInfo::IsExtractableLocation(const std::string& path)
 bool CDVDFileInfo::GetFileStreamDetails(CFileItem* pItem,
                                         int listingFlags /* = 0 */,
                                         CStreamDetails* probed /* = nullptr */,
-                                        unsigned int fileFlags /* = 0 */)
+                                        unsigned int fileFlags /* = 0 */,
+                                        const std::function<bool()>& abort /* = {} */)
 {
   if (!pItem)
     return false;
@@ -365,8 +366,13 @@ bool CDVDFileInfo::GetFileStreamDetails(CFileItem* pItem,
   {
     // Filled locally and published once, as the item may be shown while its streams are probed
     CStreamDetails details;
-    bool retVal =
-        DemuxerToStreamDetails(pInputStream, pDemuxer, details, strFileNameAndPath, fileFlags);
+    bool retVal = DemuxerToStreamDetails(pInputStream, pDemuxer, details, strFileNameAndPath,
+                                         fileFlags, abort);
+    if (abort && abort())
+    {
+      delete pDemuxer;
+      return false;
+    }
     if (probed)
       *probed = details;
 
@@ -405,7 +411,8 @@ bool CDVDFileInfo::DemuxerToStreamDetails(const std::shared_ptr<CDVDInputStream>
 static bool GetDetailsFromFrame(CDemuxStreamVideo* stream,
                                 CDVDDemux* demuxer,
                                 const std::string& redactPath,
-                                CStreamDetailVideo& vDetail)
+                                CStreamDetailVideo& vDetail,
+                                const std::function<bool()>& abort)
 {
   std::unique_ptr<CProcessInfo> processInfo(CProcessInfo::CreateInstance());
   std::vector<AVPixelFormat> pixFmts{AV_PIX_FMT_YUV420P};
@@ -425,9 +432,11 @@ static bool GetDetailsFromFrame(CDemuxStreamVideo* stream,
   VideoPicture picture = {};
   int packetsTried = 0;
   if (!SeekAndDecodePictureAt(*demuxer, *videoCodec, stream->uniqueId,
-                              demuxer->GetStreamLength() / 5, redactPath, picture, packetsTried))
+                              demuxer->GetStreamLength() / 5, redactPath, picture, packetsTried,
+                              abort))
   {
-    CLog::LogF(LOGERROR, "no picture decoded after {} packets", packetsTried);
+    if (!abort || !abort())
+      CLog::LogF(LOGERROR, "no picture decoded after {} packets", packetsTried);
     return false;
   }
 
@@ -443,7 +452,8 @@ bool CDVDFileInfo::DemuxerToStreamDetails(const std::shared_ptr<CDVDInputStream>
                                           CDVDDemux* pDemux,
                                           CStreamDetails& details,
                                           const std::string& path,
-                                          unsigned int fileFlags)
+                                          unsigned int fileFlags,
+                                          const std::function<bool()>& abort)
 {
   bool retVal = false;
   details.Reset();
@@ -487,7 +497,8 @@ bool CDVDFileInfo::DemuxerToStreamDetails(const std::shared_ptr<CDVDInputStream>
           vstream->hdr_type != StreamHdrType::HDR_TYPE_HLG && vstream->dovi.dv_profile != 5 &&
           vstream->dovi.dv_profile <= 10 && p->m_strHdrTypeAlt != "hlg")
       {
-        if (!GetDetailsFromFrame(vstream, pDemux, CURL::GetRedacted(path), *p))
+        if (!GetDetailsFromFrame(vstream, pDemux, CURL::GetRedacted(path), *p, abort) &&
+            (!abort || !abort()))
           CLog::LogF(LOGERROR, "Failed to get HDR details from frame");
       }
       p->SetSource(CStreamDetail::MEDIA);
