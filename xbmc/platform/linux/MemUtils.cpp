@@ -55,6 +55,7 @@ void GetMemoryStatus(MemoryStatus* buffer)
   uint64_t total;
   uint64_t reclaimable;
   uint64_t available = 0;
+  uint64_t cmaFree = 0;
 
   std::string token;
 
@@ -72,11 +73,14 @@ void GetMemoryStatus(MemoryStatus* buffer)
       file >> reclaimable;
     if (token == "MemAvailable:")
       file >> available;
+    if (token == "CmaFree:")
+      file >> cmaFree;
   }
 
   buffer->totalPhys = total * 1024;
   buffer->availPhys =
       available > 0 ? available * 1024 : (free + cached + reclaimable + buffers) * 1024;
+  buffer->availCma = cmaFree * 1024;
 }
 
 }
