@@ -17,9 +17,87 @@
 #include "DVDInputStreams/DVDInputStream.h"
 #include "FileItem.h"
 #include "Process/ProcessInfo.h"
+#include "ServiceBroker.h"
+#include "messaging/ApplicationMessenger.h"
+#include "threads/Condition.h"
+#include "threads/CriticalSection.h"
+#include "utils/MemUtils.h"
 #include "utils/log.h"
 
+#include <chrono>
+#include <cstdint>
+#include <mutex>
+#include <utility>
 #include <vector>
+
+namespace
+{
+// a job holds a 64MB read cache for network files and, for 4K, about 90MB of decoded pictures;
+// the reserve is left for playback and the GUI
+constexpr uint64_t DECODE_JOB_RESERVE = 100 * 1024 * 1024;
+constexpr uint64_t DECODE_JOB_BUDGET = 150 * 1024 * 1024;
+constexpr auto DECODE_JOB_RECHECK = std::chrono::milliseconds(500);
+
+CCriticalSection decodeJobSection;
+XbmcThreads::ConditionVariable decodeJobCondition;
+int decodeJobs = 0;
+} // namespace
+
+CVideoDecodeJob::CVideoDecodeJob(bool wait)
+{
+  std::unique_lock lock(decodeJobSection);
+
+  const auto messenger = CServiceBroker::GetAppMessenger();
+  if (wait && (!messenger || !messenger->IsProcessThread()))
+  {
+    KODI::MEMORY::MemoryStatus status{};
+    while (decodeJobs > 0)
+    {
+      // free CMA is not counted, as Linux kernels can keep tasks with a positive nice value out
+      // of it and the job threads run below normal priority
+      KODI::MEMORY::GetMemoryStatus(&status);
+      const uint64_t available =
+          status.availPhys > status.availCma ? status.availPhys - status.availCma : 0;
+      if (available >= DECODE_JOB_RESERVE + DECODE_JOB_BUDGET * (decodeJobs + 1))
+        break;
+
+      decodeJobCondition.wait(lock, DECODE_JOB_RECHECK);
+    }
+  }
+  decodeJobs++;
+  m_admitted = true;
+}
+
+CVideoDecodeJob::~CVideoDecodeJob()
+{
+  Release();
+}
+
+CVideoDecodeJob::CVideoDecodeJob(CVideoDecodeJob&& other) noexcept
+  : m_admitted(std::exchange(other.m_admitted, false))
+{
+}
+
+CVideoDecodeJob& CVideoDecodeJob::operator=(CVideoDecodeJob&& other) noexcept
+{
+  if (this != &other)
+  {
+    Release();
+    m_admitted = std::exchange(other.m_admitted, false);
+  }
+  return *this;
+}
+
+void CVideoDecodeJob::Release()
+{
+  if (!m_admitted)
+    return;
+
+  std::unique_lock lock(decodeJobSection);
+  decodeJobs--;
+  m_admitted = false;
+  decodeJobCondition.notifyAll();
+}
 
 std::optional<VideoDecodeSession> OpenVideoDecodeSession(const CFileItem& fileItem,
                                                          int codecOptions,
