@@ -9,6 +9,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -38,7 +39,7 @@ public:
   static bool IsExtractableLocation(const std::string& path);
 
   // Probe the files streams and store the info in the VideoInfoTag
-  static bool GetFileStreamDetails(CFileItem* pItem);
+  static bool GetFileStreamDetails(CFileItem* pItem, const std::function<bool()>& abort = {});
 
   static bool GetFileDuration(const std::string& path, int& duration);
 
@@ -46,7 +47,8 @@ private:
   static bool DemuxerToStreamDetails(const std::shared_ptr<CDVDInputStream>& pInputStream,
                                      CDVDDemux* pDemux,
                                      CStreamDetails& details,
-                                     const std::string& path = "");
+                                     const std::string& path = "",
+                                     const std::function<bool()>& abort = {});
 
   /** \brief Probe the file's internal and external streams and store the info in the StreamDetails parameter.
   *   \param[out] details The file's StreamDetails consisting of internal streams and external subtitle streams.
