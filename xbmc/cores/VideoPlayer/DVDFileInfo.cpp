@@ -20,6 +20,7 @@
 #include "pvr/utils/PVRStreamUtils.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/SettingsComponent.h"
+#include "threads/CriticalSection.h"
 #include "utils/URIUtils.h"
 #include "utils/log.h"
 #include "video/VideoFileItemClassify.h"
@@ -139,6 +140,11 @@ bool CDVDFileInfo::SeekAndDecodeFirstPicture(CDVDDemux& demuxer,
 
 namespace
 {
+// kept across thumbnails, so files with the same format and mastering metadata reuse the
+// tone mapping graph and its 3D LUT; one tone mapping runs at a time
+CCriticalSection thumbSwsSection;
+SwsContext* thumbSwsTone = nullptr;
+
 //! Convert a decoded picture to a BGRA texture sized for the thumbnail cache.
 std::unique_ptr<CTexture> PictureToTexture(const VideoPicture& picture, const CDVDStreamInfo& hint)
 {
@@ -163,8 +169,8 @@ std::unique_ptr<CTexture> PictureToTexture(const VideoPicture& picture, const CD
   bool converted = false;
 
 #if LIBSWSCALE_BUILD >= AV_VERSION_INT(9, 0, 100)
-  // color management builds a 3D LUT per call, which takes seconds on ARM, so keep it for
-  // HDR and wide gamut sources
+  // color management builds a 3D LUT, which takes seconds on ARM, so keep it for HDR and
+  // wide gamut sources
   if (picture.color_transfer == AVCOL_TRC_SMPTE2084 ||
       picture.color_transfer == AVCOL_TRC_ARIB_STD_B67 ||
       picture.color_primaries == AVCOL_PRI_BT2020)
@@ -173,8 +179,7 @@ std::unique_ptr<CTexture> PictureToTexture(const VideoPicture& picture, const CD
     AVFrame* midFrame = av_frame_alloc();
     AVFrame* dstFrame = av_frame_alloc();
     SwsContext* swsScale = sws_alloc_context();
-    SwsContext* sws = sws_alloc_context();
-    if (srcFrame && midFrame && dstFrame && swsScale && sws)
+    if (srcFrame && midFrame && dstFrame && swsScale)
     {
       srcFrame->width = static_cast<int>(picture.iWidth);
       srcFrame->height = static_cast<int>(picture.iHeight);
@@ -213,9 +218,6 @@ std::unique_ptr<CTexture> PictureToTexture(const VideoPicture& picture, const CD
       dstFrame->color_primaries = AVCOL_PRI_BT709;
       dstFrame->color_trc = AVCOL_TRC_BT709;
 
-      sws->flags = SWS_BILINEAR;
-      sws->intent = SWS_INTENT_PERCEPTUAL;
-
       // scale first, so the tone mapping works on thumbnail sized RGBA64 buffers
       AVFrame* toneFrame = srcFrame;
       int res = 0;
@@ -231,13 +233,24 @@ std::unique_ptr<CTexture> PictureToTexture(const VideoPicture& picture, const CD
         toneFrame = midFrame;
       }
       if (res >= 0)
-        res = sws_scale_frame(sws, dstFrame, toneFrame);
+      {
+        std::unique_lock lock(thumbSwsSection);
+        if (!thumbSwsTone)
+          thumbSwsTone = sws_alloc_context();
+        if (thumbSwsTone)
+        {
+          thumbSwsTone->flags = SWS_BILINEAR;
+          thumbSwsTone->intent = SWS_INTENT_PERCEPTUAL;
+          res = sws_scale_frame(thumbSwsTone, dstFrame, toneFrame);
+        }
+        else
+          res = AVERROR(ENOMEM);
+      }
       if (res < 0)
         CLog::LogF(LOGWARNING, "sws_scale_frame failed ({}), using legacy conversion", res);
       else
         converted = true;
     }
-    sws_free_context(&sws);
     sws_free_context(&swsScale);
     av_frame_free(&srcFrame);
     av_frame_free(&midFrame);
