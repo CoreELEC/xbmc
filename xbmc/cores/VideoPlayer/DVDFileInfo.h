@@ -9,6 +9,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -48,7 +49,8 @@ public:
   static bool GetFileStreamDetails(CFileItem* pItem,
                                    int listingFlags = 0,
                                    CStreamDetails* probed = nullptr,
-                                   unsigned int fileFlags = 0);
+                                   unsigned int fileFlags = 0,
+                                   const std::function<bool()>& abort = {});
 
   /*!
    * @brief Store streams probed already in an item's tag, with the item's own external subtitles
@@ -65,7 +67,8 @@ private:
                                      CDVDDemux* pDemux,
                                      CStreamDetails& details,
                                      const std::string& path = "",
-                                     unsigned int fileFlags = 0);
+                                     unsigned int fileFlags = 0,
+                                     const std::function<bool()>& abort = {});
 
   /** \brief Probe the file's internal and external streams and store the info in the StreamDetails parameter.
   *   \param[out] details The file's StreamDetails consisting of internal streams and external subtitle streams.

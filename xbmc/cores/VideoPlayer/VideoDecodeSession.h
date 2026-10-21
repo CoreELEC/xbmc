@@ -10,6 +10,7 @@
 
 #include "DVDStreamInfo.h"
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -59,11 +60,13 @@ std::optional<VideoDecodeSession> OpenVideoDecodeSession(const CFileItem& fileIt
                                                          int codecOptions,
                                                          const std::string& redactPath);
 
-//! \brief Seek to a position in milliseconds and decode the first usable picture there.
+//! \brief Seek to a position in milliseconds and decode the first usable picture there; stops
+//! early when \p abort returns true.
 bool SeekAndDecodePictureAt(CDVDDemux& demuxer,
                             CDVDVideoCodec& codec,
                             int videoStream,
                             int64_t seekToMs,
                             const std::string& redactPath,
                             VideoPicture& picture,
-                            int& packetsTried);
+                            int& packetsTried,
+                            const std::function<bool()>& abort = {});
