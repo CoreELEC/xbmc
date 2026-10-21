@@ -1434,6 +1434,21 @@ DemuxPacket* CDVDDemuxFFmpeg::Read()
   return pPacket;
 }
 
+void CDVDDemuxFFmpeg::FlushInputSeek()
+{
+  Flush();
+
+  // mpegts only drops its partial packets when the position changes
+  if (m_ioContext && m_pFormatContext && m_pFormatContext->pb == m_ioContext &&
+      !m_ioContext->seekable)
+  {
+#ifdef HAVE_LIBBLURAY
+    m_blurayReadBase += m_ioContext->pos;
+#endif
+    m_ioContext->pos = 0;
+  }
+}
+
 bool CDVDDemuxFFmpeg::SeekTime(double time, bool backwards, double* startpts)
 {
   bool hitEnd = false;
@@ -1459,7 +1474,7 @@ bool CDVDDemuxFFmpeg::SeekTime(double time, bool backwards, double* startpts)
     if (startpts)
       *startpts = DVD_NOPTS_VALUE;
 
-    Flush();
+    FlushInputSeek();
 
     return true;
   }
@@ -2788,7 +2803,7 @@ bool CDVDDemuxFFmpeg::SeekChapter(int chapter, double* startpts)
           DVD_SEC_TO_TIME(std::chrono::duration<double>(ich->GetChapterPos(chapter)).count());
     }
 
-    Flush();
+    FlushInputSeek();
     return true;
   }
 
