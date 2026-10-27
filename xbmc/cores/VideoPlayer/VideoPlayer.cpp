@@ -2428,13 +2428,12 @@ void CVideoPlayer::HandlePlaySpeed()
               (m_CurrentVideo.id >= 0 && m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
                m_processInfo->GetLevelVQ() == 0))
           {
-            CLog::Log(LOGDEBUG, "Stream stalled, start buffering. Audio: {} - Video: {}",
+            CLog::Log(LOGDEBUG, "Stream stalled, resyncing to live. Audio: {} - Video: {}",
                       m_VideoPlayerAudio->GetLevel(), m_processInfo->GetLevelVQ());
 
-            if (m_VideoPlayerAudio->AcceptsData() && m_VideoPlayerVideo->AcceptsData())
-              SetCaching(CACHESTATE_FULL);
-            else
-              FlushBuffers(DVD_NOPTS_VALUE, false, true);
+            FlushBuffers(DVD_NOPTS_VALUE, false, true);
+            if (m_pDemuxer)
+              m_pDemuxer->Flush();
           }
         }
         else
@@ -2531,7 +2530,7 @@ void CVideoPlayer::HandlePlaySpeed()
     }
     else if (video && audio && !deferNoPts)
     {
-      double clock = 0;
+      double clock = m_pInputStream->IsRealtime() ? m_clock.GetClock() : 0.0;
       if (m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
         CLog::Log(LOGDEBUG, "VideoPlayer::Sync - Audio - pts: {:.3f}, cache: {:.3f}, totalcache: {:.3f}, packets:{:d} level:{:d}",
                              m_CurrentAudio.starttime / DVD_TIME_BASE, m_CurrentAudio.cachetime / DVD_TIME_BASE, m_CurrentAudio.cachetotal / DVD_TIME_BASE, m_CurrentAudio.packets, m_VideoPlayerAudio->GetLevel());
