@@ -404,7 +404,14 @@ void CVideoPlayerAudio::Process()
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_PAUSE))
     {
-      m_paused = std::static_pointer_cast<CDVDMsgBool>(pMsg)->m_value;
+      const bool paused{std::static_pointer_cast<CDVDMsgBool>(pMsg)->m_value};
+      // the clock stands while paused, a sink that survives must not play on
+      if (paused && !m_paused)
+        m_audioSink.Pause();
+      else if (!paused && m_paused && m_syncState == IDVDStreamPlayer::SYNC_INSYNC &&
+               m_processInfo.IsTempoAllowed(static_cast<float>(m_speed) / DVD_PLAYSPEED_NORMAL))
+        m_audioSink.Resume();
+      m_paused = paused;
       CLog::Log(LOGDEBUG, "CVideoPlayerAudio - CDVDMsg::GENERAL_PAUSE: {}", m_paused);
     }
     else if (pMsg->IsType(CDVDMsg::PLAYER_REQUEST_STATE))
