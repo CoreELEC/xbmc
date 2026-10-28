@@ -90,6 +90,7 @@ void CAudioSinkAE::Destroy(bool finish)
   m_bPassthrough = false;
   m_bPaused = true;
   m_playingPts = DVD_NOPTS_VALUE;
+  m_startSyncError = false;
 }
 
 unsigned int CAudioSinkAE::AddPackets(const DVDAudioFrame &audioframe)
@@ -107,6 +108,7 @@ unsigned int CAudioSinkAE::AddPackets(const DVDAudioFrame &audioframe)
     unsigned int newTime = info.errortime;
     if (newTime != m_syncErrorTime)
     {
+      m_startSyncError = info.lateStartHandedOver;
       m_syncErrorTime = info.errortime;
       m_syncError = info.error / 1000 * DVD_TIME_BASE;
       m_resampleRatio = info.rr;
@@ -116,6 +118,7 @@ unsigned int CAudioSinkAE::AddPackets(const DVDAudioFrame &audioframe)
   {
     m_syncErrorTime = 0;
     m_syncError = 0.0;
+    m_startSyncError = false;
   }
 
   // Use wall-clock deadline independent of playback speed (fixes dimensional error
@@ -194,6 +197,7 @@ void CAudioSinkAE::Pause()
     m_pAudioStream->Pause();
   CLog::Log(LOGDEBUG,"CDVDAudio::Pause - pausing audio stream");
   m_playingPts = DVD_NOPTS_VALUE;
+  m_startSyncError = false;
 }
 
 void CAudioSinkAE::Resume()
@@ -228,6 +232,7 @@ void CAudioSinkAE::Flush()
   m_playingPts = DVD_NOPTS_VALUE;
   m_syncError = 0.0;
   m_syncErrorTime = 0;
+  m_startSyncError = false;
 }
 
 void CAudioSinkAE::AbortAddPackets()
@@ -309,6 +314,13 @@ double CAudioSinkAE::GetSyncError()
 void CAudioSinkAE::SetSyncErrorCorrection(double correction)
 {
   m_syncError += correction;
+}
+
+bool CAudioSinkAE::TakeStartSyncError()
+{
+  const bool startSyncError{m_startSyncError};
+  m_startSyncError = false;
+  return startSyncError;
 }
 
 double CAudioSinkAE::GetResampleRatio()

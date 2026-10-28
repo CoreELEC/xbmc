@@ -44,6 +44,8 @@ public:
     SYNC_ADJUST
   };
   AESyncState state;
+  //! The error is a late start the engine left to the player's clock
+  bool lateStartHandedOver{false};
 };
 
 /**

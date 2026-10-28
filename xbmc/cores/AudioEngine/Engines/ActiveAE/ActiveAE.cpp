@@ -158,6 +158,7 @@ void CEngineStats::UpdateStream(CActiveAEStream *stream)
     {
       float delay = 0;
       str.m_syncState = stream->m_syncState;
+      str.m_lateStartHandedOver = stream->m_lateStartHandedOver;
       str.m_syncError = stream->m_syncError.GetLastError(str.m_errorTime);
       if (stream->m_processingBuffers)
       {
@@ -234,6 +235,7 @@ void CEngineStats::GetSyncInfo(CAESyncInfo& info, CActiveAEStream *stream)
       info.error = str.m_syncError;
       info.errortime = str.m_errorTime;
       info.state = str.m_syncState;
+      info.lateStartHandedOver = str.m_lateStartHandedOver;
       info.rr = str.m_resampleRatio;
       return;
     }

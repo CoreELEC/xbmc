@@ -47,6 +47,7 @@ public:
   double GetDelay(); // returns the time it takes to play a packet if we add one at this time
   double GetSyncError();
   void SetSyncErrorCorrection(double correction);
+  bool TakeStartSyncError();
 
   /*!
    * \brief Returns the resample ratio, or 0.0 if unknown/invalid
@@ -69,6 +70,7 @@ protected:
   double m_timeOfPts;
   double m_syncError;
   unsigned int m_syncErrorTime;
+  bool m_startSyncError{false};
   double m_resampleRatio = 0.0; // invalid
   CCriticalSection m_critSection;
 
