@@ -2761,6 +2761,9 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     stream->m_startCut = stream->m_pClock->TakeStartCut();
     stream->m_startPad = 0.0;
     stream->m_exactStart = false;
+    double shift{0.0};
+    double period{0.0};
+    stream->m_syncPhaseId = stream->m_pClock->GetSyncPhaseId(shift, period);
     stream->m_syncSinkReports = m_stats.GetSinkReports();
     CLog::Log(LOGDEBUG,"ActiveAE - start sync of audio stream");
   }
@@ -2774,6 +2777,21 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - start cut, skip {:.3f}ms", skipped);
     if (buf->pkt->nb_samples == 0)
       return ret;
+  }
+
+  double phasePeriod{0.0};
+  if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE)
+  {
+    // the start sync measures against one published clock sync phase
+    double shift{0.0};
+    const int syncPhaseId = stream->m_pClock->GetSyncPhaseId(shift, phasePeriod);
+    if (syncPhaseId == -1 || syncPhaseId != stream->m_syncPhaseId)
+    {
+      stream->m_syncPhaseId = syncPhaseId;
+      stream->m_syncError.Flush(100ms);
+      CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - start sync held, phase id {:d}",
+                syncPhaseId);
+    }
   }
 
   double error;
@@ -2813,12 +2831,6 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
   // limit. Audio starting late is therefore left to the player once it was heard, as skipping it
   // would cut audio already playing.
   const bool clockFollowsAudio{!stream->m_resampleMode};
-  double phasePeriod{0.0};
-  if (clockFollowsAudio && stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE)
-  {
-    double shift{0.0};
-    stream->m_pClock->GetSyncPhaseId(shift, phasePeriod);
-  }
   const auto keepAudible = [&](double syncError)
   {
     const bool lateStart{clockFollowsAudio && syncError < 0 && -syncError <= MAX_LATE_START_MS};

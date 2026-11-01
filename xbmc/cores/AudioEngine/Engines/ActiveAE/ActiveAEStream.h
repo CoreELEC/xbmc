@@ -273,6 +273,8 @@ protected:
   double m_startPad{0.0};
   // whether the start error handed over is in whole phase periods
   bool m_exactStart{false};
+  // the clock sync phase the start sync measures against
+  int m_syncPhaseId{0};
   // the sink reports counted when the start sync began
   unsigned int m_syncSinkReports{0};
 };
