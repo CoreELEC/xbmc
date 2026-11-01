@@ -4419,7 +4419,7 @@ float CVideoPlayer::GetCachePercentage() const
 void CVideoPlayer::SetAVDelay(float fValue)
 {
   m_processInfo->GetVideoSettingsLocked().SetAudioDelay(fValue);
-  m_renderManager.SetDelay(static_cast<int>(fValue * 1000.0f));
+  m_renderManager.SetDelay(static_cast<int>(std::lround(fValue * 1000.0f)));
 }
 
 float CVideoPlayer::GetAVDelay()
@@ -6481,7 +6481,7 @@ void CVideoPlayer::SetVideoSettings(CVideoSettings& settings)
 {
   m_processInfo->SetVideoSettings(settings);
   m_renderManager.SetVideoSettings(settings);
-  m_renderManager.SetDelay(static_cast<int>(settings.m_AudioDelay * 1000.0f));
+  m_renderManager.SetDelay(static_cast<int>(std::lround(settings.m_AudioDelay * 1000.0f)));
   m_renderManager.SetSubtitleVerticalPosition(settings.m_subtitleVerticalPosition,
                                               settings.m_subtitleVerticalPositionSave);
   m_VideoPlayerVideo->EnableSubtitle(settings.m_SubtitleOn);
