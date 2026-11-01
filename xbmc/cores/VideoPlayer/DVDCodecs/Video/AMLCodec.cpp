@@ -2699,6 +2699,9 @@ void CAMLCodec::CloseDecoder()
   CLog::Log(LOGDEBUG, "CAMLCodec::CloseDecoder");
 
   SetPollDevice(-1);
+  // the vsync presenter reads no clock sync phase until a picture is queued or released again
+  if (m_hints.pClock)
+    m_hints.pClock->GetVsyncPhase().EndVsyncPhase();
 
   if (m_fullStereoFramePacking)
   {

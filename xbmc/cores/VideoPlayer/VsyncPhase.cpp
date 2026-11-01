@@ -11,6 +11,7 @@
 #include "cores/VideoPlayer/Interface/TimingConstants.h"
 #include "utils/log.h"
 
+#include <algorithm>
 #include <cmath>
 #include <mutex>
 
@@ -29,6 +30,18 @@ void CVsyncPhase::SetVsyncPhasePending()
   m_state = State::PENDING;
 }
 
+void CVsyncPhase::EndVsyncPhase()
+{
+  std::unique_lock lock(m_clock.m_critSection);
+
+  m_phasePeriod = 0;
+  if (m_state == State::NONE)
+    return;
+
+  m_clock.m_vSyncAdjust = 0;
+  m_state = State::NONE;
+}
+
 double CVsyncPhase::ApplyVsyncPhaseReading(double reading, int epoch, bool restart)
 {
   std::unique_lock lock(m_clock.m_critSection);
@@ -45,6 +58,9 @@ double CVsyncPhase::ApplyVsyncPhaseReading(double reading, int epoch, bool resta
   if (reading == DVD_NOPTS_VALUE || m_clock.m_speedAdjust != 0 ||
       m_clock.m_systemUsed != m_clock.m_systemFrequency || m_phasePeriod <= 0)
   {
+    // the clock runs off the display while the speed is adjusted, so the mean starts again
+    if (m_clock.m_speedAdjust != 0)
+      m_readings = 0;
     if (m_state == State::PENDING || m_epoch != m_clock.m_clockEpoch)
     {
       m_clock.m_vSyncAdjust = 0;
@@ -55,10 +71,13 @@ double CVsyncPhase::ApplyVsyncPhaseReading(double reading, int epoch, bool resta
   if (epoch != m_clock.m_clockEpoch || m_clock.m_bReset || m_clock.m_pauseClock)
     return -m_clock.m_vSyncAdjust;
 
-  // the lattice branch nearest to the phase held
   double vsyncPhase = -m_clock.m_vSyncAdjust;
   const double step = reading - vsyncPhase;
-  vsyncPhase += step - m_phasePeriod * std::floor(step / m_phasePeriod + 0.5);
+  if (m_state != State::PUBLISHED || m_epoch != m_clock.m_clockEpoch)
+    m_readings = 0;
+  m_readings = std::min(m_readings + 1, PHASE_READINGS);
+  // the lattice branch nearest to the phase held, averaged so off-lattice pictures barely move it
+  vsyncPhase += (step - m_phasePeriod * std::floor(step / m_phasePeriod + 0.5)) / m_readings;
 
   // a wrap moves the clock by a period so the clock minus the phase stays put
   if (std::abs(vsyncPhase) >= m_phasePeriod)
@@ -97,6 +116,6 @@ int CVsyncPhase::FollowVsyncPhase(double& shift, double& period)
   std::unique_lock lock(m_clock.m_critSection);
 
   shift = 0.0;
-  period = m_clock.m_speedAdjust != 0 ? 0.0 : m_phasePeriod;
+  period = m_state == State::NONE || m_clock.m_speedAdjust != 0 ? 0.0 : m_phasePeriod;
   return GetVsyncPhaseId();
 }

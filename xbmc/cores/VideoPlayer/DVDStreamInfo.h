@@ -81,7 +81,7 @@ public:
   std::shared_ptr<AVContentLightMetadata> contentLightMetadata;
   std::string stereo_mode; // stereoscopic 3d mode
   AVDOVIDecoderConfigurationRecord dovi{};
-  CDVDClock *pClock;
+  CDVDClock *pClock{nullptr};
 
   // Dolby Vision profile 8 compatibility IDs 1 and 4 identify HDR10 and HLG
   // base layers respectively.
