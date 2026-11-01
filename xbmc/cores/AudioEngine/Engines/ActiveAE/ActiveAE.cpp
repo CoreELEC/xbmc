@@ -2192,11 +2192,6 @@ bool CActiveAE::RunStages()
         double maxError = ((*it)->m_syncState == CAESyncInfo::SYNC_INSYNC) ? 1000 : 5000;
         double error = playingPts - (*it)->m_pClock->GetClock();
 
-        // underestimate error for TrueHD passthrough
-        // oscillations should be less than frametime 40ms to avoid unnecessary a/v sync corrections
-        if (isTrueHDPassthrough)
-          error *= 0.45;
-
         if (error > maxError)
         {
           CLog::Log(LOGWARNING, "ActiveAE - large audio sync error: {:f}", error);
