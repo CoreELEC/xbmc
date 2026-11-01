@@ -39,6 +39,12 @@
 
 using namespace std::chrono_literals;
 
+namespace
+{
+// the video start delay the player assumes for a renderer that cannot report its release lead
+constexpr double UNKNOWN_RELEASE_LEAD_MS = 100.0;
+} // namespace
+
 class CRenderManager::CPresentThread : public CThread
 {
 public:
@@ -1254,20 +1260,7 @@ void CRenderManager::PrepareNextRender()
       1.0 / static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) *
       DVD_TIME_BASE;
 
-  const int presentLatency = m_pRenderer->GetPresentLatency();
-  const double displayLatency =
-      presentLatency >= 0
-          ? presentLatency * 1000.0 /
-                    static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) +
-                m_pRenderer->GetPresentHold()
-          : static_cast<double>(
-                CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency());
-
-  m_displayLatency = DVD_MSEC_TO_TIME(
-      m_latencyTweak +
-      displayLatency -
-      m_videoDelay -
-      static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment()));
+  m_displayLatency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_videoDelay);
 
   // While the clock is paused, frameOnScreen does not advance, so adding the display
   // latency would pick a frame ahead of the one actually shown. That only holds for
@@ -1387,6 +1380,31 @@ void CRenderManager::PrepareNextRender()
     m_presentpts = m_Queue[m_presentsource].pts - m_displayLatency - frametime / 2;
     m_presentevent.notifyAll();
   }
+}
+
+double CRenderManager::CalcReleaseLead()
+{
+  const int presentLatency = m_pRenderer->GetPresentLatency();
+  const double displayLatency =
+      presentLatency >= 0
+          ? presentLatency * 1000.0 /
+                    static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) +
+                m_pRenderer->GetPresentHold()
+          : static_cast<double>(
+                CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency());
+
+  return m_latencyTweak + displayLatency -
+         static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment());
+}
+
+double CRenderManager::GetReleaseLead()
+{
+  std::unique_lock lock(m_statelock);
+
+  if (m_renderState != STATE_CONFIGURED || !m_pRenderer || m_pRenderer->GetPresentLatency() < 0)
+    return UNKNOWN_RELEASE_LEAD_MS;
+
+  return CalcReleaseLead();
 }
 
 void CRenderManager::DiscardBuffer()
