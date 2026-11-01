@@ -258,6 +258,8 @@ protected:
   CAESyncInfo::AESyncState m_syncState;
   // Whether late audio was left to the player's clock and no error was averaged since
   bool m_lateStartHandedOver{false};
+  // the part of the muted frames' duration their whole-millisecond pause bursts left out
+  double m_pauseBurstCarry{0.0};
 };
 }
 

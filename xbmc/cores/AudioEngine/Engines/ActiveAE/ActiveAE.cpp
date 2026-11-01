@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <memory>
 #include <mutex>
 
@@ -2599,6 +2600,7 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     stream->m_processingBuffers->SetRR(1.0, m_settings.atempoThreshold);
     stream->m_resampleIntegral = 0;
     stream->m_lateStartHandedOver = false;
+    stream->m_pauseBurstCarry = 0.0;
     CLog::Log(LOGDEBUG,"ActiveAE - start sync of audio stream");
   }
 
@@ -2685,7 +2687,10 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     if (m_mode == MODE_RAW)
     {
       buf->pkt->nb_samples = 0;
-      buf->pkt->pause_burst_ms = stream->m_processingBuffers->m_inputFormat.m_streamInfo.GetDuration();
+      const double pause = stream->m_processingBuffers->m_inputFormat.m_streamInfo.GetDuration() +
+                           stream->m_pauseBurstCarry;
+      buf->pkt->pause_burst_ms = static_cast<int>(std::lround(pause));
+      stream->m_pauseBurstCarry = pause - buf->pkt->pause_burst_ms;
     }
     else
     {
