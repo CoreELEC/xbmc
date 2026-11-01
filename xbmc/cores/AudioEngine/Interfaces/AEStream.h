@@ -57,6 +57,8 @@ public:
   AESyncState state;
   //! The error is a late start the engine left to the player's clock
   bool lateStartHandedOver{false};
+  //! The start error is in whole phase periods, for the clock to move by in full
+  bool exactStart{false};
 };
 
 /**

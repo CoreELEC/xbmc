@@ -47,7 +47,7 @@ public:
   double GetDelay(); // returns the time it takes to play a packet if we add one at this time
   double GetSyncError();
   void SetSyncErrorCorrection(double correction);
-  bool TakeStartSyncError();
+  bool TakeStartSyncError(bool& exact);
   void SetStartCut(double cut);
 
   /*!
@@ -74,6 +74,7 @@ protected:
   double m_syncError;
   unsigned int m_syncErrorTime;
   bool m_startSyncError{false};
+  bool m_startSyncErrorExact{false};
   std::atomic<double> m_startCut{0.0};
   double m_resampleRatio = 0.0; // invalid
   CCriticalSection m_critSection;

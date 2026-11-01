@@ -235,6 +235,7 @@ protected:
     unsigned int m_errorTimeTaken{0};
     CAESyncInfo::AESyncState m_syncState;
     bool m_lateStartHandedOver{false};
+    bool m_exactStart{false};
     // paused by the player since the engine last restarted the stream's sync
     bool m_syncPaused{false};
   };
@@ -355,6 +356,8 @@ protected:
   int TakeFramePause(CActiveAEStream* stream, double frame);
   // silences `buf` in place, in passthrough as a pause of one input frame
   void MuteSamples(CActiveAEStream* stream, CSampleBuffer* buf);
+  // makes `buf` a pause of up to `ms`, returns the ms it holds
+  double FillSyncPad(CActiveAEStream* stream, CSampleBuffer* buf, double ms);
   // takes up to `ms` from the front of `buf`, returns the ms taken
   double SkipSyncSamples(CActiveAEStream* stream, CSampleBuffer* buf, double ms);
 

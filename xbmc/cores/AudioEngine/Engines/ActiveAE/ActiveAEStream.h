@@ -269,6 +269,10 @@ protected:
   bool m_syncErrorBooked{false};
   // ms of audio the clock start left out on purpose, skipped before the start sync measures
   double m_startCut{0.0};
+  // ms of silence a late start handed over in whole phase periods still owes
+  double m_startPad{0.0};
+  // whether the start error handed over is in whole phase periods
+  bool m_exactStart{false};
   // the sink reports counted when the start sync began
   unsigned int m_syncSinkReports{0};
 };

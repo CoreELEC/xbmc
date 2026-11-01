@@ -174,6 +174,7 @@ void CEngineStats::UpdateStream(CActiveAEStream *stream)
       if (!str.m_syncPaused)
         str.m_syncState = stream->m_syncState;
       str.m_lateStartHandedOver = stream->m_lateStartHandedOver;
+      str.m_exactStart = stream->m_exactStart;
       str.m_syncError = stream->m_syncError.GetLastError(str.m_errorTime);
       if (stream->m_processingBuffers)
       {
@@ -282,6 +283,7 @@ void CEngineStats::GetSyncInfo(CAESyncInfo& info, CActiveAEStream *stream)
       info.errortime = str.m_errorTime;
       info.state = str.m_syncState;
       info.lateStartHandedOver = str.m_lateStartHandedOver;
+      info.exactStart = str.m_exactStart;
       info.rr = str.m_resampleRatio;
       str.m_errorTimeTaken = str.m_errorTime;
       return;
@@ -2672,6 +2674,37 @@ void CActiveAE::MuteSamples(CActiveAEStream* stream, CSampleBuffer* buf)
   }
 }
 
+double CActiveAE::FillSyncPad(CActiveAEStream* stream, CSampleBuffer* buf, double ms)
+{
+  buf->pkt->nb_samples = 0;
+  buf->pkt->pause_burst_ms = 0;
+  if (m_mode == MODE_RAW)
+  {
+    const double frame = stream->m_format.m_streamInfo.GetDuration();
+    // a pause shorter than a frame only before anything was heard
+    if (stream->m_silentSinceSyncStart)
+      buf->pkt->pause_burst_ms = static_cast<int>(std::lround(std::min(ms, frame)));
+    else if (ms > frame / 2)
+      buf->pkt->pause_burst_ms = TakeFramePause(stream, frame);
+    return buf->pkt->pause_burst_ms;
+  }
+
+  int framesToDelay = static_cast<int>(std::lround(ms / 1000 * buf->pkt->config.sample_rate));
+  if (framesToDelay > buf->pkt->max_nb_samples)
+    framesToDelay = buf->pkt->max_nb_samples;
+  if (m_mode == MODE_TRANSCODE)
+  {
+    if (framesToDelay > static_cast<int>(m_encoderFormat.m_frames / 2))
+      framesToDelay = m_encoderFormat.m_frames;
+    else
+      framesToDelay = 0;
+  }
+  buf->pkt->nb_samples = framesToDelay;
+  for (int i = 0; i < buf->pkt->planes; i++)
+    memset(buf->pkt->data[i], 0, buf->pkt->linesize);
+  return static_cast<double>(framesToDelay) * 1000 / buf->pkt->config.sample_rate;
+}
+
 double CActiveAE::SkipSyncSamples(CActiveAEStream* stream, CSampleBuffer* buf, double ms)
 {
   if (m_mode == MODE_RAW)
@@ -2726,6 +2759,8 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     stream->m_pauseBurstCarry = 0.0;
     stream->m_silentSinceSyncStart = true;
     stream->m_startCut = stream->m_pClock->TakeStartCut();
+    stream->m_startPad = 0.0;
+    stream->m_exactStart = false;
     stream->m_syncSinkReports = m_stats.GetSinkReports();
     CLog::Log(LOGDEBUG,"ActiveAE - start sync of audio stream");
   }
@@ -2775,14 +2810,22 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
   }
 
   // Without resampling, the player moves its clock to the audio once the error exceeds its own
-  // limit, but not below it. Audio starting late is therefore left to the player, as skipping it
-  // would lose the start of the audio. Not in passthrough, which is muted while the error is
-  // measured anyway, so the error is adjusted here.
-  const bool clockFollowsAudio{!stream->m_resampleMode && m_mode != MODE_RAW};
+  // limit. Audio starting late is therefore left to the player once it was heard, as skipping it
+  // would cut audio already playing.
+  const bool clockFollowsAudio{!stream->m_resampleMode};
+  double phasePeriod{0.0};
+  if (clockFollowsAudio && stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE)
+  {
+    double shift{0.0};
+    stream->m_pClock->GetSyncPhaseId(shift, phasePeriod);
+  }
   const auto keepAudible = [&](double syncError)
   {
-    return fabs(syncError) <= startThreshold ||
-           (clockFollowsAudio && syncError < 0 && -syncError <= MAX_LATE_START_MS);
+    const bool lateStart{clockFollowsAudio && syncError < 0 && -syncError <= MAX_LATE_START_MS};
+    // a late start is skipped before it is heard, which keeps the clock sync phase
+    if (lateStart && phasePeriod > 0)
+      return false;
+    return fabs(syncError) <= startThreshold || lateStart;
   };
 
   if (newerror && fabs(error) > threshold && stream->m_syncState == CAESyncInfo::AESyncState::SYNC_INSYNC)
@@ -2792,22 +2835,34 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     stream->m_resampleIntegral = 0;
     // a long average can span a step, so the error to correct is measured anew
     stream->m_syncErrorBooked = false;
+    stream->m_startPad = 0.0;
+    stream->m_exactStart = false;
     stream->m_syncError.SetErrorInterval(100ms);
     CLog::Log(LOGDEBUG, "ActiveAE::SyncStream - average error {:f} above threshold of {:f}", error,
               threshold);
   }
   else if (newerror && stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE)
   {
-    if (clockFollowsAudio && error < 0 && -error <= MAX_LATE_START_MS)
+    if (clockFollowsAudio && error < 0 && -error <= MAX_LATE_START_MS &&
+        !stream->m_silentSinceSyncStart)
     {
+      // a clock move by whole phase periods keeps the clock sync phase; the rest is padded
+      double handover = error;
+      if (phasePeriod > 0)
+      {
+        handover = -std::ceil(-error / phasePeriod) * phasePeriod;
+        stream->m_startPad = error - handover;
+        stream->m_exactStart = true;
+      }
       stream->m_syncState = CAESyncInfo::AESyncState::SYNC_INSYNC;
       stream->m_syncError.Flush(1000ms);
       // Reports the error to the player right away
-      stream->m_syncError.Correction(error);
+      stream->m_syncError.Correction(handover);
       stream->m_resampleIntegral = 0;
       stream->m_lateStartHandedOver = true;
       CLog::Log(LOGDEBUG,
-                "ActiveAE::SyncStream - average error of {:f}, left to the player's clock", error);
+                "ActiveAE::SyncStream - average error of {:f}, {:f} left to the player's clock",
+                error, handover);
     }
     else
     {
@@ -2845,44 +2900,11 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
       ret = m_silenceBuffers->GetFreeBuffer();
       if (ret)
       {
-        ret->pkt->nb_samples = 0;
-        ret->pkt->pause_burst_ms = 0;
-        int framesToDelay =
-            static_cast<int>(std::lround(error / 1000 * ret->pkt->config.sample_rate));
-        if (framesToDelay > ret->pkt->max_nb_samples)
-          framesToDelay = ret->pkt->max_nb_samples;
-        if (m_mode == MODE_TRANSCODE)
-        {
-          if (framesToDelay > (int) (m_encoderFormat.m_frames / 2))
-            framesToDelay = m_encoderFormat.m_frames;
-          else
-            framesToDelay = 0;
-        }
-        ret->pkt->nb_samples = framesToDelay;
-        if (m_mode == MODE_RAW)
-        {
-          ret->pkt->nb_samples = 0;
-          const double frame = stream->m_format.m_streamInfo.GetDuration();
-          // a pause shorter than a frame only before anything was heard
-          if (stream->m_silentSinceSyncStart)
-            ret->pkt->pause_burst_ms = static_cast<int>(std::lround(std::min(error, frame)));
-          else if (error > frame / 2)
-            ret->pkt->pause_burst_ms = TakeFramePause(stream, frame);
-          stream->m_syncError.Correction(-ret->pkt->pause_burst_ms);
-          error = std::max(error - ret->pkt->pause_burst_ms, 0.0);
-        }
-        else
-        {
-          const double delayed =
-              static_cast<double>(framesToDelay) * 1000 / ret->pkt->config.sample_rate;
-          stream->m_syncError.Correction(-delayed);
-          error = std::max(error - delayed, 0.0);
-          for(int i=0; i<ret->pkt->planes; i++)
-          {
-            memset(ret->pkt->data[i], 0, ret->pkt->linesize);
-          }
-        }
-        CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - delay frames:{:d} error {:.0f}ms", framesToDelay, error);
+        const double delayed = FillSyncPad(stream, ret, error);
+        stream->m_syncError.Correction(-delayed);
+        error = std::max(error - delayed, 0.0);
+        CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - delay {:.3f}ms error {:.0f}ms",
+                  delayed, error);
 
         if ((ret->pkt->nb_samples == 0) && (ret->pkt->pause_burst_ms == 0))
         {
@@ -2917,6 +2939,28 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     }
 
     return ret;
+  }
+
+  if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_INSYNC && stream->m_startPad > 0)
+  {
+    ret = m_silenceBuffers->GetFreeBuffer();
+    if (ret)
+    {
+      const double delayed = FillSyncPad(stream, ret, stream->m_startPad);
+      CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - start pad {:.3f}ms of {:.3f}ms",
+                delayed, stream->m_startPad);
+      if (delayed > 0)
+        stream->m_startPad -= delayed;
+      else
+      {
+        stream->m_startPad = 0.0;
+        stream->m_silentSinceSyncStart = false;
+        ret->Return();
+        ret = nullptr;
+      }
+    }
+    else
+      stream->m_silentSinceSyncStart = false;
   }
 
   if (!newerror || stream->m_syncState != CAESyncInfo::AESyncState::SYNC_INSYNC)

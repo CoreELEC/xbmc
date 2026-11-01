@@ -26,7 +26,9 @@ public:
   double GetClock(bool interpolated = true);
   double GetClock(double& absolute, bool interpolated = true);
 
-  double ErrorAdjust(double error, const char* log);
+  //! An `exact` error is moved by in full, as the audio engine already quantised it. A `start`
+  //! handover is never skipped as a minor update.
+  double ErrorAdjust(double error, const char* log, bool exact = false, bool start = false);
   void Discontinuity(double clock, double absolute);
   void Discontinuity(double clock = 0LL)
   {

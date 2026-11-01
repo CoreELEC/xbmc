@@ -559,11 +559,13 @@ bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe)
   {
     double syncerror = m_audioSink.GetSyncError();
     // a late start the engine left to the clock is applied at any size
-    const bool startSyncError{m_audioSink.TakeStartSyncError()};
+    bool exactStart{false};
+    const bool startSyncError{m_audioSink.TakeStartSyncError(exactStart)};
 
     if (startSyncError || std::abs(syncerror) > DVD_MSEC_TO_TIME(m_disconAdjustTimeMs))
     {
-      double correction = m_pClock->ErrorAdjust(syncerror, "CVideoPlayerAudio::OutputPacket");
+      double correction = m_pClock->ErrorAdjust(syncerror, "CVideoPlayerAudio::OutputPacket",
+                                                exactStart, startSyncError);
       if (correction != 0)
       {
         m_audioSink.SetSyncErrorCorrection(-correction);
