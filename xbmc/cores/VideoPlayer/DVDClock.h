@@ -25,6 +25,10 @@ public:
 
   double GetClock(bool interpolated = true);
   double GetClock(double& absolute, bool interpolated = true);
+  //! The clock plus the vsync adjust, read together
+  double GetClockWithVsyncAdjust();
+  //! The clock and the epoch of its mapping, read together
+  double GetClock(int& epoch);
 
   //! An `exact` error is moved by in full, as the audio engine already quantised it. A `start`
   //! handover is never skipped as a minor update.
@@ -54,7 +58,6 @@ public:
 
   bool GetClockInfo(int& MissedVblanks, double& ClockSpeed, double& RefreshRate) const;
   void SetVsyncAdjust(double adjustment);
-  double GetVsyncAdjust();
   CVsyncPhase& GetVsyncPhase() { return m_vsyncPhase; }
 
   void Pause(bool pause);
@@ -90,5 +93,6 @@ protected:
   CCriticalSection m_speedsection;
 
   friend class CVsyncPhase;
+  int m_clockEpoch{0};
   CVsyncPhase m_vsyncPhase{*this};
 };

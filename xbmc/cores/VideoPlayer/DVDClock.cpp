@@ -80,16 +80,28 @@ double CDVDClock::GetClock(double& absolute, bool interpolated /*= true*/)
   return SystemToPlaying(current);
 }
 
+double CDVDClock::GetClockWithVsyncAdjust()
+{
+  std::unique_lock lock(m_critSection);
+
+  const double clock = GetClock();
+  return clock + m_vSyncAdjust;
+}
+
+double CDVDClock::GetClock(int& epoch)
+{
+  std::unique_lock lock(m_critSection);
+
+  const double clock = GetClock();
+  epoch = m_clockEpoch;
+  return clock;
+}
+
 void CDVDClock::SetVsyncAdjust(double adjustment)
 {
   std::unique_lock lock(m_critSection);
   m_vSyncAdjust = adjustment;
-}
-
-double CDVDClock::GetVsyncAdjust()
-{
-  std::unique_lock lock(m_critSection);
-  return m_vSyncAdjust;
+  m_vsyncPhase.Reset();
 }
 
 void CDVDClock::Pause(bool pause)
@@ -143,12 +155,18 @@ void CDVDClock::SetSpeed(int iSpeed)
   if (iSpeed == DVD_PLAYSPEED_PAUSE)
   {
     if (!m_pauseClock)
+    {
       m_pauseClock = m_videoRefClock->GetTime();
+      m_clockEpoch++;
+    }
     return;
   }
 
   int64_t current;
   int64_t newfreq = m_systemFrequency * DVD_PLAYSPEED_NORMAL / iSpeed;
+
+  if (m_pauseClock || newfreq != m_systemUsed)
+    m_clockEpoch++;
 
   current = m_videoRefClock->GetTime();
   if (m_pauseClock)
@@ -229,6 +247,7 @@ void CDVDClock::Discontinuity(double clock, double absolute)
   m_bReset = false;
   m_systemAdjust = 0;
   m_speedAdjust = 0;
+  m_clockEpoch++;
 }
 
 void CDVDClock::SetMaxSpeedAdjust(double speed)
@@ -302,6 +321,7 @@ double CDVDClock::SystemToPlaying(int64_t system)
     m_speedAdjust = 0;
     m_vSyncAdjust = 0;
     m_bReset = false;
+    m_clockEpoch++;
   }
 
   if (m_pauseClock)

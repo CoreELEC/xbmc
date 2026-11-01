@@ -357,7 +357,7 @@ void CAudioSinkAE::SetResampleMode(int mode)
 double CAudioSinkAE::GetClock()
 {
   if (m_pClock)
-    return (m_pClock->GetClock() + m_pClock->GetVsyncAdjust()) / DVD_TIME_BASE * 1000;
+    return m_pClock->GetClockWithVsyncAdjust() / DVD_TIME_BASE * 1000;
   else
     return 0.0;
 }
