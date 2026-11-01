@@ -341,6 +341,8 @@ protected:
   bool RunStages();
   bool HasWork();
   CSampleBuffer* SyncStream(CActiveAEStream* stream);
+  // rounds a pause of `frame` ms to whole ms and carries the remainder into the next one
+  int TakeFramePause(CActiveAEStream* stream, double frame);
 
   void ResampleSounds();
   bool ResampleSound(CActiveAESound *sound);

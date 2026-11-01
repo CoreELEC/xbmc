@@ -260,6 +260,10 @@ protected:
   bool m_lateStartHandedOver{false};
   // the part of the muted frames' duration their whole-millisecond pause bursts left out
   double m_pauseBurstCarry{0.0};
+  // whether every frame since the sync start was paused or skipped
+  bool m_silentSinceSyncStart{false};
+  // whether m_lastSyncError holds an error measured since adjusting started
+  bool m_syncErrorBooked{false};
 };
 }
 
