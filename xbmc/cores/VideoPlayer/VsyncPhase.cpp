@@ -79,18 +79,7 @@ double CVsyncPhase::ApplyVsyncPhaseReading(double reading, int epoch, bool resta
   // the lattice branch nearest to the phase held, averaged so off-lattice pictures barely move it
   vsyncPhase += (step - m_phasePeriod * std::floor(step / m_phasePeriod + 0.5)) / m_readings;
 
-  // a wrap moves the clock by a period so the clock minus the phase stays put
-  if (std::abs(vsyncPhase) >= m_phasePeriod)
-  {
-    const double wrap = vsyncPhase > 0 ? m_phasePeriod : -m_phasePeriod;
-    m_clock.m_iDisc -= wrap;
-    vsyncPhase -= wrap;
-    CLog::Log(LOGDEBUG,
-              "CVsyncPhase::ApplyVsyncPhaseReading - phase wrap, disc:{:.3f} wrap:{:.3f}",
-              m_clock.m_iDisc / DVD_TIME_BASE, wrap / DVD_TIME_BASE);
-  }
-
-  m_clock.m_vSyncAdjust = -vsyncPhase;
+  SetVsyncPhase(vsyncPhase);
 
   // readers measure against one id, so a phase they have not seen gets a new one
   if (m_state != State::PUBLISHED || m_epoch != m_clock.m_clockEpoch)
@@ -98,6 +87,45 @@ double CVsyncPhase::ApplyVsyncPhaseReading(double reading, int epoch, bool resta
   m_state = State::PUBLISHED;
   m_epoch = m_clock.m_clockEpoch;
   return -m_clock.m_vSyncAdjust;
+}
+
+bool CVsyncPhase::ShiftVsyncPhase(double delay, double& phase)
+{
+  std::unique_lock lock(m_clock.m_critSection);
+
+  if (m_state != State::PUBLISHED || m_phasePeriod <= 0 || m_clock.m_speedAdjust != 0 ||
+      m_clock.m_systemUsed != m_clock.m_systemFrequency)
+    return false;
+
+  // the video moves by whole periods, so what the audio has not followed stays within half of one
+  const double owed = m_shift - m_shiftFollowed;
+  const double shift =
+      owed + delay - m_phasePeriod * std::floor((owed + delay) / m_phasePeriod + 0.5) - owed;
+  if (shift != 0)
+  {
+    m_shift += shift;
+    m_generation++;
+    SetVsyncPhase(-m_clock.m_vSyncAdjust - shift);
+  }
+  CLog::Log(LOGDEBUG, "CVsyncPhase::ShiftVsyncPhase - delay:{:.3f} video:{:.3f} shift:{:.3f}",
+            delay / DVD_TIME_BASE, (delay - shift) / DVD_TIME_BASE, shift / DVD_TIME_BASE);
+  phase = -m_clock.m_vSyncAdjust;
+  return true;
+}
+
+void CVsyncPhase::SetVsyncPhase(double vsyncPhase)
+{
+  // a wrap moves the clock by a period so the clock minus the phase stays put
+  if (std::abs(vsyncPhase) >= m_phasePeriod)
+  {
+    const double wrap = vsyncPhase > 0 ? m_phasePeriod : -m_phasePeriod;
+    m_clock.m_iDisc -= wrap;
+    vsyncPhase -= wrap;
+    CLog::Log(LOGDEBUG, "CVsyncPhase::SetVsyncPhase - phase wrap, disc:{:.3f} wrap:{:.3f}",
+              m_clock.m_iDisc / DVD_TIME_BASE, wrap / DVD_TIME_BASE);
+  }
+
+  m_clock.m_vSyncAdjust = -vsyncPhase;
 }
 
 int CVsyncPhase::GetVsyncPhaseId()

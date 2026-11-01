@@ -33,8 +33,12 @@ public:
   //! again from a reading only with `restart`. At a whole phase period off, the clock and the
   //! phase move by it together.
   double ApplyVsyncPhaseReading(double reading, int epoch, bool restart);
+  //! Moves a published phase by a change `delay` of the video delay: the video by whole phase
+  //! periods, the clock the audio follows by the rest. False without a published phase, a phase
+  //! period or at a speed adjust.
+  bool ShiftVsyncPhase(double delay, double& phase);
   //! 0 without a phase, -1 while pending or published at an older epoch, else an id that
-  //! changes at a new epoch and after pending or none
+  //! changes at a new epoch, after pending or none, and at a phase shift
   int GetVsyncPhaseId();
   //! As GetVsyncPhaseId(), with `shift` 0 and the phase period, 0 without a phase or while the
   //! speed is adjusted
@@ -51,6 +55,7 @@ private:
   };
 
   void Reset() { m_state = State::NONE; }
+  void SetVsyncPhase(double vsyncPhase);
 
   // the readings in one average of the render manager's clock sync
   static constexpr int PHASE_READINGS = 31;
@@ -61,4 +66,7 @@ private:
   int m_epoch{0};
   int m_generation{0};
   int m_readings{0};
+  // the sum of all phase shifts, and its value when the audio last followed it
+  double m_shift{0.0};
+  double m_shiftFollowed{0.0};
 };
