@@ -48,6 +48,7 @@ public:
   double GetSyncError();
   void SetSyncErrorCorrection(double correction);
   bool TakeStartSyncError();
+  void SetStartCut(double cut);
 
   /*!
    * \brief Returns the resample ratio, or 0.0 if unknown/invalid
@@ -61,6 +62,7 @@ public:
 
   double GetClock() override;
   double GetClockSpeed() override;
+  double TakeStartCut() override;
 
   CAEStreamInfo::DataType GetPassthroughStreamType(AVCodecID codecId, int samplerate, int profile);
 
@@ -71,6 +73,7 @@ protected:
   double m_syncError;
   unsigned int m_syncErrorTime;
   bool m_startSyncError{false};
+  std::atomic<double> m_startCut{0.0};
   double m_resampleRatio = 0.0; // invalid
   CCriticalSection m_critSection;
 

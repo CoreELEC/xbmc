@@ -1520,6 +1520,9 @@ void CActiveAE::Configure(AEAudioFormat *desiredFmt)
         m_discardBufferPools.push_back((*it)->m_processingBuffers->GetResampleBuffers());
         m_discardBufferPools.push_back((*it)->m_processingBuffers->GetAtempoBuffers());
         (*it)->m_processingBuffers.reset();
+        // a start cut was measured against the flushed buffers
+        if ((*it)->m_pClock && !(*it)->m_freed)
+          (*it)->m_pClock->TakeStartCut();
         (*it)->m_syncState = CAESyncInfo::AESyncState::SYNC_START;
       }
       if (!(*it)->m_processingBuffers)
@@ -2669,6 +2672,36 @@ void CActiveAE::MuteSamples(CActiveAEStream* stream, CSampleBuffer* buf)
   }
 }
 
+double CActiveAE::SkipSyncSamples(CActiveAEStream* stream, CSampleBuffer* buf, double ms)
+{
+  if (m_mode == MODE_RAW)
+  {
+    // before anything was heard, the next calls pause for what a skip took too much
+    const double frame = stream->m_format.m_streamInfo.GetDuration();
+    if (stream->m_silentSinceSyncStart ? std::lround(ms) <= 0 : ms <= frame / 2)
+      return 0.0;
+    buf->pkt->nb_samples = 0;
+    return frame;
+  }
+
+  int framesToSkip = static_cast<int>(std::lround(ms / 1000 * buf->pkt->config.sample_rate));
+  if (framesToSkip > buf->pkt->nb_samples)
+    framesToSkip = buf->pkt->nb_samples;
+  if (m_mode == MODE_TRANSCODE)
+  {
+    if (framesToSkip > static_cast<int>(m_encoderFormat.m_frames / 2))
+      framesToSkip = buf->pkt->nb_samples;
+    else
+      framesToSkip = 0;
+  }
+  const int bytesToSkip =
+      framesToSkip * buf->pkt->bytes_per_sample * buf->pkt->config.channels / buf->pkt->planes;
+  for (int i = 0; i < buf->pkt->planes; i++)
+    memmove(buf->pkt->data[i], buf->pkt->data[i] + bytesToSkip, buf->pkt->linesize - bytesToSkip);
+  buf->pkt->nb_samples -= framesToSkip;
+  return static_cast<double>(framesToSkip) * 1000 / buf->pkt->config.sample_rate;
+}
+
 CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
 {
   CSampleBuffer *ret = NULL;
@@ -2692,8 +2725,20 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     stream->m_lateStartHandedOver = false;
     stream->m_pauseBurstCarry = 0.0;
     stream->m_silentSinceSyncStart = true;
+    stream->m_startCut = stream->m_pClock->TakeStartCut();
     stream->m_syncSinkReports = m_stats.GetSinkReports();
     CLog::Log(LOGDEBUG,"ActiveAE - start sync of audio stream");
+  }
+
+  if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE && stream->m_startCut > 0)
+  {
+    CSampleBuffer* buf = stream->m_processingBuffers->m_outputSamples.front();
+    const double skipped = SkipSyncSamples(stream, buf, stream->m_startCut);
+    stream->m_startCut = skipped > 0 ? stream->m_startCut - skipped : 0.0;
+    stream->m_syncError.Flush(100ms);
+    CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - start cut, skip {:.3f}ms", skipped);
+    if (buf->pkt->nb_samples == 0)
+      return ret;
   }
 
   double error;
@@ -2852,44 +2897,12 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     else
     {
       CSampleBuffer *buf = stream->m_processingBuffers->m_outputSamples.front();
-      int framesToSkip =
-          static_cast<int>(std::lround(-error / 1000 * buf->pkt->config.sample_rate));
-      if (framesToSkip > buf->pkt->nb_samples)
-        framesToSkip = buf->pkt->nb_samples;
-      if (m_mode == MODE_TRANSCODE)
-      {
-        if (framesToSkip > (int) (m_encoderFormat.m_frames / 2))
-          framesToSkip = buf->pkt->nb_samples;
-        else
-          framesToSkip = 0;
-      }
-      if (m_mode == MODE_RAW)
-      {
-        // before anything was heard, the next calls pause for what a skip took too much
-        const double frame = stream->m_format.m_streamInfo.GetDuration();
-        if (stream->m_silentSinceSyncStart ? std::lround(-error) > 0 : -error > frame / 2)
-        {
-          stream->m_syncError.Correction(stream->m_format.m_streamInfo.GetDuration());
-          error += stream->m_format.m_streamInfo.GetDuration();
-          buf->pkt->nb_samples = 0;
-        }
-        else
-          corrected = true;
-      }
-      else
-      {
-        int bytesToSkip = framesToSkip * buf->pkt->bytes_per_sample *
-                                  buf->pkt->config.channels / buf->pkt->planes;
-        for (int i=0; i<buf->pkt->planes; i++)
-        {
-          memmove(buf->pkt->data[i], buf->pkt->data[i]+bytesToSkip, buf->pkt->linesize - bytesToSkip);
-        }
-        buf->pkt->nb_samples -= framesToSkip;
-        stream->m_syncError.Correction((double)framesToSkip * 1000 / buf->pkt->config.sample_rate);
-        error += (double)framesToSkip * 1000 / buf->pkt->config.sample_rate;
-        corrected = framesToSkip == 0 && buf->pkt->nb_samples > 0;
-      }
-      CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - skip frames:{:d} error {:.0f}ms", framesToSkip, error);
+      const double skipped = SkipSyncSamples(stream, buf, -error);
+      stream->m_syncError.Correction(skipped);
+      error += skipped;
+      corrected = skipped == 0 && (m_mode == MODE_RAW || buf->pkt->nb_samples > 0);
+      CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - skip {:.3f}ms error {:.0f}ms", skipped,
+                error);
     }
 
     stream->m_lastSyncError = error;

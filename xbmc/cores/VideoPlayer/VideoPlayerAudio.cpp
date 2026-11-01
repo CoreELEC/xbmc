@@ -19,6 +19,7 @@
 #include "utils/MathUtils.h"
 #include "utils/log.h"
 
+#include <algorithm>
 #include <mutex>
 
 #ifdef TARGET_RASPBERRY_PI
@@ -334,11 +335,15 @@ void CVideoPlayerAudio::Process()
                 pts / DVD_TIME_BASE, m_messageQueue.GetLevel(), m_audioSink.GetDelay() / DVD_TIME_BASE);
 
       double delay = m_audioSink.GetDelay();
+      double startCut{0.0};
       if (pts > m_audioClock - delay + 0.5 * DVD_TIME_BASE)
       {
         m_audioSink.Flush();
         audioframe.nb_frames = 0;
       }
+      else if (resync.seekStart)
+        startCut = std::max(0.0, pts - (m_audioClock - delay));
+      m_audioSink.SetStartCut(startCut);
       m_audioClock = pts + delay;
       if (m_speed != DVD_PLAYSPEED_PAUSE)
         m_audioSink.Resume();
