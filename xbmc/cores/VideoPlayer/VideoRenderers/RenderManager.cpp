@@ -1365,7 +1365,7 @@ void CRenderManager::PrepareNextRender()
 
     m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
   }
-  else if (!combined && renderPts > (nextFramePts - frametime))
+  else if (!combined && !m_presenting && renderPts > (nextFramePts - frametime))
   {
     m_lateframes = 0;
     m_presentstep = PRESENT_FLIP;
