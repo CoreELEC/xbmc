@@ -125,6 +125,11 @@ public:
   virtual void SetAVDelay(float fValue = 0.0f) {}
   virtual float GetAVDelay() { return 0.0f; }
 
+  /*!
+   * \brief The interactive change of the audio delay has finished, at the value last set
+   */
+  virtual void CommitAVDelay() {}
+
   virtual void SetSubTitleDelay(float fValue = 0.0f) {}
   virtual float GetSubTitleDelay()    { return 0.0f; }
   virtual int GetSubtitleCount() const { return 0; }

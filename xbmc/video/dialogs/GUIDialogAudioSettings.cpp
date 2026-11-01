@@ -80,6 +80,19 @@ void CGUIDialogAudioSettings::FrameMove()
   CGUIDialogSettingsManualBase::FrameMove();
 }
 
+void CGUIDialogAudioSettings::OnDeinitWindow(int nextWindowID)
+{
+  if (m_audioDelayChanged)
+  {
+    auto& components = CServiceBroker::GetAppComponents();
+    const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+    appPlayer->CommitAVDelay();
+    m_audioDelayChanged = false;
+  }
+
+  CGUIDialogSettingsManualBase::OnDeinitWindow(nextWindowID);
+}
+
 std::string CGUIDialogAudioSettings::FormatDelay(float value, float interval)
 {
   if (fabs(value) < 0.5f * interval)
@@ -137,6 +150,8 @@ void CGUIDialogAudioSettings::OnSettingChanged(const std::shared_ptr<const CSett
   else if (settingId == SETTING_AUDIO_DELAY)
   {
     float value = static_cast<float>(std::static_pointer_cast<const CSettingNumber>(setting)->GetValue());
+    if (value != appPlayer->GetVideoSettings().m_AudioDelay)
+      m_audioDelayChanged = true;
     appPlayer->SetAVDelay(value);
   }
   else if (settingId == SETTING_AUDIO_STREAM)
