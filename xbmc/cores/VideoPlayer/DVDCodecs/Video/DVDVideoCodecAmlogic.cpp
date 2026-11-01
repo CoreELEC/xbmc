@@ -502,6 +502,7 @@ void CDVDVideoCodecAmlogic::Close(void)
     m_Codec->CloseDecoder(), m_Codec = nullptr;
 
   m_videobuffer.iFlags = 0;
+  m_dropRanges.clear();
 
   if (m_mpeg2_sequence)
     delete m_mpeg2_sequence, m_mpeg2_sequence = NULL;
@@ -687,6 +688,21 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
     if (m_mvcOffsets)
       m_mvcOffsets->Commit(m_hints.ptsinvalid ? DVD_NOPTS_VALUE : packet.pts);
 
+    // pictures leave the decoder long after their packets, so a drop request reaches
+    // them through the dts range of the packets added under it
+    const double dts = packet.dts != DVD_NOPTS_VALUE ? packet.dts : packet.pts;
+    if (dts != DVD_NOPTS_VALUE)
+    {
+      const bool open = !m_dropRanges.empty() && m_dropRanges.back().endDts == DVD_NOPTS_VALUE;
+      if (m_codecControlFlags & DVD_CODEC_CTRL_DROP)
+      {
+        if (!open)
+          m_dropRanges.push_back({dts, DVD_NOPTS_VALUE});
+      }
+      else if (open)
+        m_dropRanges.back().endDts = dts;
+    }
+
     m_pendingMeta.Inherit(*m_lastMeta);
     // consecutive frames with equal values share one copy
     if (!(m_pendingMeta == *m_lastMeta))
@@ -713,6 +729,7 @@ void CDVDVideoCodecAmlogic::Reset(void)
     m_mvcOffsets->Reset();
   m_metadataSequencer.Reset();
   m_pendingMeta = m_streamMeta;
+  m_dropRanges.clear();
   if (m_bitstream)
   {
     switch(m_hints.codec)
@@ -739,6 +756,13 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoP
   if (!m_Codec)
     return VC_ERROR;
 
+  // a dropped picture is never rendered, and at the end of the stream no next picture releases it
+  if (pVideoPicture->videoBuffer && (pVideoPicture->iFlags & DVP_FLAG_DROPPED))
+  {
+    pVideoPicture->videoBuffer->Release();
+    pVideoPicture->videoBuffer = nullptr;
+  }
+
   VCReturn retVal = m_Codec->GetPicture(&m_videobuffer);
 
   if (retVal == VC_PICTURE)
@@ -751,6 +775,18 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoP
         m_mvcOffsets ? m_mvcOffsets->GetDepth(static_cast<double>(m_Codec->GetOMXPts()),
                                               m_subtitlePlane)
                      : 0;
+
+    if (!m_dropRanges.empty() && pVideoPicture->pts != DVD_NOPTS_VALUE)
+    {
+      // amlvideo may rebuild the pts from 90 kHz, up to one tick below the packet pts
+      constexpr double PTS_90KHZ_TICK = DVD_TIME_BASE / 90000.0;
+      const double pts = pVideoPicture->pts + PTS_90KHZ_TICK;
+      std::erase_if(m_dropRanges, [pts](const DropRange& range)
+                    { return range.endDts != DVD_NOPTS_VALUE && pts >= range.endDts; });
+      if (std::ranges::any_of(m_dropRanges,
+                              [pts](const DropRange& range) { return pts >= range.startDts; }))
+        pVideoPicture->iFlags |= DVP_FLAG_DROPPED;
+    }
 
     m_metadataSequencer.Consume(static_cast<double>(m_Codec->GetOMXPts()), m_frameMeta);
     pVideoPicture->videoBuffer = m_videoBufferPool->Get();
@@ -788,11 +824,6 @@ void CDVDVideoCodecAmlogic::SetCodecControl(int flags)
   {
     CLog::Log(LOGDEBUG, LOGVIDEO, "{} {:x}->{:x}",  __func__, m_codecControlFlags, flags);
     m_codecControlFlags = flags;
-
-    if (flags & DVD_CODEC_CTRL_DROP)
-      m_videobuffer.iFlags |= DVP_FLAG_DROPPED;
-    else
-      m_videobuffer.iFlags &= ~DVP_FLAG_DROPPED;
 
     if (m_Codec)
       m_Codec->SetDrain((flags & DVD_CODEC_CTRL_DRAIN) != 0);
