@@ -199,7 +199,7 @@ void CAdvancedSettings::Initialize()
   m_videoSubsDelayRange = 60;
   m_videoSubsDelayStep = 0.1f;
   m_videoAudioDelayRange = 10;
-  m_videoAudioDelayStep = 0.025f;
+  m_videoAudioDelayStep = 0.005f;
   m_videoUseTimeSeeking = true;
   m_videoSmoothPercentToTimeSeeking = true;
   m_videoTimeSeekForward = 30;
