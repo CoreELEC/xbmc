@@ -141,6 +141,8 @@ public:
 
   void SetDelay(int delay) { m_videoDelay = delay; }
   int GetDelay() { return m_videoDelay; }
+  // the audio books what it has not followed of the delay changes set so far
+  void CommitDelay() { m_videoDelayCommit = true; }
 
   /*!
    * \brief How far ahead of the clock the picture on screen is, in DVD clock units.
@@ -234,6 +236,7 @@ protected:
   std::atomic_int m_videoDelay = {};
   // the video delay the release and the clock sync phase use, presenter or render thread only
   int m_appliedVideoDelay{0};
+  std::atomic_bool m_videoDelayCommit{false};
 
   int m_QueueSize = 2;
   int m_QueueSkip = 0;

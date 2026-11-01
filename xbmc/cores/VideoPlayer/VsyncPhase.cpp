@@ -144,7 +144,24 @@ int CVsyncPhase::FollowVsyncPhase(double& shift, double& period)
   std::unique_lock lock(m_clock.m_critSection);
 
   m_shiftFollowed = m_shift;
+  m_shiftCommit = false;
   shift = m_shift;
   period = m_state == State::NONE || m_clock.m_speedAdjust != 0 ? 0.0 : m_phasePeriod;
   return GetVsyncPhaseId();
+}
+
+void CVsyncPhase::CommitVsyncShift()
+{
+  std::unique_lock lock(m_clock.m_critSection);
+
+  m_shiftCommit = m_shift != m_shiftFollowed;
+}
+
+bool CVsyncPhase::TakeVsyncShiftCommit()
+{
+  std::unique_lock lock(m_clock.m_critSection);
+
+  const bool commit = m_shiftCommit && m_shift != m_shiftFollowed;
+  m_shiftCommit = false;
+  return commit;
 }

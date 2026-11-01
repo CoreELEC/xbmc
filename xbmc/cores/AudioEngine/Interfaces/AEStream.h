@@ -37,6 +37,8 @@ public:
     period = 0.0;
     return 0;
   }
+  //! Whether the clock asks once to book the phase shifts not followed so far
+  virtual bool TakeSyncShiftCommit() { return false; }
 };
 
 class CAESyncInfo

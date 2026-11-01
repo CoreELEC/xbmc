@@ -1309,7 +1309,9 @@ void CRenderManager::PrepareNextRender()
   if (!m_showVideo && !m_forceNext)
     return;
 
-  // a phase shift can move the clock, so it goes before the clock of the release is taken
+  // a phase shift can move the clock, so it goes before the clock of the release is taken;
+  // a commit is taken first, so the delays set before it are applied before it is passed on
+  const bool commit = m_videoDelayCommit.exchange(false);
   const int videoDelay = m_videoDelay;
   if (videoDelay != m_appliedVideoDelay)
   {
@@ -1319,6 +1321,8 @@ void CRenderManager::PrepareNextRender()
       m_clockSync.m_syncOffset = phase;
     m_appliedVideoDelay = videoDelay;
   }
+  if (commit)
+    m_dvdClock.GetVsyncPhase().CommitVsyncShift();
 
   const double frameOnScreen = m_dvdClock.GetClock(m_releaseClockEpoch);
   m_releaseClock = frameOnScreen;

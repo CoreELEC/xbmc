@@ -43,6 +43,10 @@ public:
   //! As GetVsyncPhaseId(), with `shift` the sum of all phase shifts, which the audio follows now,
   //! and the phase period, 0 without a phase or while the speed is adjusted
   int FollowVsyncPhase(double& shift, double& period);
+  //! Asks the audio to book the phase shifts it has not followed, if there are any
+  void CommitVsyncShift();
+  //! Whether a commit asked for since the audio last followed is still owed, once
+  bool TakeVsyncShiftCommit();
 
 private:
   friend class CDVDClock;
@@ -69,4 +73,5 @@ private:
   // the sum of all phase shifts, and its value when the audio last followed it
   double m_shift{0.0};
   double m_shiftFollowed{0.0};
+  bool m_shiftCommit{false};
 };

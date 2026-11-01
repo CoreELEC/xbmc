@@ -312,6 +312,7 @@ public:
   bool CanPause() const override;
   void SetAVDelay(float fValue = 0.0f) override;
   float GetAVDelay() override;
+  void CommitAVDelay() override;
   bool IsInMenu() const override;
 
   /*!

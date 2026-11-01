@@ -2749,6 +2749,15 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     return ret;
   }
 
+  // passthrough follows a phase shift only through a start sync, which measures it once;
+  // a commit made while the stream is not in sync waits for it
+  if (m_mode != MODE_PCM && stream->m_syncState == CAESyncInfo::AESyncState::SYNC_INSYNC &&
+      stream->m_pClock->TakeSyncShiftCommit())
+  {
+    stream->m_syncState = CAESyncInfo::AESyncState::SYNC_START;
+    CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - phase shift committed");
+  }
+
   if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_START)
   {
     stream->m_syncState = CAESyncInfo::AESyncState::SYNC_MUTE;
