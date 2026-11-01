@@ -1099,9 +1099,17 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
   int retry = 0;
   unsigned int written = 0;
   AEDelayStatus status;
+  // as the engine counted it: a packet, a pause burst or nothing
+  int rawPackets = 0;
+  int rawPauseMs = 0;
 
   if (m_requestedFormat.m_dataFormat == AE_FMT_RAW)
   {
+    if (samples->pool && samples->pkt->nb_samples > 0)
+      rawPackets = 1;
+    else if (samples->pool)
+      rawPauseMs = samples->pkt->pause_burst_ms;
+
     bool skipSwap = false;
     if (m_needIecPack)
     {
@@ -1149,13 +1157,11 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
       {
         m_sink->AddPause(samples->pkt->pause_burst_ms);
         m_sink->GetDelay(status);
-        m_stats->UpdateSinkDelay(status, samples->pool ? 1 : 0);
+        m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
         return status.delay * 1000;
       }
     }
   }
-
-  int framesOrPackets;
 
   while (frames > 0)
   {
@@ -1171,10 +1177,10 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
         m_extError = true;
         CLog::Log(LOGERROR, "CActiveAESink::OutputSamples - failed");
         status.SetDelay(0);
-        framesOrPackets = frames;
         if (m_requestedFormat.m_dataFormat == AE_FMT_RAW)
-          framesOrPackets = 1;
-        m_stats->UpdateSinkDelay(status, samples->pool ? framesOrPackets : 0);
+          m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
+        else
+          m_stats->UpdateSinkDelay(status, samples->pool ? frames : 0);
         return 0;
       }
       else
@@ -1185,10 +1191,10 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
       m_extError = true;
       CLog::Log(LOGERROR, "CActiveAESink::OutputSamples - sink returned error");
       status.SetDelay(0);
-      framesOrPackets = frames;
       if (m_requestedFormat.m_dataFormat == AE_FMT_RAW)
-        framesOrPackets = 1;
-      m_stats->UpdateSinkDelay(status, samples->pool ? framesOrPackets : 0);
+        m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
+      else
+        m_stats->UpdateSinkDelay(status, samples->pool ? frames : 0);
       return 0;
     }
     frames -= written;
@@ -1206,7 +1212,7 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
     // sync error measurements are off by the whole sink delay.
     if (totalFrames == 0)
       m_sink->GetDelay(status);
-    m_stats->UpdateSinkDelay(status, samples->pool ? 1 : 0);
+    m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
   }
 
   return status.delay * 1000;

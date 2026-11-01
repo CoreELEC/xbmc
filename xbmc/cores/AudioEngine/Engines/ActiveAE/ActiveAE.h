@@ -187,8 +187,8 @@ class CEngineStats
 {
 public:
   void Reset(unsigned int sampleRate, bool pcm);
-  void UpdateSinkDelay(const AEDelayStatus& status, int samples);
-  void AddSamples(int samples, const std::list<CActiveAEStream*>& streams);
+  void UpdateSinkDelay(const AEDelayStatus& status, int samples, int pauseMs = 0);
+  void AddSamples(int samples, const std::list<CActiveAEStream*>& streams, int pauseMs = 0);
   void GetDelay(AEDelayStatus& status);
   void AddStream(unsigned int streamid);
   void RemoveStream(unsigned int streamid);
@@ -210,6 +210,7 @@ protected:
   float m_sinkCacheTotal;
   float m_sinkLatency;
   int m_bufferedSamples;
+  int m_bufferedPauseMs{0};
   unsigned int m_sinkSampleRate;
   AEDelayStatus m_sinkDelay;
   bool m_suspended;

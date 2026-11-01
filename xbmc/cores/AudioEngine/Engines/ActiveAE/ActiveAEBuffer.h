@@ -65,6 +65,7 @@ public:
   virtual bool Create(unsigned int totaltime);
   CSampleBuffer *GetFreeBuffer();
   void ReturnBuffer(CSampleBuffer *buffer);
+  float GetPlayingTime(const CSampleBuffer* buffer) const;
   AEAudioFormat m_format;
   std::deque<CSampleBuffer*> m_allSamples;
   std::deque<CSampleBuffer*> m_freeSamples;

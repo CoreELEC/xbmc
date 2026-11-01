@@ -87,6 +87,18 @@ void CActiveAEBufferPool::ReturnBuffer(CSampleBuffer *buffer)
   m_freeSamples.push_back(buffer);
 }
 
+// a passthrough buffer holds one frame in bytes, a pause burst or nothing
+float CActiveAEBufferPool::GetPlayingTime(const CSampleBuffer* buffer) const
+{
+  if (m_format.m_dataFormat != AE_FMT_RAW)
+    return static_cast<float>(buffer->pkt->nb_samples) / buffer->pkt->config.sample_rate;
+
+  if (buffer->pkt->nb_samples > 0)
+    return static_cast<float>(m_format.m_streamInfo.GetDuration() / 1000);
+
+  return static_cast<float>(buffer->pkt->pause_burst_ms) / 1000;
+}
+
 bool CActiveAEBufferPool::Create(unsigned int totaltime)
 {
   CSampleBuffer *buffer;
@@ -377,12 +389,12 @@ float CActiveAEBufferPoolResample::GetDelay()
 
   for(itBuf=m_inputSamples.begin(); itBuf!=m_inputSamples.end(); ++itBuf)
   {
-    delay += (float)(*itBuf)->pkt->nb_samples / (*itBuf)->pkt->config.sample_rate;
+    delay += GetPlayingTime(*itBuf);
   }
 
   for(itBuf=m_outputSamples.begin(); itBuf!=m_outputSamples.end(); ++itBuf)
   {
-    delay += (float)(*itBuf)->pkt->nb_samples / (*itBuf)->pkt->config.sample_rate;
+    delay += GetPlayingTime(*itBuf);
   }
 
   if (m_resampler)
@@ -669,12 +681,12 @@ float CActiveAEBufferPoolAtempo::GetDelay()
 
   for (auto &buf : m_inputSamples)
   {
-    delay += (float)buf->pkt->nb_samples / buf->pkt->config.sample_rate;
+    delay += GetPlayingTime(buf);
   }
 
   for (auto &buf : m_outputSamples)
   {
-    delay += (float)buf->pkt->nb_samples / buf->pkt->config.sample_rate;
+    delay += GetPlayingTime(buf);
   }
 
   if (m_pTempoFilter->IsActive())

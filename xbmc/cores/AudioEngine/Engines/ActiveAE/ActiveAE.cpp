@@ -88,26 +88,31 @@ void CEngineStats::Reset(unsigned int sampleRate, bool pcm)
   m_sinkDelay.SetDelay(0.0);
   m_sinkSampleRate = sampleRate;
   m_bufferedSamples = 0;
+  m_bufferedPauseMs = 0;
   m_suspended = false;
   m_pcmOutput = pcm;
 }
 
-void CEngineStats::UpdateSinkDelay(const AEDelayStatus& status, int samples)
+void CEngineStats::UpdateSinkDelay(const AEDelayStatus& status, int samples, int pauseMs)
 {
   std::unique_lock lock(m_lock);
   m_sinkDelay = status;
-  if (samples > m_bufferedSamples)
+  if (samples > m_bufferedSamples || pauseMs > m_bufferedPauseMs)
   {
     CLog::Log(LOGERROR, "CEngineStats::UpdateSinkDelay - inconsistency in buffer time");
   }
   else
+  {
     m_bufferedSamples -= samples;
+    m_bufferedPauseMs -= pauseMs;
+  }
 }
 
-void CEngineStats::AddSamples(int samples, const std::list<CActiveAEStream*>& streams)
+void CEngineStats::AddSamples(int samples, const std::list<CActiveAEStream*>& streams, int pauseMs)
 {
   std::unique_lock lock(m_lock);
   m_bufferedSamples += samples;
+  m_bufferedPauseMs += pauseMs;
 
   for (auto stream : streams)
   {
@@ -123,7 +128,8 @@ void CEngineStats::GetDelay(AEDelayStatus& status)
     status.delay += static_cast<double>(m_bufferedSamples) / m_sinkSampleRate;
   else
     status.delay +=
-        static_cast<double>(m_bufferedSamples) * m_sinkFormat.m_streamInfo.GetDuration() / 1000;
+        static_cast<double>(m_bufferedSamples) * m_sinkFormat.m_streamInfo.GetDuration() / 1000 +
+        static_cast<double>(m_bufferedPauseMs) / 1000;
 }
 
 void CEngineStats::AddStream(unsigned int streamid)
@@ -196,7 +202,8 @@ void CEngineStats::GetDelay(AEDelayStatus& status, CActiveAEStream *stream)
     status.delay += static_cast<double>(m_bufferedSamples) / m_sinkSampleRate;
   else
     status.delay +=
-        static_cast<double>(m_bufferedSamples) * m_sinkFormat.m_streamInfo.GetDuration() / 1000;
+        static_cast<double>(m_bufferedSamples) * m_sinkFormat.m_streamInfo.GetDuration() / 1000 +
+        static_cast<double>(m_bufferedPauseMs) / 1000;
 
   for (auto &str : m_streamStats)
   {
@@ -220,7 +227,8 @@ void CEngineStats::GetSyncInfo(CAESyncInfo& info, CActiveAEStream *stream)
     status.delay += static_cast<double>(m_bufferedSamples) / m_sinkSampleRate;
   else
     status.delay +=
-        static_cast<double>(m_bufferedSamples) * m_sinkFormat.m_streamInfo.GetDuration() / 1000;
+        static_cast<double>(m_bufferedSamples) * m_sinkFormat.m_streamInfo.GetDuration() / 1000 +
+        static_cast<double>(m_bufferedPauseMs) / 1000;
 
   status.delay += static_cast<double>(m_sinkLatency);
 
@@ -277,7 +285,8 @@ float CEngineStats::GetWaterLevel()
     return static_cast<float>(m_bufferedSamples) / m_sinkSampleRate;
   else
     return static_cast<float>(static_cast<double>(m_bufferedSamples) *
-                              m_sinkFormat.m_streamInfo.GetDuration() / 1000.0);
+                                  m_sinkFormat.m_streamInfo.GetDuration() / 1000.0 +
+                              static_cast<double>(m_bufferedPauseMs) / 1000.0);
 }
 
 void CEngineStats::SetSuspended(bool state)
@@ -2501,7 +2510,8 @@ bool CActiveAE::RunStages()
       // update stats
       if(out)
       {
-        int samples = (m_mode == MODE_TRANSCODE) ? 1 : out->pkt->nb_samples;
+        int samples =
+            (m_mode == MODE_TRANSCODE) ? (out->pkt->nb_samples > 0 ? 1 : 0) : out->pkt->nb_samples;
         m_stats.AddSamples(samples, m_streams);
         m_sinkBuffers->m_inputSamples.push_back(out);
       }
@@ -2523,7 +2533,10 @@ bool CActiveAE::RunStages()
             buffer = (*it)->m_processingBuffers->m_outputSamples.front();
             (*it)->m_processingBuffers->m_outputSamples.pop_front();
           }
-          m_stats.AddSamples(1, m_streams);
+          if (buffer->pkt->nb_samples > 0)
+            m_stats.AddSamples(1, m_streams);
+          else
+            m_stats.AddSamples(0, m_streams, buffer->pkt->pause_burst_ms);
           m_sinkBuffers->m_inputSamples.push_back(buffer);
         }
       }
