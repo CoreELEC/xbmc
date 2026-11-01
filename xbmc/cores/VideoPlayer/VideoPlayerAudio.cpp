@@ -328,7 +328,8 @@ void CVideoPlayerAudio::Process()
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_RESYNC))
     { //player asked us to set internal clock
-      double pts = std::static_pointer_cast<CDVDMsgDouble>(pMsg)->m_value;
+      const SResyncMsg resync{std::static_pointer_cast<CDVDMsgType<SResyncMsg>>(pMsg)->m_value};
+      double pts = resync.clock;
       CLog::Log(LOGDEBUG, LOGAUDIO, "CVideoPlayerAudio - CDVDMsg::GENERAL_RESYNC({:.3f} level: {:d} cache:{:.3f}",
                 pts / DVD_TIME_BASE, m_messageQueue.GetLevel(), m_audioSink.GetDelay() / DVD_TIME_BASE);
 
