@@ -339,10 +339,12 @@ bool CRendererAML::WaitVsync()
       case CAMLCodec::VsyncWake::VSYNC:
       case CAMLCodec::VsyncWake::TIMEOUT:
         m_lastWakeVsync = wake == CAMLCodec::VsyncWake::VSYNC;
+        m_lastWake = m_lastWakeVsync ? VsyncPresentWake::VSYNC : VsyncPresentWake::TIMEOUT;
         // amvideo shows a released frame from the vsync after the release
         PublishReleasedFrame();
         return true;
       case CAMLCodec::VsyncWake::STEP:
+        m_lastWake = VsyncPresentWake::STEP;
         // a requested step leaves the GUI pacing as it is
         return true;
       case CAMLCodec::VsyncWake::HANDOVER:

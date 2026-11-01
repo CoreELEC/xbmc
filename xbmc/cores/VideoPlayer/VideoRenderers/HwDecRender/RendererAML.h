@@ -44,6 +44,7 @@ public:
   virtual bool StartVsyncPresent() override;
   virtual void StopVsyncPresent() override;
   virtual bool WaitVsync() override;
+  virtual VsyncPresentWake GetVsyncPresentWake() const override { return m_lastWake; }
   virtual bool PresentFrame(int index) override;
   virtual void WakeVsyncPresent() override;
   virtual int GetPresentLatency() const override;
@@ -79,6 +80,8 @@ private:
   std::atomic<double> m_presentHold{0.0};
   //! Vsync thread only: whether its last wake was a real vsync (what the GUI may pace on)
   bool m_lastWakeVsync{false};
+  //! Vsync thread only: the wake that ended its last wait
+  VsyncPresentWake m_lastWake{VsyncPresentWake::STEP};
   //! Codec of the frame last queued from the vsync thread, for the render loop to apply geometry
   std::mutex m_pendingGeometryLock;
   std::shared_ptr<CAMLCodec> m_pendingGeometry;

@@ -94,6 +94,14 @@ public:
   virtual void StopVsyncPresent() {}
   //! Blocks until the plane's next vsync, a wake or a liveness bound; false when stopped
   virtual bool WaitVsync() { return false; }
+  enum class VsyncPresentWake
+  {
+    VSYNC,
+    STEP,
+    TIMEOUT,
+  };
+  //! What ended the last wait that returned true, for the vsync thread
+  virtual VsyncPresentWake GetVsyncPresentWake() const { return VsyncPresentWake::STEP; }
   //! Hands the frame at `index` to the plane, from the vsync thread; false if no new picture
   virtual bool PresentFrame(int index) { return false; }
   //! Makes the vsync thread run a step now instead of at the next vsync
