@@ -149,6 +149,7 @@ bool CRenderManager::Configure(const VideoPicture& picture, float fps, unsigned 
         // Clear stale vsync/late-frame state from the old framerate; CheckEnableClockSync() will recalibrate on the next FrameMove on the main thread.
         m_clockSync.Reset();
         m_dvdClock.SetVsyncAdjust(0);
+        m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
         m_lateframes = -1;
       }
       return true;
@@ -190,6 +191,7 @@ bool CRenderManager::Configure(const VideoPicture& picture, float fps, unsigned 
     m_stateEvent.Reset();
     m_clockSync.Reset();
     m_dvdClock.SetVsyncAdjust(0);
+    m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
     m_pConfigPicture = std::make_unique<VideoPicture>();
     m_pConfigPicture->CopyRef(picture);
 
@@ -280,6 +282,7 @@ bool CRenderManager::Configure()
     m_renderDebug = false;
     m_clockSync.Reset();
     m_dvdClock.SetVsyncAdjust(0);
+    m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
     m_overlays.Reset();
     OVERLAY::MarkDirty();
     m_overlays.SetStereoMode(m_picture.stereoMode);
@@ -556,6 +559,7 @@ void CRenderManager::UnInit()
   DeleteRenderer();
 
   m_renderState = STATE_UNCONFIGURED;
+  m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
   m_picture.Reset();
   m_bRenderGUI = false;
   CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_picture.hdrType);
@@ -1297,6 +1301,7 @@ void CRenderManager::PrepareNextRender()
   else
   {
     m_dvdClock.SetVsyncAdjust(0);
+    m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
     // with no lock to the display, release at the nearest vsync
     if (!isPaused)
       renderPts += frametime / 2;
@@ -1461,11 +1466,18 @@ void CRenderManager::CheckEnableClockSync()
   if (diff < 0.0005)
   {
     m_clockSync.m_enabled = true;
+    if (m_presenting)
+      m_dvdClock.GetVsyncPhase().SetPhasePeriod(
+          DVD_TIME_BASE /
+          static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()));
+    else
+      m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
   }
   else
   {
     m_clockSync.m_enabled = false;
     m_dvdClock.SetVsyncAdjust(0);
+    m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
   }
 
   m_playerPort->UpdateClockSync(m_clockSync.m_enabled);
