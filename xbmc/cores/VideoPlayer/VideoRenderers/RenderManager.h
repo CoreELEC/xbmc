@@ -147,6 +147,12 @@ public:
    */
   double GetDisplayLatency() const { return m_displayLatency; }
 
+  /**
+   * The time in ms from the release of a frame to its scan-out, without the video delay;
+   * 100 until a renderer is configured or when it does not know its present latency
+   */
+  double GetReleaseLead();
+
   void SetVideoSettings(const CVideoSettings& settings);
 
 protected:
@@ -169,6 +175,8 @@ protected:
   void ServiceVideoCaptures();
 
   void UpdateLatencyTweak();
+  //! Release lead in ms without the video delay; needs m_pRenderer
+  double CalcReleaseLead();
   void CheckEnableClockSync();
 
   //! The vsync thread picks and presents; the render loop draws the frame it last presented

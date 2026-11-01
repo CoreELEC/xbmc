@@ -921,27 +921,9 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(double &frametime, double &pts)
       SStartMsg msg;
       msg.player = VideoPlayer_VIDEO;
       msg.cachetime = DVD_MSEC_TO_TIME(50); //! @todo implement
-      msg.cachetotal = DVD_MSEC_TO_TIME(100); //! @todo implement
+      msg.cachetotal = DVD_MSEC_TO_TIME(m_renderManager.GetReleaseLead());
 
-      // Amlogic hardware deinterlace pipeline latency compensation.
-      // When interlaced content is decoded by AML hardware, the VFM pipeline
-      // includes a deinterlace module (di0) that buffers multiple fields before
-      // producing output (buffer_keep_count=3, start_frame_drop=2, plus post-
-      // processing). Kodi captures PTS via V4L2 DQBUF *before* the DI stage,
-      // so the frame appears on screen ~240ms later than Kodi's sync expects.
-      // Shift the video start timestamp forward to delay audio accordingly.
-      double diCompensation = 0;
-      if (m_processInfo.GetVideoInterlaced() && m_processInfo.IsVideoHwDecoder() &&
-          CSysfsPath{"/sys/class/deinterlace/di0/frame_format"}.Exists())
-      {
-        constexpr int DI_PIPELINE_FIELDS = 12;
-        diCompensation = DI_PIPELINE_FIELDS * DVD_TIME_BASE / m_fFrameRate;
-        CLog::Log(LOGDEBUG, "CVideoPlayerVideo - DI pipeline latency compensation: "
-                  "{:.0f}ms ({} fields at {:.1f}Hz)",
-                  diCompensation / (DVD_TIME_BASE / 1000), DI_PIPELINE_FIELDS, m_fFrameRate);
-      }
-
-      msg.timestamp = hasTimestamp ? (pts + m_renderManager.GetDelay() * 1000 + diCompensation) : DVD_NOPTS_VALUE;
+      msg.timestamp = hasTimestamp ? (pts + m_renderManager.GetDelay() * 1000) : DVD_NOPTS_VALUE;
       m_messageParent.Put(std::make_shared<CDVDMsgType<SStartMsg>>(CDVDMsg::PLAYER_STARTED, msg));
     }
 
