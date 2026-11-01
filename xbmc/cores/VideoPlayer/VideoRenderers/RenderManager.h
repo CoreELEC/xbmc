@@ -232,6 +232,8 @@ protected:
   /// Display latency updated in PrepareNextRender in DVD clock units, includes m_latencyTweak
   std::atomic<double> m_displayLatency = 0.0;
   std::atomic_int m_videoDelay = {};
+  // the video delay the release and the clock sync phase use, presenter or render thread only
+  int m_appliedVideoDelay{0};
 
   int m_QueueSize = 2;
   int m_QueueSkip = 0;

@@ -525,7 +525,7 @@ void CRenderManager::PresentFromVsync()
       if (!m_releaseClockTaken)
       {
         clock = m_dvdClock.GetClock(epoch);
-        latency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_videoDelay);
+        latency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_appliedVideoDelay);
       }
 
       // only a vsync wake knows the picture on screen
@@ -1309,6 +1309,17 @@ void CRenderManager::PrepareNextRender()
   if (!m_showVideo && !m_forceNext)
     return;
 
+  // a phase shift can move the clock, so it goes before the clock of the release is taken
+  const int videoDelay = m_videoDelay;
+  if (videoDelay != m_appliedVideoDelay)
+  {
+    double phase = 0;
+    if (m_dvdClock.GetVsyncPhase().ShiftVsyncPhase(
+            DVD_MSEC_TO_TIME(videoDelay - m_appliedVideoDelay), phase))
+      m_clockSync.m_syncOffset = phase;
+    m_appliedVideoDelay = videoDelay;
+  }
+
   const double frameOnScreen = m_dvdClock.GetClock(m_releaseClockEpoch);
   m_releaseClock = frameOnScreen;
   m_releaseClockTaken = true;
@@ -1316,7 +1327,7 @@ void CRenderManager::PrepareNextRender()
       1.0 / static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) *
       DVD_TIME_BASE;
 
-  m_displayLatency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_videoDelay);
+  m_displayLatency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_appliedVideoDelay);
 
   // While the clock is paused, frameOnScreen does not advance, so adding the display
   // latency would pick a frame ahead of the one actually shown. That only holds for
