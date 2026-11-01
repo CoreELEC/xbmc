@@ -345,6 +345,14 @@ std::vector<uint8_t> CPackerMAT::GetOutputFrame()
   return buffer;
 }
 
+void CPackerMAT::Reset()
+{
+  m_state = {};
+  m_buffer.clear();
+  m_bufferCount = 0;
+  m_outputQueue.clear();
+}
+
 void CPackerMAT::WriteHeader()
 {
   m_buffer.resize(MAT_BUFFER_SIZE);
