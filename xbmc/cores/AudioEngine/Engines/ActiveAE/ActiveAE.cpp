@@ -85,7 +85,6 @@ bool IsPreferredDeviceAvailable(const AESinkDevice& configured, const AESinkDevi
 void CEngineStats::Reset(unsigned int sampleRate, bool pcm)
 {
   std::unique_lock lock(m_lock);
-  m_sinkDelay.SetDelay(0.0);
   m_sinkSampleRate = sampleRate;
   m_bufferedSamples = 0;
   m_bufferedPauseMs = 0;

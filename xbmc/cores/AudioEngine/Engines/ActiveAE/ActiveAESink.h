@@ -126,6 +126,7 @@ protected:
   bool NeedIECPacking();
 
   unsigned int OutputSamples(CSampleBuffer* samples);
+  void ReportDelay();
   void SwapInit(CSampleBuffer* samples);
 
   void GenerateNoise();
