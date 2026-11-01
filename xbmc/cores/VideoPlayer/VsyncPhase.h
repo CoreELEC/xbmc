@@ -40,8 +40,8 @@ public:
   //! 0 without a phase, -1 while pending or published at an older epoch, else an id that
   //! changes at a new epoch, after pending or none, and at a phase shift
   int GetVsyncPhaseId();
-  //! As GetVsyncPhaseId(), with `shift` 0 and the phase period, 0 without a phase or while the
-  //! speed is adjusted
+  //! As GetVsyncPhaseId(), with `shift` the sum of all phase shifts, which the audio follows now,
+  //! and the phase period, 0 without a phase or while the speed is adjusted
   int FollowVsyncPhase(double& shift, double& period);
 
 private:

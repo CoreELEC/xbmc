@@ -2761,9 +2761,8 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     stream->m_startCut = stream->m_pClock->TakeStartCut();
     stream->m_startPad = 0.0;
     stream->m_exactStart = false;
-    double shift{0.0};
     double period{0.0};
-    stream->m_syncPhaseId = stream->m_pClock->GetSyncPhaseId(shift, period);
+    stream->m_syncPhaseId = stream->m_pClock->GetSyncPhaseId(stream->m_syncShift, period);
     stream->m_syncSinkReports = m_stats.GetSinkReports();
     CLog::Log(LOGDEBUG,"ActiveAE - start sync of audio stream");
   }
@@ -2788,9 +2787,37 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     if (syncPhaseId == -1 || syncPhaseId != stream->m_syncPhaseId)
     {
       stream->m_syncPhaseId = syncPhaseId;
+      stream->m_syncShift = shift;
       stream->m_syncError.Flush(100ms);
       CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - start sync held, phase id {:d}",
                 syncPhaseId);
+    }
+  }
+  else if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_INSYNC && m_mode == MODE_PCM)
+  {
+    // the clock moved by a known shift, so samples follow it exactly and no average spans it
+    double shift{0.0};
+    double period{0.0};
+    stream->m_pClock->GetSyncPhaseId(shift, period);
+    if (shift != stream->m_syncShift)
+    {
+      stream->m_startPad += stream->m_syncShift - shift;
+      stream->m_syncShift = shift;
+      if (!stream->m_lateStartHandedOver)
+        stream->m_syncError.SetErrorInterval(stream->GetErrorInterval());
+    }
+  }
+  else if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_ADJUST &&
+           !stream->m_syncErrorBooked && m_mode == MODE_PCM)
+  {
+    // the error not yet booked is measured anew against the moved clock
+    double shift{0.0};
+    double period{0.0};
+    stream->m_pClock->GetSyncPhaseId(shift, period);
+    if (shift != stream->m_syncShift)
+    {
+      stream->m_syncShift = shift;
+      stream->m_syncError.SetErrorInterval(100ms);
     }
   }
 
@@ -2962,7 +2989,12 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
       CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - start pad {:.3f}ms of {:.3f}ms",
                 delayed, stream->m_startPad);
       if (delayed > 0)
+      {
         stream->m_startPad -= delayed;
+        // a shift padded over several passes leaves no average of the samples before its end
+        if (!stream->m_lateStartHandedOver)
+          stream->m_syncError.SetErrorInterval(stream->GetErrorInterval());
+      }
       else
       {
         stream->m_startPad = 0.0;
@@ -2973,6 +3005,21 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     }
     else
       stream->m_silentSinceSyncStart = false;
+  }
+  else if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_INSYNC && stream->m_startPad < 0)
+  {
+    CSampleBuffer* buf = stream->m_processingBuffers->m_outputSamples.front();
+    const double skipped = SkipSyncSamples(stream, buf, -stream->m_startPad);
+    CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - shift skip {:.3f}ms of {:.3f}ms", skipped,
+              -stream->m_startPad);
+    if (skipped > 0)
+    {
+      stream->m_startPad += skipped;
+      if (!stream->m_lateStartHandedOver)
+        stream->m_syncError.SetErrorInterval(stream->GetErrorInterval());
+    }
+    else
+      stream->m_startPad = 0.0;
   }
 
   if (!newerror || stream->m_syncState != CAESyncInfo::AESyncState::SYNC_INSYNC)
