@@ -89,6 +89,7 @@ public:
   int           ReleaseFrame(const uint32_t index, bool bDrop = false);
   bool          IsOpen() const { return m_opened; }
   bool          IsRealtimeStream() const { return m_processInfo.IsRealtimeStream(); }
+  double        GetPresentHold() const { return m_presentHold; }
 
   static int    PollFrame();
   static void   SetPollDevice(int device);
@@ -143,6 +144,7 @@ private:
   DllLibAmCodec   *m_dll;
   std::atomic<bool> m_opened;
   bool             m_drain = false;
+  std::atomic<double> m_presentHold{0.0};
   am_private_t    *am_private;
   CDVDStreamInfo   m_hints;
   int              m_speed;

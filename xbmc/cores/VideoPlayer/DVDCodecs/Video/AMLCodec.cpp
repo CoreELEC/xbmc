@@ -2430,6 +2430,9 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL, StreamHdrType
     }
   }
 
+  // the deinterlacer outputs a field once the next one is queued
+  m_presentHold = hints.interlaced ? am_private->video_rate * 1000.0 / UNIT_FREQ / 2 : 0.0;
+
   // DEC_CONTROL_FLAG_DISABLE_FAST_POC
   CSysfsPath("/sys/module/amvdec_h264/parameters/dec_control", 4);
 
@@ -3454,6 +3457,8 @@ void CAMLCodec::SetVideoRect(const CRect &SrcRect, const CRect &DestRect)
   {
     CLog::Log(LOGDEBUG, "CAMLCodec::SetVideoRect: decoder fps has changed, video_rate adjusted from {:d} to {:d}", am_private->video_rate, video_rate);
     am_private->video_rate = video_rate;
+    if (m_hints.interlaced)
+      m_presentHold = am_private->video_rate * 1000.0 / UNIT_FREQ / 2;
   }
 
   // video view mode
