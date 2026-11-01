@@ -1251,9 +1251,18 @@ void CRenderManager::PrepareNextRender()
       1.0 / static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) *
       DVD_TIME_BASE;
 
+  const int presentLatency = m_pRenderer->GetPresentLatency();
+  const double displayLatency =
+      presentLatency >= 0
+          ? presentLatency * 1000.0 /
+                    static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) +
+                m_pRenderer->GetPresentHold()
+          : static_cast<double>(
+                CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency());
+
   m_displayLatency = DVD_MSEC_TO_TIME(
       m_latencyTweak +
-      static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency()) -
+      displayLatency -
       m_videoDelay -
       static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment()));
 

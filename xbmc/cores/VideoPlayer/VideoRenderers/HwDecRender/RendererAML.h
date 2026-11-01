@@ -46,6 +46,8 @@ public:
   virtual bool WaitVsync() override;
   virtual bool PresentFrame(int index) override;
   virtual void WakeVsyncPresent() override;
+  virtual int GetPresentLatency() const override;
+  virtual double GetPresentHold() const override;
 
   // Feature support
   virtual bool Supports(ESCALINGMETHOD method) const override { return false; };
@@ -73,6 +75,8 @@ private:
   bool m_bConfigured;
 
   std::atomic<bool> m_vsyncPresent{false};
+  //! Deinterlacer hold of the decoder whose frame was configured or released last
+  std::atomic<double> m_presentHold{0.0};
   //! Vsync thread only: whether its last wake was a real vsync (what the GUI may pace on)
   bool m_lastWakeVsync{false};
   //! Codec of the frame last queued from the vsync thread, for the render loop to apply geometry
