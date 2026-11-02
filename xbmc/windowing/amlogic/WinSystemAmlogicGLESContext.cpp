@@ -37,6 +37,12 @@ using namespace KODI;
 using namespace KODI::WINDOWING::AML;
 using namespace std::chrono_literals;
 
+namespace
+{
+// a swapped frame latches at the next vsync and scans out from the one after
+constexpr float PRESENT_DEPTH_REFRESHES = 2.0f;
+} // namespace
+
 CWinSystemAmlogicGLESContext::CWinSystemAmlogicGLESContext()
 : m_pGLContext(new CEGLContextUtils(EGL_PLATFORM_GBM_MESA, "EGL_EXT_platform_base"))
 {
@@ -363,6 +369,11 @@ void CWinSystemAmlogicGLESContext::PresentRender(bool rendered, bool videoLayer)
     // the player clock runs again: pick now, not a vsync later
     CAMLCodec::RequestVsyncStep();
   }
+}
+
+float CWinSystemAmlogicGLESContext::GetDisplayLatency()
+{
+  return PRESENT_DEPTH_REFRESHES / m_gfxContext->GetFPS() * 1000.0f;
 }
 
 bool CWinSystemAmlogicGLESContext::SetGuiCompositing(int colorTransfer)
