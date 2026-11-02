@@ -1358,8 +1358,12 @@ void CRenderManager::PrepareNextRender()
   }
   else
   {
-    m_dvdClock.SetVsyncAdjust(0);
-    m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
+    // the vsync thread leaves the phase to CheckEnableClockSync, which can hold it pending
+    if (!m_presenting)
+    {
+      m_dvdClock.SetVsyncAdjust(0);
+      m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
+    }
     // with no lock to the display, release at the nearest vsync
     if (!isPaused)
       renderPts += frametime / 2;
@@ -1544,7 +1548,15 @@ void CRenderManager::CheckEnableClockSync()
   else
   {
     m_clockSync.m_enabled = false;
-    m_dvdClock.SetVsyncAdjust(0);
+    // a start sync waits for the refresh rate that the pending switch sets
+    const CGraphicContext& gfx = CServiceBroker::GetWinSystem()->GetGfxContext();
+    if (m_presenting && m_bTriggerUpdateResolution && gfx.IsFullScreenVideo() &&
+        gfx.IsFullScreenRoot() && m_fps > 0.0f &&
+        CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+            CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) != ADJUST_REFRESHRATE_OFF)
+      m_dvdClock.GetVsyncPhase().SetVsyncPhasePending();
+    else
+      m_dvdClock.SetVsyncAdjust(0);
     m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
   }
 

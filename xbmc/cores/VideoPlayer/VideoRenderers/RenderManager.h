@@ -193,7 +193,7 @@ protected:
   mutable CCriticalSection m_statelock;
   CCriticalSection m_presentlock;
   CCriticalSection m_datalock;
-  bool m_bTriggerUpdateResolution = false;
+  std::atomic_bool m_bTriggerUpdateResolution{false};
   bool m_bRenderGUI = true;
   bool m_renderedDebugOverlay = false;
   bool m_renderDebug = false;
