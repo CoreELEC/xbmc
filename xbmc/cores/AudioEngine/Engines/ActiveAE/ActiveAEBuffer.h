@@ -51,7 +51,7 @@ public:
   void Return();
   std::unique_ptr<CSoundPacket> pkt;
   CActiveAEBufferPool *pool = nullptr;
-  int64_t timestamp = 0;
+  double timestamp = 0;
   int pkt_start_offset = 0;
   int refCount = 0;
   double centerMixLevel;
@@ -103,7 +103,7 @@ protected:
   uint8_t *m_planes[16];
   bool m_empty = true;
   bool m_drain = false;
-  int64_t m_lastSamplePts = 0;
+  double m_lastSamplePts = 0;
   bool m_remap = false;
   CSampleBuffer *m_procSample = nullptr;
   std::unique_ptr<IAEResample> m_resampler;
@@ -145,7 +145,7 @@ protected:
   bool m_drain;
   bool m_changeFilter;
   float m_tempo;
-  int64_t m_lastSamplePts = 0;
+  double m_lastSamplePts = 0;
   bool m_fillPackets;
 };
 
