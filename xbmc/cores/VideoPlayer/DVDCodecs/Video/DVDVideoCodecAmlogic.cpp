@@ -772,9 +772,7 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoP
     pVideoPicture->videoBuffer = nullptr;
     pVideoPicture->SetParams(m_videobuffer);
     pVideoPicture->m_3dSubtitleDepth =
-        m_mvcOffsets ? m_mvcOffsets->GetDepth(static_cast<double>(m_Codec->GetOMXPts()),
-                                              m_subtitlePlane)
-                     : 0;
+        m_mvcOffsets ? m_mvcOffsets->GetDepth(pVideoPicture->pts, m_subtitlePlane) : 0;
 
     if (!m_dropRanges.empty() && pVideoPicture->pts != DVD_NOPTS_VALUE)
     {
@@ -788,7 +786,7 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoP
         pVideoPicture->iFlags |= DVP_FLAG_DROPPED;
     }
 
-    m_metadataSequencer.Consume(static_cast<double>(m_Codec->GetOMXPts()), m_frameMeta);
+    m_metadataSequencer.Consume(pVideoPicture->pts, m_frameMeta);
     pVideoPicture->videoBuffer = m_videoBufferPool->Get();
     static_cast<CAMLVideoBuffer*>(pVideoPicture->videoBuffer)->Set(this, m_Codec,
      m_Codec->GetOMXPts(), m_Codec->GetAmlDuration(), m_Codec->GetBufferIndex(), m_metadataToken,

@@ -320,6 +320,19 @@ public:
 
 static const uint64_t UINT64_0 = 0x8000000000000000ULL;
 
+namespace
+{
+// the decoder takes 0 as no pts and keeps a 32-bit 90 kHz copy; this base is nine full wraps of
+// that copy, so it lifts negative pts above 0 and leaves the 32-bit value unchanged
+constexpr uint64_t PTS_US64_BASE = 100ULL << 32;
+
+uint64_t PtsToDecoder(double pts)
+{
+  pts += PTS_US64_BASE;
+  return pts >= 1.0 ? static_cast<uint64_t>(pts) : UINT64_0;
+}
+} // namespace
+
 #define EXTERNAL_PTS    (1)
 #define SYNC_OUTSIDE    (2)
 #define KEYFRAME_PTS_ONLY 0x100
@@ -2927,7 +2940,7 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
     am_private->am_pkt.avpts = UINT64_0;
   else
   {
-    am_private->am_pkt.avpts = pts;
+    am_private->am_pkt.avpts = PtsToDecoder(pts);
     m_state |= STATE_HASPTS;
   }
 
@@ -2936,7 +2949,7 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
     am_private->am_pkt.avdts = am_private->am_pkt.avpts;
   else
   {
-    am_private->am_pkt.avdts = dts;
+    am_private->am_pkt.avdts = PtsToDecoder(dts);
 
     // For VC1 AML decoder uses PTS only on I-Frames
     if (am_private->am_pkt.avpts == UINT64_0 && (((size_t)am_private->gcodec.param) & KEYFRAME_PTS_ONLY))
@@ -3337,6 +3350,9 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
 
     pVideoPicture->dts = DVD_NOPTS_VALUE;
     pVideoPicture->pts = static_cast<double>(m_cur_pts);
+    // a pts the decoder counted up from 0 for a missed lookup sits far below the base
+    if (m_cur_pts >= PTS_US64_BASE / 2)
+      pVideoPicture->pts -= PTS_US64_BASE;
 
     CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::GetPicture: index: {:d}, pts: {:.3f}, dur:{:.3f}ms elf:{:d}ms",
       m_bufferIndex, pVideoPicture->pts / DVD_TIME_BASE, pVideoPicture->iDuration / 1000, elapsed_since_last_frame.count());
