@@ -1297,6 +1297,9 @@ void CRenderManager::PrepareNextRender()
   else
   {
     m_dvdClock.SetVsyncAdjust(0);
+    // with no lock to the display, release at the nearest vsync
+    if (!isPaused)
+      renderPts += frametime / 2;
   }
 
   CLog::LogFC(LOGDEBUG, LOGAVTIMING,
