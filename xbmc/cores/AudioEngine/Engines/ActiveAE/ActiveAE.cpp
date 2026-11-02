@@ -97,6 +97,8 @@ void CEngineStats::UpdateSinkDelay(const AEDelayStatus& status, int samples, int
 {
   std::unique_lock lock(m_lock);
   m_sinkDelay = status;
+  if (samples > 0 || pauseMs > 0)
+    m_sinkReports++;
   if (samples > m_bufferedSamples || pauseMs > m_bufferedPauseMs)
   {
     CLog::Log(LOGERROR, "CEngineStats::UpdateSinkDelay - inconsistency in buffer time");
@@ -130,6 +132,11 @@ void CEngineStats::GetDelay(AEDelayStatus& status)
     status.delay +=
         static_cast<double>(m_bufferedSamples) * m_sinkFormat.m_streamInfo.GetDuration() / 1000 +
         static_cast<double>(m_bufferedPauseMs) / 1000;
+}
+
+unsigned int CEngineStats::GetSinkReports()
+{
+  return m_sinkReports;
 }
 
 void CEngineStats::AddStream(unsigned int streamid)
@@ -2180,6 +2187,14 @@ bool CActiveAE::RunStages()
       if ((*it)->m_processingBuffers->m_outputSamples.empty())
         continue;
 
+      // the silence an idle sink writes ahead of a start counts from its next buffer report
+      if ((*it)->m_syncState != CAESyncInfo::SYNC_INSYNC &&
+          m_stats.GetSinkReports() == (*it)->m_syncSinkReports)
+      {
+        (*it)->m_syncError.Flush(100ms);
+        continue;
+      }
+
       CSampleBuffer *buf = (*it)->m_processingBuffers->m_outputSamples.front();
       if (buf->timestamp)
       {
@@ -2605,6 +2620,7 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     stream->m_lateStartHandedOver = false;
     stream->m_pauseBurstCarry = 0.0;
     stream->m_silentSinceSyncStart = true;
+    stream->m_syncSinkReports = m_stats.GetSinkReports();
     CLog::Log(LOGDEBUG,"ActiveAE - start sync of audio stream");
   }
 

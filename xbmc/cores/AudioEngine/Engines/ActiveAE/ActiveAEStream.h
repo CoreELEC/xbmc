@@ -264,6 +264,8 @@ protected:
   bool m_silentSinceSyncStart{false};
   // whether m_lastSyncError holds an error measured since adjusting started
   bool m_syncErrorBooked{false};
+  // the sink reports counted when the start sync began
+  unsigned int m_syncSinkReports{0};
 };
 }
 
