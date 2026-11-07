@@ -990,9 +990,9 @@ void CRenderManager::UpdateResolution()
             std::unique_lock lock(m_statelock);
             m_switching = true;
           }
+          CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_picture.hdrType);
           RESOLUTION res = CResolutionUtils::ChooseBestResolution(
               m_fps, m_picture.iWidth, m_picture.iHeight, !m_picture.stereoMode.empty());
-          CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_picture.hdrType);
           CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(res, false);
           UpdateLatencyTweak();
           if (m_pRenderer)
