@@ -1718,10 +1718,8 @@ void CPeripheralCecAdapterUpdateThread::UpdateTvVolumeTarget(void)
   m_adapter->SetTvVolumeTarget(target);
 }
 
-std::string CPeripheralCecAdapterUpdateThread::UpdateAudioSystemStatus(void)
+void CPeripheralCecAdapterUpdateThread::UpdateAudioSystemStatus(void)
 {
-  std::string strAmpName;
-
   /* the TV takes over whenever the amp is not handling volume, so settle on it first */
   UpdateTvVolumeTarget();
 
@@ -1729,32 +1727,28 @@ std::string CPeripheralCecAdapterUpdateThread::UpdateAudioSystemStatus(void)
   {
     CLog::Log(LOGDEBUG, "{} - no CEC capable amplifier found", __FUNCTION__);
     m_adapter->SetAmpControlsVolume(false);
-    return strAmpName;
+    return;
   }
 
   if (m_adapter->GetSettingInt("volume_control") == LOCALISED_ID_NONE)
   {
     m_adapter->SetAmpControlsVolume(false);
-    return strAmpName;
+    return;
   }
-
-  // request the OSD name of the amp
-  std::string ampName(m_adapter->m_cecAdapter->GetDeviceOSDName(CECDEVICE_AUDIOSYSTEM));
-  strAmpName += ampName;
 
 #if CEC_LIB_HAS_SYSTEM_AUDIO_MODE_STATUS
   /* an amp only acts on volume keypresses while system audio mode is on. handing it the volume
      while it is off leaves the user with no working volume control at all. */
   if (m_adapter->m_cecAdapter->SystemAudioModeStatus() != CEC_SYSTEM_AUDIO_STATUS_ON)
   {
-    CLog::Log(LOGDEBUG, "{} - CEC capable amplifier found ({}), but system audio mode is off",
-              __FUNCTION__, ampName);
+    CLog::Log(LOGDEBUG, "{} - CEC capable amplifier found, but system audio mode is off",
+              __FUNCTION__);
     m_adapter->SetAmpControlsVolume(false);
-    return strAmpName;
+    return;
   }
 #endif
 
-  CLog::Log(LOGDEBUG, "{} - CEC capable amplifier found ({})", __FUNCTION__, ampName);
+  CLog::Log(LOGDEBUG, "{} - CEC capable amplifier found", __FUNCTION__);
 
   m_adapter->SetAmpControlsVolume(true);
 
@@ -1763,8 +1757,6 @@ std::string CPeripheralCecAdapterUpdateThread::UpdateAudioSystemStatus(void)
   if (audioStatus != CEC_AUDIO_VOLUME_STATUS_UNKNOWN)
     m_adapter->SetAmpMuted((audioStatus & CEC_AUDIO_MUTE_STATUS_MASK) ==
                            CEC_AUDIO_MUTE_STATUS_MASK);
-
-  return strAmpName;
 }
 
 bool CPeripheralCecAdapterUpdateThread::SetInitialConfiguration(void)
@@ -1793,9 +1785,7 @@ bool CPeripheralCecAdapterUpdateThread::SetInitialConfiguration(void)
   strNotification = StringUtils::Format(
       "{}: {}", CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(36016), tvName);
 
-  std::string strAmpName = UpdateAudioSystemStatus();
-  if (!strAmpName.empty())
-    strNotification += StringUtils::Format("- {}", strAmpName);
+  UpdateAudioSystemStatus();
 
   m_adapter->m_bIsReady = true;
 
