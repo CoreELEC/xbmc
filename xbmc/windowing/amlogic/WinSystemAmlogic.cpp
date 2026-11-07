@@ -516,6 +516,14 @@ bool CWinSystemAmlogic::IsHDRDisplay()
          (caps.SupportsDolbyVision() != DolbyVisionFormat::DOLBYVISION_TYPE_NONE));
 }
 
+bool CWinSystemAmlogic::AllowsRefreshRateMultiples() const
+{
+  const StreamHdrType hdrType = GetGfxContext().GetHDRType();
+
+  return hdrType != StreamHdrType::HDR_TYPE_DOLBYVISION || !aml_dolby_vision_enabled() ||
+         aml_convert_to_hdr_by_vs_engine(hdrType) || aml_convert_to_sdr_by_vs_engine(hdrType);
+}
+
 CHDRCapabilities CWinSystemAmlogic::GetDisplayHDRCapabilities() const
 {
   return m_amlDisplay->GetHDRCaps();
