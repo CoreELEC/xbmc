@@ -257,7 +257,7 @@ public:
 protected:
   void UpdateMenuLanguage(void);
   void UpdateTvVolumeTarget(void);
-  std::string UpdateAudioSystemStatus(void);
+  void UpdateAudioSystemStatus(void);
   bool WaitReady(void);
   bool SetInitialConfiguration(void);
   void Process(void) override;
