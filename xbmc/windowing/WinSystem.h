@@ -249,6 +249,7 @@ public:
   virtual HDR_STATUS ToggleHDR() { return HDR_STATUS::HDR_UNSUPPORTED; }
   virtual HDR_STATUS GetOSHDRStatus() { return HDR_STATUS::HDR_UNSUPPORTED; }
   virtual CHDRCapabilities GetDisplayHDRCapabilities() const { return {}; }
+  virtual bool AllowsRefreshRateMultiples() const { return true; }
   virtual KODI::UTILS::Eotf GetEotf() const { return KODI::UTILS::Eotf::TRADITIONAL_SDR; }
   virtual KODI::UTILS::Colorimetry GetColorimetry() const
   {
