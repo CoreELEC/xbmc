@@ -1725,6 +1725,12 @@ std::string CPeripheralCecAdapterUpdateThread::UpdateAudioSystemStatus(void)
   /* the TV takes over whenever the amp is not handling volume, so settle on it first */
   UpdateTvVolumeTarget();
 
+  if (m_adapter->GetSettingInt("volume_control") == LOCALISED_ID_NONE)
+  {
+    m_adapter->SetAmpControlsVolume(false);
+    return strAmpName;
+  }
+
   if (!m_adapter->m_cecAdapter->IsActiveDeviceType(CEC_DEVICE_TYPE_AUDIO_SYSTEM))
   {
     CLog::Log(LOGDEBUG, "{} - no CEC capable amplifier found", __FUNCTION__);
