@@ -347,6 +347,8 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       m_pFormatName = "am-h265";
       m_bitstream = new CBitstreamConverter();
       m_bitstream->Open(m_hints.codec, m_hints.extradata.GetData(), m_hints.extradata.GetSize(), true);
+      if (!m_bitstream->NeedConvert())
+        m_bitstream->ResetStartDecode();
 
       // length-prefix size from the original hvcC, read before the extradata
       // below becomes Annex-B. Stays 0 for Annex-B input
@@ -700,6 +702,10 @@ void CDVDVideoCodecAmlogic::Reset(void)
         [[fallthrough]];
       case AV_CODEC_ID_H264:
         m_bitstream->ResetStartDecode();
+        break;
+      case AV_CODEC_ID_HEVC:
+        if (!m_bitstream->NeedConvert())
+          m_bitstream->ResetStartDecode();
         break;
       default:
         break;
