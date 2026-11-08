@@ -370,7 +370,7 @@ bool CBitstreamConverter::Convert(uint8_t* pData, int iSize)
   if (m_codec == AV_CODEC_ID_VVC && m_vvcAnnexB)
   {
     if (!m_start_decode)
-      m_start_decode = HasVvcStartAnnexB(pData, iSize);
+      m_start_decode = HasStartAnnexB(pData, iSize);
     m_inputBuffer = pData;
     m_inputSize = iSize;
     return true;
@@ -379,6 +379,8 @@ bool CBitstreamConverter::Convert(uint8_t* pData, int iSize)
   if (m_to_annexb && !m_convert_bitstream &&
       (m_codec == AV_CODEC_ID_H264 || m_codec == AV_CODEC_ID_HEVC))
   {
+    if (!m_start_decode && m_codec == AV_CODEC_ID_HEVC)
+      m_start_decode = HasStartAnnexB(pData, iSize);
     if (m_convert_dovi && m_codec == AV_CODEC_ID_HEVC)
       return ProcessAnnexB(pData, iSize);
     m_inputBuffer = pData;
@@ -405,6 +407,9 @@ bool CBitstreamConverter::Convert(uint8_t* pData_bl,
 
   if (!pData_bl || !pData_el)
     return true;
+
+  if (!m_start_decode && !m_convert_bitstream && m_codec == AV_CODEC_ID_HEVC)
+    m_start_decode = HasStartAnnexB(pData_bl, iSize_bl);
 
   const auto forEachNal = [this](const uint8_t* data, int size, const auto& func)
   {
@@ -633,7 +638,7 @@ bool CBitstreamConverter::IsAnnexB(const uint8_t* data, int size)
          (data[2] == 1 || (size >= 4 && !data[2] && data[3] == 1));
 }
 
-bool CBitstreamConverter::HasVvcStartAnnexB(const uint8_t* data, int size)
+bool CBitstreamConverter::HasStartAnnexB(const uint8_t* data, int size)
 {
   const uint8_t* const end = data + size;
   const uint8_t* nal = avc_find_startcode(data, end);
@@ -644,9 +649,18 @@ bool CBitstreamConverter::HasVvcStartAnnexB(const uint8_t* data, int size)
     if (nal >= end || *nal++ != 1 || nal + 1 >= end)
       break;
 
-    const uint8_t unitType = (nal[1] >> 3) & 0x1f;
-    if (unitType == VVC_SPS_NUT || IsIDR(unitType))
-      return true;
+    if (m_codec == AV_CODEC_ID_HEVC)
+    {
+      const uint8_t unitType = (nal[0] >> 1) & 0x3f;
+      if (unitType == HEVC_NAL_VPS || unitType == HEVC_NAL_SPS)
+        return true;
+    }
+    else
+    {
+      const uint8_t unitType = (nal[1] >> 3) & 0x1f;
+      if (unitType == VVC_SPS_NUT || IsIDR(unitType))
+        return true;
+    }
     nal = avc_find_startcode(nal, end);
   }
   return false;
