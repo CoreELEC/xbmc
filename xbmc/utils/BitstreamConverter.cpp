@@ -284,6 +284,25 @@ static const uint8_t* avc_find_startcode(const uint8_t* p, const uint8_t* end)
   return out;
 }
 
+static bool hevc_has_parameter_set(const uint8_t* data, int size)
+{
+  const uint8_t* const end = data + size;
+  const uint8_t* nal = avc_find_startcode(data, end);
+  while (nal < end)
+  {
+    while (nal < end && !*nal)
+      ++nal;
+    if (nal >= end || *nal++ != 1 || nal >= end)
+      break;
+
+    const uint8_t unitType = (*nal >> 1) & 0x3f;
+    if (unitType == HEVC_NAL_VPS || unitType == HEVC_NAL_SPS)
+      return true;
+    nal = avc_find_startcode(nal, end);
+  }
+  return false;
+}
+
 static bool has_sei_recovery_point(const uint8_t* p, const uint8_t* end)
 {
   int pt(0), ps(0), offset(1);
@@ -627,6 +646,9 @@ bool CBitstreamConverter::Convert(uint8_t* pData, int iSize)
         }
         else
         {
+          if (!m_start_decode && m_codec == AV_CODEC_ID_HEVC)
+            m_start_decode = hevc_has_parameter_set(pData, iSize);
+
           if (m_convert_dovi)
           {
             uint32_t nal_buf_size = iSize;
@@ -828,6 +850,9 @@ bool CBitstreamConverter::Convert(uint8_t *pData_bl, int iSize_bl, uint8_t *pDat
   m_inputSize = 0;
   m_convertSize = 0;
   m_inputBuffer = NULL;
+
+  if (!m_start_decode && !m_convert_bitstream && m_codec == AV_CODEC_ID_HEVC && pData_bl)
+    m_start_decode = hevc_has_parameter_set(pData_bl, iSize_bl);
 
   if (pData_bl && pData_el)
   {
