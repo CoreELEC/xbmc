@@ -2814,7 +2814,9 @@ bool CVideoPlayer::CheckPlayerInit(CCurrentStream& current)
       return true;
     }
 
-    if ((current.startpts - current.dts) > DVD_SEC_TO_TIME(20))
+    // other players keep early packets, so nothing is decoded to reach the start
+    if ((current.type == StreamType::AUDIO || current.type == StreamType::VIDEO) &&
+        (current.startpts - current.dts) > DVD_SEC_TO_TIME(20))
     {
       CLog::Log(LOGDEBUG, "{} - too far to decode before finishing seek", __FUNCTION__);
       if(m_CurrentAudio.startpts != DVD_NOPTS_VALUE)
