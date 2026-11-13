@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "AMLUtils.h"
+#include "cores/VideoPlayer/DVDStreamInfo.h"
 #include "utils/log.h"
 #include "utils/StringUtils.h"
 #include "ServiceBroker.h"
@@ -315,6 +316,54 @@ bool aml_convert_to_dv_by_vs_engine(StreamHdrType hdrType)
                             ->GetAmlDisplay()->aml_display_support_dv());
 
   return ((convert_to_dv && !!user_convert_to_dv && !!dv_user_enabled) == 1);
+}
+
+AMLVideoOutput aml_video_output(const CDVDStreamInfo& source)
+{
+  const StreamHdrType hdrType = source.hdrType;
+  const bool dvByVsEngine = aml_convert_to_dv_by_vs_engine(hdrType);
+  bool toHdr = false;
+  bool toSdr = false;
+  if (hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION || dvByVsEngine)
+  {
+    if (dvByVsEngine)
+      toHdr = hdrType == StreamHdrType::HDR_TYPE_NONE;
+    else
+      toSdr = aml_convert_to_sdr(hdrType) || (aml_convert_to_sdr_by_vs_engine(hdrType) &&
+                                              !aml_convert_to_hdr_by_vs_engine(hdrType));
+  }
+  else
+  {
+    toHdr = aml_convert_to_hdr(hdrType);
+    toSdr = !toHdr && (aml_convert_to_sdr(hdrType) || aml_convert_to_sdr_by_vs_engine(hdrType));
+  }
+
+  AMLVideoOutput output;
+  output.hdrType = hdrType;
+  output.colorSpace = source.colorSpace;
+  output.colorPrimaries = source.colorPrimaries;
+  output.colorTransfer = source.colorTransferCharacteristic;
+  if (toHdr)
+  {
+    output.colorSpace = AVCOL_SPC_BT2020_NCL;
+    output.colorPrimaries = AVCOL_PRI_BT2020;
+    output.colorTransfer = AVCOL_TRC_SMPTE2084;
+  }
+  else if (toSdr)
+  {
+    output.colorSpace = AVCOL_SPC_BT709;
+    output.colorPrimaries = AVCOL_PRI_BT709;
+    output.colorTransfer = AVCOL_TRC_BT709;
+  }
+
+  if (dvByVsEngine)
+    output.hdrType = StreamHdrType::HDR_TYPE_DOLBYVISION;
+  else if (aml_convert_to_sdr(hdrType))
+    output.hdrType = StreamHdrType::HDR_TYPE_NONE;
+  else if (toHdr)
+    output.hdrType = StreamHdrType::HDR_TYPE_HDR10;
+
+  return output;
 }
 
 bool aml_video_started()
