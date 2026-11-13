@@ -2268,15 +2268,11 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
             if (sideData && sideData->size)
               st->dovi = *reinterpret_cast<const AVDOVIDecoderConfigurationRecord*>(sideData->data);
 
-            // base layers without backward compatibility are IPTPQc2, PQ and HLG ones are BT.2020
+            // base layers without backward compatibility are IPTPQc2
             if (st->dovi.dv_profile == 5 ||
                 ((st->dovi.dv_profile == 10 || st->dovi.dv_profile == 20) &&
                  st->dovi.dv_bl_signal_compatibility_id == 0))
               st->colorSpace = AVCOL_SPC_IPT_C2;
-            else if (st->colorSpace == AVCOL_SPC_UNSPECIFIED &&
-                     (st->colorTransferCharacteristic == AVCOL_TRC_SMPTE2084 ||
-                      st->colorTransferCharacteristic == AVCOL_TRC_ARIB_STD_B67))
-              st->colorSpace = AVCOL_SPC_BT2020_NCL;
 
             if (dv_by_vs_engine ||
                 aml_convert_to_hdr_by_vs_engine(st->hdr_type))
