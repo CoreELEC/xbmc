@@ -27,6 +27,7 @@
 #include "windowing/WinSystem.h"
 
 #include <algorithm>
+#include <cmath>
 #include <mutex>
 #include <utility>
 
@@ -582,6 +583,14 @@ std::shared_ptr<COverlay> CRenderer::Convert(SElement& e)
   if (!e.overlay_dvd)
     return nullptr;
 
+  // cached sdr pgs textures are converted for the previous video
+  const HdrCompositeVideo video = CServiceBroker::GetWinSystem()->GetHdrCompositeVideo();
+  if (video != m_compositeVideo)
+  {
+    m_compositeVideo = video;
+    ReleaseCache();
+  }
+
   CDVDOverlay& o = *e.overlay_dvd;
   std::shared_ptr<COverlay> r = NULL;
 
@@ -612,7 +621,49 @@ std::shared_ptr<COverlay> CRenderer::Convert(SElement& e)
   }
 
   if (o.IsOverlayType(DVDOVERLAY_TYPE_IMAGE))
-    r = COverlay::Create(static_cast<CDVDOverlayImage&>(o), m_rs);
+  {
+    const CDVDOverlayImage& image = static_cast<CDVDOverlayImage&>(o);
+    // an sdr pgs is drawn like an authored pq one, at the video's sdr white
+    if (image.m_isSDRPgs && m_compositeVideo.transfer == AVCOL_TRC_SMPTE2084 &&
+        m_compositeVideo.sdrWhite > 0.0f)
+    {
+      // linear bt.709 to bt.2020 primaries, ITU-R BT.2087
+      constexpr float BT709_TO_2020[3][3] = {
+          {0.627403896f, 0.329283039f, 0.043313065f},
+          {0.069097289f, 0.919540395f, 0.011362316f},
+          {0.016391439f, 0.088013308f, 0.895595253f},
+      };
+
+      const float gamma = m_compositeVideo.sdrGamma;
+      const float whiteScale = m_compositeVideo.sdrWhite / 10000.0f;
+      CDVDOverlayImage pq(image);
+      for (uint32_t& entry : pq.palette)
+      {
+        const uint32_t a = (entry >> PIXEL_ASHIFT) & 0xff;
+        const float linear709[3] = {
+            std::pow(((entry >> PIXEL_RSHIFT) & 0xff) / 255.0f, gamma) * whiteScale,
+            std::pow(((entry >> PIXEL_GSHIFT) & 0xff) / 255.0f, gamma) * whiteScale,
+            std::pow(((entry >> PIXEL_BSHIFT) & 0xff) / 255.0f, gamma) * whiteScale,
+        };
+
+        uint32_t code[3];
+        for (int i = 0; i < 3; i++)
+        {
+          const float linear = BT709_TO_2020[i][0] * linear709[0] +
+                               BT709_TO_2020[i][1] * linear709[1] +
+                               BT709_TO_2020[i][2] * linear709[2];
+          code[i] = static_cast<uint32_t>(EncodePQ(linear) * 255.0f + 0.5f);
+        }
+
+        entry = (a << PIXEL_ASHIFT) | (code[0] << PIXEL_RSHIFT) | (code[1] << PIXEL_GSHIFT) |
+                (code[2] << PIXEL_BSHIFT);
+      }
+      pq.m_isHDROverlay = true;
+      r = COverlay::Create(pq, m_rs);
+    }
+    else
+      r = COverlay::Create(image, m_rs);
+  }
   else if (o.IsOverlayType(DVDOVERLAY_TYPE_SPU))
     r = COverlay::Create(static_cast<CDVDOverlaySpu&>(o));
 

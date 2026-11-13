@@ -396,6 +396,12 @@ float LinearToSrgbComponent(float c)
 }
 } // namespace
 
+float EncodePQ(float y)
+{
+  const float p = std::pow(std::clamp(y, 0.0f, 1.0f), ST2084_m1);
+  return std::pow((ST2084_c1 + ST2084_c2 * p) / (1.0f + ST2084_c3 * p), ST2084_m2);
+}
+
 void ConvertPQPaletteToSRGB(std::vector<uint32_t>& palette)
 {
   // Linear BT.2020 -> linear BT.709/sRGB primaries, D65 both ends;
