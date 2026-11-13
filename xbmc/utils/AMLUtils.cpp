@@ -338,6 +338,14 @@ AMLVideoOutput aml_video_output(const CDVDStreamInfo& source)
     toSdr = !toHdr && (aml_convert_to_sdr(hdrType) || aml_convert_to_sdr_by_vs_engine(hdrType));
   }
 
+  // sdr white of the dolby vision output, measured on player-led and tv-led output
+  constexpr float DV_SDR_WHITE = 300.0f;
+  constexpr float BT1886_GAMMA = 2.4f;
+  // the hdr module's sdr eotf, eo_y_lut_sdr, is a 2.2 power law
+  constexpr float HDR_MODULE_SDR_GAMMA = 2.2f;
+  // ITU-R BT.2408 graphics white
+  constexpr float REFERENCE_WHITE = 203.0f;
+
   AMLVideoOutput output;
   output.hdrType = hdrType;
   output.colorSpace = source.colorSpace;
@@ -348,12 +356,37 @@ AMLVideoOutput aml_video_output(const CDVDStreamInfo& source)
     output.colorSpace = AVCOL_SPC_BT2020_NCL;
     output.colorPrimaries = AVCOL_PRI_BT2020;
     output.colorTransfer = AVCOL_TRC_SMPTE2084;
+    // graphics are matched to bt.709 sources only
+    const bool bt709 =
+        source.colorPrimaries == AVCOL_PRI_BT709 || source.colorPrimaries == AVCOL_PRI_UNSPECIFIED;
+    if (bt709 && dvByVsEngine)
+    {
+      output.sdrWhite = DV_SDR_WHITE;
+      output.sdrGamma = BT1886_GAMMA;
+    }
+    else if (bt709)
+    {
+      // sdr to hdr ootf gain, 512 is 1.0 on the 10000 nit pq scale, last entry at sdr white
+      constexpr size_t OOTF_LUT_SIZE = 149;
+      constexpr float OOTF_GAIN_ONE = 512.0f;
+      CSysfsPath gainLut{"/sys/module/aml_media/parameters/oo_y_lut_sdr_hdr"};
+      const std::vector<std::string> gains =
+          StringUtils::Split(gainLut.Get<std::string>().value_or(""), ",");
+      if (gains.size() == OOTF_LUT_SIZE)
+        output.sdrWhite = StringUtils::ToUint32(gains.back()) * 10000.0f / OOTF_GAIN_ONE;
+      output.sdrGamma = HDR_MODULE_SDR_GAMMA;
+    }
   }
   else if (toSdr)
   {
     output.colorSpace = AVCOL_SPC_BT709;
     output.colorPrimaries = AVCOL_PRI_BT709;
     output.colorTransfer = AVCOL_TRC_BT709;
+  }
+  else if (hdrType != StreamHdrType::HDR_TYPE_NONE)
+  {
+    output.sdrWhite = REFERENCE_WHITE;
+    output.sdrGamma = BT1886_GAMMA;
   }
 
   if (dvByVsEngine)

@@ -81,6 +81,8 @@ struct AMLVideoOutput
   AVColorSpace colorSpace{AVCOL_SPC_UNSPECIFIED};
   AVColorPrimaries colorPrimaries{AVCOL_PRI_UNSPECIFIED};
   AVColorTransferCharacteristic colorTransfer{AVCOL_TRC_UNSPECIFIED};
+  float sdrWhite{0.0f};
+  float sdrGamma{0.0f};
 };
 AMLVideoOutput aml_video_output(const CDVDStreamInfo& source);
 bool aml_video_started();
