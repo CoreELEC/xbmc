@@ -2170,7 +2170,7 @@ void CAMLCodec::SetDoviZeroLevel5(bool value)
     am_private->dovi_zero_level5 = value;
 }
 
-bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
+bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL, StreamHdrType outputHdrType)
 {
   m_speed = DVD_PLAYSPEED_NORMAL;
   m_drain = false;
@@ -2343,9 +2343,9 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
   bool display_support_dv(static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_dv());
   bool user_dv_disable(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_DISABLE));
   bool dv_enable(device_support_dv && !user_dv_disable &&
-      ((hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && (display_support_dv || hints.dovi.dv_profile == 5)) ||
-      ((hints.hdrType != StreamHdrType::HDR_TYPE_NONE && dv2sdr) ||
-       (hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && dv2hdr))));
+      ((outputHdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && (display_support_dv || hints.dovi.dv_profile == 5)) ||
+      ((outputHdrType != StreamHdrType::HDR_TYPE_NONE && dv2sdr) ||
+       (outputHdrType == StreamHdrType::HDR_TYPE_DOLBYVISION && dv2hdr))));
   CLog::Log(LOGINFO, "CAMLCodec::OpenDecoder Amlogic device {} support DV, DV is {} by user, display {} support DV, DV system is {}",
     device_support_dv ? "does" : "does not", user_dv_disable ? "disabled" : "enabled",
     display_support_dv ? "does" : "does not", dv_enable ? "enabled" : "disabled");
@@ -2407,7 +2407,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, bool doviIsFEL)
 
     AmlDisplay->aml_set_drmProperty("dv_enable", DRM_MODE_OBJECT_CRTC, 0);
     if (settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_SDR2HDR) &&
-        hints.hdrType == StreamHdrType::HDR_TYPE_HDR10 && !m_processInfo.GetIsHdr10Plus())
+        outputHdrType == StreamHdrType::HDR_TYPE_HDR10 && !m_processInfo.GetIsHdr10Plus())
       forceOutput = FORCE_OUTPUT_BT2020_PQ;
     else if (settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR2SDR))
       forceOutput = FORCE_OUTPUT_BT709;
