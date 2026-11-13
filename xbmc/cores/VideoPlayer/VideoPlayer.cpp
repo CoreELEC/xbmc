@@ -1879,11 +1879,17 @@ void CVideoPlayer::Process()
         m_pDemuxer->FillBuffer(fillBuffer);
     }
 
-    // If the queues are full, no need to read more, unless the full queue belongs
+    const auto queuesFull = [this]
+    {
+      return (!m_VideoPlayerAudio->AcceptsData() && m_CurrentAudio.id >= 0 &&
+              !m_CurrentAudio.replaying) ||
+             (!m_VideoPlayerVideo->AcceptsData() && m_CurrentVideo.id >= 0 &&
+              !m_CurrentVideo.replaying);
+    };
+
+    // If the queues are full, read only the subtitle file, unless the full queue belongs
     // to a stream that replays: its replayed packets are dropped and never reach it
-    if ((!m_VideoPlayerAudio->AcceptsData() && m_CurrentAudio.id >= 0 &&
-         !m_CurrentAudio.replaying) ||
-        (!m_VideoPlayerVideo->AcceptsData() && m_CurrentVideo.id >= 0 && !m_CurrentVideo.replaying))
+    if (queuesFull())
     {
       if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
           m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
@@ -1891,6 +1897,36 @@ void CVideoPlayer::Process()
         if (m_pDemuxer)
           m_pDemuxer->SetSpeed(DVD_PLAYSPEED_PAUSE);
         m_demuxerSpeed = DVD_PLAYSPEED_PAUSE;
+      }
+
+      while (m_pSubtitleDemuxer && !m_bAbortRequest && m_VideoPlayerSubtitle->AcceptsData() &&
+             m_messenger.IsEmpty() && queuesFull())
+      {
+        DemuxPacket* packet = m_pSubtitleDemuxer->Read();
+        if (!packet)
+          break;
+
+        UpdateCorrection(packet, m_offset_pts);
+        CDemuxStream* stream = nullptr;
+        if (packet->iStreamId >= 0)
+        {
+          stream = m_pSubtitleDemuxer->GetStream(packet->demuxerId, packet->iStreamId);
+          if (!stream)
+            CLog::Log(LOGERROR, "{} - Error demux packet doesn't belong to a valid stream",
+                      __FUNCTION__);
+        }
+        if (!stream)
+        {
+          CDVDDemuxUtils::FreeDemuxPacket(packet);
+          break;
+        }
+        if (stream->source == STREAM_SOURCE_NONE)
+        {
+          m_SelectionStreams.Clear(StreamType::NONE, STREAM_SOURCE_DEMUX_SUB);
+          m_SelectionStreams.Update(nullptr, m_pSubtitleDemuxer.get());
+          UpdateContent();
+        }
+        ProcessPacket(stream, packet);
       }
       CThread::Sleep(10ms);
       continue;
