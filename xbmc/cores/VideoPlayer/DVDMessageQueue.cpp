@@ -289,6 +289,13 @@ unsigned CDVDMessageQueue::GetPacketCount(CDVDMsg::Message type)
   return count;
 }
 
+bool CDVDMessageQueue::IsEmpty() const
+{
+  std::unique_lock lock(m_section);
+
+  return m_messages.empty() && m_prioMessages.empty();
+}
+
 void CDVDMessageQueue::WaitUntilEmpty()
 {
   {
