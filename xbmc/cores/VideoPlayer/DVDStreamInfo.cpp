@@ -305,6 +305,10 @@ void CDVDStreamInfo::Assign(const CDemuxStream& right, bool withextradata)
     colorRange = stream->colorRange;
     colorPrimaries = stream->colorPrimaries;
     colorTransferCharacteristic = stream->colorTransferCharacteristic;
+    if (colorSpace == AVCOL_SPC_UNSPECIFIED &&
+        (colorTransferCharacteristic == AVCOL_TRC_SMPTE2084 ||
+         colorTransferCharacteristic == AVCOL_TRC_ARIB_STD_B67))
+      colorSpace = AVCOL_SPC_BT2020_NCL;
     masteringMetadata = stream->masteringMetaData;
     contentLightMetadata = stream->contentLightMetaData;
     stereo_mode = stream->stereo_mode;
