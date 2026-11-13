@@ -430,6 +430,8 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
     m_videobuffer.color_space = output.colorSpace;
     m_videobuffer.color_primaries = output.colorPrimaries;
     m_videobuffer.color_transfer = output.colorTransfer;
+    m_sdrWhite = output.sdrWhite;
+    m_sdrGamma = output.sdrGamma;
   }
 
   m_processInfo.SetVideoDecoderName(m_pFormatName, true);
@@ -734,7 +736,7 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoP
     pVideoPicture->videoBuffer = m_videoBufferPool->Get();
     static_cast<CAMLVideoBuffer*>(pVideoPicture->videoBuffer)->Set(this, m_Codec,
      m_Codec->GetOMXPts(), m_Codec->GetAmlDuration(), m_Codec->GetBufferIndex(), m_metadataToken,
-     m_frameMeta);;
+     m_frameMeta, m_sdrWhite, m_sdrGamma);;
   }
 
   // check for mpeg2 aspect ratio changes
