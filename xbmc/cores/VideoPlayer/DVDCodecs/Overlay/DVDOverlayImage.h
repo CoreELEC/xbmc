@@ -45,6 +45,7 @@ public:
     source_width = src.source_width;
     source_height = src.source_height;
     m_isHDROverlay = src.m_isHDROverlay;
+    m_isSDRPgs = src.m_isSDRPgs;
 
     pixels.resize(sub_h * linesize);
 
@@ -79,6 +80,8 @@ public:
 
   // pixels are already HDR, matching video's colorimetry
   bool m_isHDROverlay{false};
+  // pgs palette in sdr levels
+  bool m_isSDRPgs{false};
 
   int linesize{0};
   int x{0};

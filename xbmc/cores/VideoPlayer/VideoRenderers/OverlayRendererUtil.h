@@ -47,6 +47,9 @@ bool ShouldConvertPQPaletteToSRGB(bool isHDROverlay);
 //! untouched.
 void ConvertPQPaletteToSRGB(std::vector<uint32_t>& palette);
 
+//! Linear light (1.0 == 10000 nits) to a PQ code value (0-1), SMPTE ST 2084.
+float EncodePQ(float y);
+
 //! paletteOverride, when non-null, is used in place of o.palette - e.g.
 //! a palette already converted by ConvertPQPaletteToSRGB() above. o.pixels
 //! (the per-pixel palette indices) is always taken from o itself either way.
