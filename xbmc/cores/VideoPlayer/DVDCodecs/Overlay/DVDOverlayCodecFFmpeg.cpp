@@ -312,6 +312,9 @@ std::shared_ptr<CDVDOverlay> CDVDOverlayCodecFFmpeg::GetOverlay()
     overlay->m_isHDROverlay = m_pCodecContext->codec_id == AV_CODEC_ID_HDMV_PGS_SUBTITLE &&
                               m_pCodecContext->colorspace == AVCOL_SPC_BT2020_NCL &&
                               m_pCodecContext->color_trc == AVCOL_TRC_SMPTE2084;
+    overlay->m_isSDRPgs = m_pCodecContext->codec_id == AV_CODEC_ID_HDMV_PGS_SUBTITLE &&
+                          m_pCodecContext->color_trc != AVCOL_TRC_SMPTE2084 &&
+                          m_pCodecContext->color_trc != AVCOL_TRC_ARIB_STD_B67;
     overlay->source_width = m_width;
     overlay->source_height = m_height;
 
