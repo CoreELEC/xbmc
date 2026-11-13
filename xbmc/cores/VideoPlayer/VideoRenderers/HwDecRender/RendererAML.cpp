@@ -149,6 +149,16 @@ void CRendererAML::AddVideoPicture(const VideoPicture &picture, int index)
   ReleaseBuffer(index);
 
   BUFFER &buf(m_buffers[index]);
+  // on change only: a decoder can be replaced without a reconfigure
+  CAMLVideoBuffer *amli(dynamic_cast<CAMLVideoBuffer*>(picture.videoBuffer));
+  if (amli && (amli->m_sdrWhite != m_sdrWhite || amli->m_sdrGamma != m_sdrGamma))
+  {
+    m_sdrWhite = amli->m_sdrWhite;
+    m_sdrGamma = amli->m_sdrGamma;
+    static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())
+        ->SetHdrGuiSdrWhite(m_hdrGuiOwner, m_sdrWhite, m_sdrGamma);
+  }
+
   if (picture.videoBuffer)
   {
     buf.videoBuffer = picture.videoBuffer;
