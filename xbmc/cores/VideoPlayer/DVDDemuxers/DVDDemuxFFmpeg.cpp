@@ -2254,8 +2254,7 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
         }
         else
         {
-          const bool dv_by_vs_engine = aml_convert_to_dv_by_vs_engine(st->hdr_type);
-          if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION || dv_by_vs_engine)
+          if (st->hdr_type == StreamHdrType::HDR_TYPE_DOLBYVISION)
           {
             sideData =
                 av_packet_side_data_get(pStream->codecpar->coded_side_data,
@@ -2269,40 +2268,6 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
                 ((st->dovi.dv_profile == 10 || st->dovi.dv_profile == 20) &&
                  st->dovi.dv_bl_signal_compatibility_id == 0))
               st->colorSpace = AVCOL_SPC_IPT_C2;
-
-            if (dv_by_vs_engine ||
-                aml_convert_to_hdr_by_vs_engine(st->hdr_type))
-            {
-              if (st->hdr_type == StreamHdrType::HDR_TYPE_NONE)
-              {
-                st->colorPrimaries = AVCOL_PRI_BT2020;
-                st->colorSpace = AVCOL_SPC_BT2020_NCL;
-                st->colorTransferCharacteristic = AVCOL_TRC_SMPTE2084;
-                st->colorRange = dv_by_vs_engine ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
-              }
-            }
-            else if (aml_convert_to_sdr_by_vs_engine(st->hdr_type))
-            {
-              st->colorPrimaries = AVCOL_PRI_BT709;
-              st->colorSpace = AVCOL_SPC_BT709;
-              st->colorTransferCharacteristic = AVCOL_TRC_BT709;
-              st->colorRange = AVCOL_RANGE_MPEG;
-            }
-          }
-          else if (aml_convert_to_hdr(st->hdr_type))
-          {
-            st->colorPrimaries = AVCOL_PRI_BT2020;
-            st->colorSpace = AVCOL_SPC_BT2020_NCL;
-            st->colorTransferCharacteristic = AVCOL_TRC_SMPTE2084;
-            st->colorRange = AVCOL_RANGE_MPEG;
-          }
-          else if (aml_convert_to_sdr(st->hdr_type) ||
-                   aml_convert_to_sdr_by_vs_engine(st->hdr_type))
-          {
-            st->colorPrimaries = AVCOL_PRI_BT709;
-            st->colorSpace = AVCOL_SPC_BT709;
-            st->colorTransferCharacteristic = AVCOL_TRC_BT709;
-            st->colorRange = AVCOL_RANGE_MPEG;
           }
         }
 
