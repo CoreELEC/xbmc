@@ -457,8 +457,11 @@ uint64_t CWinSystemAmlogicGLESContext::ConfigureHdrGuiSession(uint64_t owner,
     }
   }
 
+  if (owner != m_hdrGuiOwner)
+    m_hdrGuiVideo = {};
   m_hdrGuiOwner = owner;
   m_hdrGuiDvGraphics = dvGraphics;
+  m_hdrGuiVideo.transfer = colorTransfer;
   return owner;
 }
 
@@ -473,6 +476,25 @@ void CWinSystemAmlogicGLESContext::ReleaseHdrGuiSession(uint64_t owner)
     SetDvGraphicsState(false);
   m_hdrGuiOwner = 0;
   m_hdrGuiDvGraphics = false;
+}
+
+void CWinSystemAmlogicGLESContext::SetHdrGuiSdrWhite(uint64_t owner, float sdrWhite, float sdrGamma)
+{
+  std::lock_guard lock(m_hdrGuiMutex);
+  if (owner == 0 || owner != m_hdrGuiOwner)
+    return;
+
+  m_hdrGuiVideo.sdrWhite = sdrWhite;
+  m_hdrGuiVideo.sdrGamma = sdrGamma;
+}
+
+HdrCompositeVideo CWinSystemAmlogicGLESContext::GetHdrCompositeVideo()
+{
+  std::lock_guard lock(m_hdrGuiMutex);
+  if (m_hdrGuiOwner == 0)
+    return {};
+
+  return m_hdrGuiVideo;
 }
 
 void CWinSystemAmlogicGLESContext::ResetHdrGuiSession()
