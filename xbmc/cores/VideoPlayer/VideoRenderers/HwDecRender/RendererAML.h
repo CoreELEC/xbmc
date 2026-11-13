@@ -68,6 +68,8 @@ private:
   uint64_t m_prevVPts;
   std::weak_ptr<CAMLCodec> m_prevCodec;
   uint64_t m_hdrGuiOwner{0};
+  float m_sdrWhite{0.0f};
+  float m_sdrGamma{0.0f};
   bool m_bConfigured;
 
   std::atomic<bool> m_vsyncPresent{false};

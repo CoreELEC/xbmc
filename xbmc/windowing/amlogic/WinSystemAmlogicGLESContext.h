@@ -56,10 +56,12 @@ public:
   bool SetGuiCompositing(int colorTransfer) override;
   uint64_t ConfigureHdrGuiSession(uint64_t owner, int colorTransfer, bool dvGraphics) override;
   void ReleaseHdrGuiSession(uint64_t owner) override;
+  void SetHdrGuiSdrWhite(uint64_t owner, float sdrWhite, float sdrGamma) override;
   bool BeginGuiComposite(bool guiWillRender) override;
   void EndGuiComposite() override;
   void CompositeGui() override;
   bool IsHdrComposite() const override { return m_guiCompositing; }
+  HdrCompositeVideo GetHdrCompositeVideo() override;
   bool GuiWillRender() const override { return m_guiWillRender; }
 
   EGLDisplay GetEGLDisplay() const;
@@ -98,6 +100,7 @@ private:
   uint64_t m_hdrGuiOwner{0};
   uint64_t m_hdrGuiNextOwner{0};
   bool m_hdrGuiDvGraphics{false};
+  HdrCompositeVideo m_hdrGuiVideo;
 };
 
 }
