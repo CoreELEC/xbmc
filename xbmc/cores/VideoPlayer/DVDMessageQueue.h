@@ -81,7 +81,7 @@ public:
   void WaitUntilEmpty();
 
   // non messagequeue related functions
-  bool IsFull() const { return GetLevel(true) == 100; }
+  bool IsFull() const { return GetLevel() == 100; }
 
   /*!
    * \brief Get the current queue level.
