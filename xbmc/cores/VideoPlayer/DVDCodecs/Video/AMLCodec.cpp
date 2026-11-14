@@ -2815,10 +2815,38 @@ void CAMLCodec::Reset()
   m_last_pts = DVD_NOPTS_VALUE;
   m_state = 0;
   m_buffer_level_ready = false;
+  m_drainStart = false;
+  m_drainStartFrame = false;
 
   SetSpeed(m_speed);
 
   SetPollDevice(am_private->vcodec.cntl_handle);
+}
+
+void CAMLCodec::SetDrain(bool drain)
+{
+  m_drain = drain;
+
+  if (!drain || !m_opened || m_buffer_level_ready)
+    return;
+
+  int data_len, free_len, size;
+  GetBufferLevel(0, data_len, free_len, size);
+  if (data_len <= 0 || data_len > size / 20)
+    return;
+
+  CLog::Log(LOGDEBUG, "CAMLCodec::SetDrain: start decoding {} bytes below the buffer level",
+            data_len);
+  m_buffer_level_ready = true;
+  m_drainStart = true;
+  m_drainStartFrame = true;
+  m_tp_last_frame = std::chrono::system_clock::now();
+  if (am_private->gcodec.dec_mode == STREAM_TYPE_STREAM)
+  {
+    CSysfsPath pre_decode_buf_level{"/sys/module/amvdec_h265/parameters/pre_decode_buf_level"};
+    if (pre_decode_buf_level.Exists())
+      pre_decode_buf_level.Set(static_cast<uint32_t>(0x1000));
+  }
 }
 
 bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
@@ -2827,6 +2855,9 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
   int chunk_size = calc_chunk_size(iSize);
   float new_buffer_level = GetBufferLevel(chunk_size, data_len, free_len, size);
   bool streambuffer(am_private->gcodec.dec_mode == STREAM_TYPE_STREAM);
+
+  if (m_drainStart && new_buffer_level > (streambuffer ? 90.0f : 5.0f))
+    m_drainStart = false;
 
   if (!m_buffer_level_ready)
   {
@@ -3276,14 +3307,16 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
   if (!m_opened)
     return CDVDVideoCodec::VC_ERROR;
 
-  if (m_drain)
+  if (m_drain || m_drainStart)
     queued_frames = m_amlVideoFile->IOControl(AMLVIDEO_IOC_GET_VFQ, &queued_frames) == 0 ? queued_frames : 0;
 
-  if (m_buffer_level_ready && (buffer_level > m_minimum_buffer_level || (queued_frames > 0)) && (ret = DequeueBuffer()) == 0)
+  const float minimum_buffer_level = m_drainStart ? 0.0f : m_minimum_buffer_level;
+  if (m_buffer_level_ready && (buffer_level > minimum_buffer_level || (queued_frames > 0)) && (ret = DequeueBuffer()) == 0)
   {
     pVideoPicture->iFlags = 0;
 
     m_minimum_buffer_level = (streambuffer ? m_minimum_buffer_level : 0.0f);
+    m_drainStartFrame = false;
 
     m_tp_last_frame = std::chrono::system_clock::now();
 
@@ -3311,6 +3344,9 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
 
     return CDVDVideoCodec::VC_PICTURE;
   }
+  else if (m_drainStartFrame && queued_frames == 0 &&
+           elapsed_since_last_frame < std::chrono::seconds(m_decoder_timeout))
+    return CDVDVideoCodec::VC_BUFFER;
   else if (m_drain && m_buffer_level_ready && (queued_frames == 0))
     return CDVDVideoCodec::VC_EOF;
   else if ((m_drain && m_buffer_level_ready) || (buffer_level > (streambuffer ? 100.0f : 10.0f)))

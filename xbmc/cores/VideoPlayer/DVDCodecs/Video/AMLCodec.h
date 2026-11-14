@@ -76,7 +76,7 @@ public:
   CDVDVideoCodec::VCReturn GetPicture(VideoPicture* pVideoPicture);
 
   void          SetSpeed(int speed);
-  void          SetDrain(bool drain){m_drain = drain;};
+  void          SetDrain(bool drain);
   void          SetDoviZeroLevel5(bool value);
   void          SetVideoRect(const CRect &SrcRect, const CRect &DestRect);
   void          SetVideoRate(int videoRate);
@@ -143,6 +143,8 @@ private:
   DllLibAmCodec   *m_dll;
   std::atomic<bool> m_opened;
   bool             m_drain = false;
+  bool             m_drainStart = false;
+  bool             m_drainStartFrame = false;
   am_private_t    *am_private;
   CDVDStreamInfo   m_hints;
   int              m_speed;
