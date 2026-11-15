@@ -172,8 +172,28 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
     return true;
   }
 
-  // destroy old window, then create a new one
-  DestroyWindow();
+  // Only the refresh rate and/or FRAC_RATE_POLICY differ: resolution, screen size, scan mode,
+  // HDR/stereo mode, GUI scaling and hotplug state are unchanged, so the GBM/EGL surface is still
+  // valid. Destroying it destroys its buffer objects, and their destroy callback removes the
+  // DRM framebuffer that is still scanned out (RMFB). The DRM core then disables the GUI plane,
+  // and it stays detached until the next rendered frame attaches a new framebuffer, which does
+  // not happen during video playback without GUI activity. Keep the surface in this case.
+  const bool keepSurface =
+      current_resolution.iWidth == res.iWidth && current_resolution.iHeight == res.iHeight &&
+      current_resolution.iScreenWidth == res.iScreenWidth &&
+      current_resolution.iScreenHeight == res.iScreenHeight && m_bFullScreen == fullScreen &&
+      (current_resolution.dwFlags & D3DPRESENTFLAG_MODEMASK) ==
+          (res.dwFlags & D3DPRESENTFLAG_MODEMASK) &&
+      m_bWindowCreated && nativeGUI == m_nativeGUI && !force_mode_switch_by_hdr &&
+      !force_mode_switch_by_hotplug && !force_mode_switch_by_stereo_mode && m_amlGBMUtils &&
+      m_amlGBMUtils->GetSurface();
+
+  if (keepSurface)
+    CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{}: refresh rate only change, keeping surface",
+              __FUNCTION__);
+  else
+    // destroy old window, then create a new one
+    DestroyWindow();
 
   // check if a forced mode switch is required
   if (force_mode_switch_by_hotplug)
@@ -209,27 +229,30 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
     return false;
   }
 
-  uint32_t format = m_pGLContext->GetConfigAttrib(EGL_NATIVE_VISUAL_ID);
-  if (!m_amlGBMUtils->CreateSurface(res.iWidth, res.iHeight, format))
+  if (!keepSurface)
   {
-    CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create GBM surface", __FUNCTION__);
-    DestroyWindow();
-    return false;
-  }
+    uint32_t format = m_pGLContext->GetConfigAttrib(EGL_NATIVE_VISUAL_ID);
+    if (!m_amlGBMUtils->CreateSurface(res.iWidth, res.iHeight, format))
+    {
+      CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create GBM surface", __FUNCTION__);
+      DestroyWindow();
+      return false;
+    }
 
-  if (!m_pGLContext->CreatePlatformSurface(
-          m_amlGBMUtils->GetSurface(),
-          reinterpret_cast<EGLNativeWindowType>(m_amlGBMUtils->GetSurface())))
-  {
-    CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create CreatePlatformSurface", __FUNCTION__);
-    DestroyWindow();
-    return false;
-  }
+    if (!m_pGLContext->CreatePlatformSurface(
+            m_amlGBMUtils->GetSurface(),
+            reinterpret_cast<EGLNativeWindowType>(m_amlGBMUtils->GetSurface())))
+    {
+      CLog::Log(LOGDEBUG, "CWinSystemAmlogicGLESContext::{} - failed to create CreatePlatformSurface", __FUNCTION__);
+      DestroyWindow();
+      return false;
+    }
 
-  if (!m_pGLContext->BindContext())
-  {
-    DestroyWindow();
-    return false;
+    if (!m_pGLContext->BindContext())
+    {
+      DestroyWindow();
+      return false;
+    }
   }
 
   if (!m_delayDispReset)
