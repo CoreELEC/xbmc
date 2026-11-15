@@ -170,7 +170,9 @@ void CEngineStats::UpdateStream(CActiveAEStream *stream)
     if (str.m_streamId == stream->m_id)
     {
       float delay = 0;
-      str.m_syncState = stream->m_syncState;
+      // a stream paused by its player is not in sync before the engine restarted its sync
+      if (!str.m_syncPaused)
+        str.m_syncState = stream->m_syncState;
       str.m_lateStartHandedOver = stream->m_lateStartHandedOver;
       str.m_syncError = stream->m_syncError.GetLastError(str.m_errorTime);
       if (stream->m_processingBuffers)
@@ -197,6 +199,35 @@ void CEngineStats::UpdateStream(CActiveAEStream *stream)
       break;
     }
   }
+}
+
+void CEngineStats::PauseStream(CActiveAEStream* stream)
+{
+  std::unique_lock lock(m_lock);
+  for (auto& str : m_streamStats)
+  {
+    if (str.m_streamId == stream->m_id)
+    {
+      str.m_syncState = CAESyncInfo::AESyncState::SYNC_START;
+      str.m_syncPaused = true;
+      return;
+    }
+  }
+}
+
+bool CEngineStats::TakeSyncPaused(CActiveAEStream* stream)
+{
+  std::unique_lock lock(m_lock);
+  for (auto& str : m_streamStats)
+  {
+    if (str.m_streamId == stream->m_id)
+    {
+      const bool paused = str.m_syncPaused;
+      str.m_syncPaused = false;
+      return paused;
+    }
+  }
+  return false;
 }
 
 // this is used to sync a/v so we need to add sink latency here
@@ -452,6 +483,15 @@ void CActiveAE::StateMachine(int signal, Protocol *port, Message *msg)
           }
           ConfigureLowLatency();
           return;
+        case CActiveAEControlProtocol::RESUMESTREAM:
+        {
+          // a resume dropped while not configured still ends the player's pause
+          CActiveAEStream* stream = *reinterpret_cast<CActiveAEStream**>(msg->data);
+          if (m_stats.TakeSyncPaused(stream) || stream->m_paused)
+            stream->m_syncState = CAESyncInfo::AESyncState::SYNC_START;
+          stream->m_paused = false;
+          break;
+        }
         default:
           break;
         }
@@ -782,7 +822,7 @@ void CActiveAE::StateMachine(int signal, Protocol *port, Message *msg)
           return;
         case CActiveAEControlProtocol::RESUMESTREAM:
           stream = *(CActiveAEStream**)msg->data;
-          if (stream->m_paused)
+          if (m_stats.TakeSyncPaused(stream) || stream->m_paused)
             stream->m_syncState = CAESyncInfo::AESyncState::SYNC_START;
           stream->m_paused = false;
           streaming = true;
@@ -1040,6 +1080,7 @@ void CActiveAE::StateMachine(int signal, Protocol *port, Message *msg)
         case CActiveAEControlProtocol::RESUMESTREAM:
           CActiveAEStream *stream;
           stream = *(CActiveAEStream**)msg->data;
+          m_stats.TakeSyncPaused(stream);
           stream->m_paused = false;
           stream->m_syncState = CAESyncInfo::AESyncState::SYNC_START;
           m_state = AE_TOP_CONFIGURED_PLAY;
@@ -1657,6 +1698,7 @@ void CActiveAE::SFlushStream(CActiveAEStream *stream)
   stream->m_processingBuffers->Flush();
   stream->m_streamPort->Purge();
   stream->m_bufferedTime = 0.0;
+  m_stats.TakeSyncPaused(stream);
   stream->m_paused = false;
   stream->m_syncState = CAESyncInfo::AESyncState::SYNC_START;
   stream->m_syncError.Flush();
@@ -3855,8 +3897,11 @@ void CActiveAE::PauseStream(CActiveAEStream *stream, bool pause)
 {
   //! @todo pause sink, needs api change
   if (pause)
+  {
+    m_stats.PauseStream(stream);
     m_controlPort.SendOutMessage(CActiveAEControlProtocol::PAUSESTREAM,
                                    &stream, sizeof(CActiveAEStream*));
+  }
   else
     m_controlPort.SendOutMessage(CActiveAEControlProtocol::RESUMESTREAM,
                                    &stream, sizeof(CActiveAEStream*));

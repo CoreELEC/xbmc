@@ -197,6 +197,9 @@ void CAudioSinkAE::Pause()
     m_pAudioStream->Pause();
   CLog::Log(LOGDEBUG,"CDVDAudio::Pause - pausing audio stream");
   m_playingPts = DVD_NOPTS_VALUE;
+  // the engine syncs the stream anew on resume
+  m_syncError = 0.0;
+  m_syncErrorTime = 0;
   m_startSyncError = false;
 }
 
