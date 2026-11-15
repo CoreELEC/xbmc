@@ -199,6 +199,7 @@ public:
   bool TakeSyncPaused(CActiveAEStream* stream);
   void GetDelay(AEDelayStatus& status, CActiveAEStream *stream);
   void GetSyncInfo(CAESyncInfo& info, CActiveAEStream *stream);
+  bool IsSyncErrorTaken(CActiveAEStream* stream);
   float GetCacheTime(CActiveAEStream *stream);
   float GetCacheTotal();
   float GetMaxDelay() const;
@@ -229,7 +230,9 @@ protected:
     double m_bufferedTime;
     double m_resampleRatio;
     double m_syncError;
-    unsigned int m_errorTime;
+    unsigned int m_errorTime{0};
+    // the error time the player last read
+    unsigned int m_errorTimeTaken{0};
     CAESyncInfo::AESyncState m_syncState;
     bool m_lateStartHandedOver{false};
     // paused by the player since the engine last restarted the stream's sync
