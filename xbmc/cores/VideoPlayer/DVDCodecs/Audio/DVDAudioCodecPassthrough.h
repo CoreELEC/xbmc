@@ -15,11 +15,9 @@
 #include "cores/AudioEngine/Utils/AEStreamInfo.h"
 
 #include <list>
-#include <memory>
 #include <vector>
 
 class CProcessInfo;
-class CPackerMAT;
 
 class CDVDAudioCodecPassthrough : public CDVDAudioCodec
 {
@@ -54,9 +52,7 @@ private:
   std::string m_codecName;
 
   // TrueHD specifics
-  std::unique_ptr<CPackerMAT> m_packerMAT;
   std::vector<uint8_t> m_trueHDBuffer;
   unsigned int m_trueHDoffset = 0;
   unsigned int m_trueHDframes = 0;
-  bool m_deviceIsRAW{false};
 };
