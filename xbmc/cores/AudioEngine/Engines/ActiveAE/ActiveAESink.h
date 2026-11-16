@@ -169,6 +169,8 @@ protected:
   int m_sinkLatency;
   std::unique_ptr<CAEBitstreamPacker> m_packer;
   bool m_needIecPack{false};
+  // the silent frame of the last buffer from the engine, which the keep-alive repeats
+  const AEPassthroughSilentFrame* m_silentFrame{nullptr};
   bool m_streamNoise;
 };
 

@@ -209,6 +209,7 @@ public:
   void SetSinkCacheTotal(float time) { m_sinkCacheTotal = time; }
   void SetSinkLatency(float time) { m_sinkLatency = time; }
   void SetSinkNeedIec(bool needIEC) { m_sinkNeedIecPack = needIEC; }
+  bool GetSinkNeedIec() const { return m_sinkNeedIecPack; }
   bool IsSuspended();
   AEAudioFormat GetCurrentSinkFormat();
 protected:

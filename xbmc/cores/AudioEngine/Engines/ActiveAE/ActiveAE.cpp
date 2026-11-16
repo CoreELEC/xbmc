@@ -16,6 +16,7 @@
 #include "cores/AudioEngine/AEResampleFactory.h"
 #include "cores/AudioEngine/Encoders/AEEncoderFFmpeg.h"
 #include "cores/AudioEngine/Interfaces/IAudioCallback.h"
+#include "cores/AudioEngine/Utils/AEPassthroughSilence.h"
 #include "cores/AudioEngine/Utils/AEStreamData.h"
 #include "cores/AudioEngine/Utils/AEStreamInfo.h"
 #include "cores/AudioEngine/Utils/AEUtil.h"
@@ -2598,6 +2599,14 @@ bool CActiveAE::RunStages()
         if (!(*it)->m_processingBuffers->m_outputSamples.empty() && !(*it)->m_paused)
         {
           (*it)->m_started = true;
+          // gaps are filled with the stream's silent frame once one of its frames is on the wire,
+          // by a sink that packs IEC 61937 itself
+          CSampleBuffer* front = (*it)->m_processingBuffers->m_outputSamples.front();
+          const AEPassthroughSilentFrame* silentFrame{
+              m_stats.GetSinkNeedIec()
+                  ? CAEPassthroughSilence::Find((*it)->m_format.m_streamInfo.m_type,
+                                                front->pkt->data[0], front->pkt->nb_samples)
+                  : nullptr};
           buffer = SyncStream(*it);
           m_stats.UpdateStream(*it);
           if (!buffer)
@@ -2605,6 +2614,8 @@ bool CActiveAE::RunStages()
             buffer = (*it)->m_processingBuffers->m_outputSamples.front();
             (*it)->m_processingBuffers->m_outputSamples.pop_front();
           }
+          if (silentFrame && buffer->pkt->nb_samples > 0)
+            buffer->pkt->silent_frame = silentFrame;
           if (buffer->pkt->nb_samples > 0)
             m_stats.AddSamples(1, m_streams);
           else

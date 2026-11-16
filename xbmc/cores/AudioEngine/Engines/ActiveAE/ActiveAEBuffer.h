@@ -19,6 +19,8 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
+struct AEPassthroughSilentFrame;
+
 namespace ActiveAE
 {
 
@@ -38,6 +40,7 @@ public:
   int nb_samples;                        // number of frames used
   int max_nb_samples;                    // max number of frames this packet can hold
   int pause_burst_ms;
+  const AEPassthroughSilentFrame* silent_frame{nullptr}; // a raw gap's content, else pause bursts
 };
 
 class CActiveAEBufferPool;

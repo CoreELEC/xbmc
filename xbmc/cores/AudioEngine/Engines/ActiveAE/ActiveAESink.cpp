@@ -1087,6 +1087,7 @@ void CActiveAESink::OpenSink()
   // init sample of silence/noise
   m_sampleOfSilence.pkt = std::make_unique<CSoundPacket>(config, m_sinkFormat.m_frames);
   m_sampleOfSilence.pkt->nb_samples = m_sampleOfSilence.pkt->max_nb_samples;
+  m_silentFrame = nullptr;
   if (!passthrough)
     GenerateNoise();
   else
@@ -1145,6 +1146,8 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples, unsigned int* 
       rawPackets = 1;
     else if (samples->pool)
       rawPauseMs = samples->pkt->pause_burst_ms;
+    if (samples->pool)
+      m_silentFrame = samples->pkt->silent_frame;
 
     bool skipSwap = false;
     if (m_needIecPack)
@@ -1158,7 +1161,8 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples, unsigned int* 
       {
         // construct a pause burst if we have already output valid audio
         bool burst = m_extStreaming && (m_packer->GetBuffer()[0] != 0);
-        if (!m_packer->PackPause(m_sinkFormat.m_streamInfo, samples->pkt->pause_burst_ms, burst))
+        if (!m_packer->PackPause(m_sinkFormat.m_streamInfo, samples->pkt->pause_burst_ms, burst,
+                                 m_silentFrame))
           skipSwap = true;
       }
       else

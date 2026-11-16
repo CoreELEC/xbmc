@@ -16,6 +16,7 @@
 #include <vector>
 
 class CAEStreamInfo;
+struct AEPassthroughSilentFrame;
 
 class CAEBitstreamPacker
 {
@@ -24,7 +25,10 @@ public:
   ~CAEBitstreamPacker();
 
   void Pack(CAEStreamInfo &info, uint8_t* data, int size);
-  bool PackPause(CAEStreamInfo &info, unsigned int millis, bool iecBursts);
+  bool PackPause(CAEStreamInfo& info,
+                 unsigned int millis,
+                 bool iecBursts,
+                 const AEPassthroughSilentFrame* silentFrame);
   void Reset();
   uint8_t* GetBuffer();
   unsigned int GetSize() const;
@@ -46,5 +50,6 @@ private:
   unsigned int  m_dataSize = 0;
   uint8_t       m_packedBuffer[MAX_IEC61937_PACKET];
   unsigned int m_pauseDuration = 0;
+  const AEPassthroughSilentFrame* m_pauseSilentFrame{nullptr};
 };
 

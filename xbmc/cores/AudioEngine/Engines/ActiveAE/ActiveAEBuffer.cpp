@@ -84,6 +84,7 @@ void CActiveAEBufferPool::ReturnBuffer(CSampleBuffer *buffer)
 {
   buffer->pkt->nb_samples = 0;
   buffer->pkt->pause_burst_ms = 0;
+  buffer->pkt->silent_frame = nullptr;
   m_freeSamples.push_back(buffer);
 }
 

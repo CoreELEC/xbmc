@@ -9,6 +9,7 @@
 #include "AEBitstreamPacker.h"
 
 #include "AEPackIEC61937.h"
+#include "AEPassthroughSilence.h"
 #include "AEStreamInfo.h"
 #include "utils/log.h"
 
@@ -73,11 +74,24 @@ void CAEBitstreamPacker::Pack(CAEStreamInfo &info, uint8_t* data, int size)
   }
 }
 
-bool CAEBitstreamPacker::PackPause(CAEStreamInfo &info, unsigned int millis, bool iecBursts)
+bool CAEBitstreamPacker::PackPause(CAEStreamInfo& info,
+                                   unsigned int millis,
+                                   bool iecBursts,
+                                   const AEPassthroughSilentFrame* silentFrame)
 {
   // re-use last buffer
-  if (m_pauseDuration == millis)
+  if (m_pauseDuration == millis && m_pauseSilentFrame == silentFrame)
     return false;
+
+  // the silent frame is sent as it is, one frame per burst
+  m_pauseSilentFrame = silentFrame;
+  if (silentFrame)
+  {
+    m_dataSize = CAEPackIEC61937::PackEAC3(const_cast<uint8_t*>(silentFrame->data),
+                                           silentFrame->size, m_packedBuffer);
+    m_pauseDuration = millis;
+    return true;
+  }
 
   switch (info.m_type)
   {
