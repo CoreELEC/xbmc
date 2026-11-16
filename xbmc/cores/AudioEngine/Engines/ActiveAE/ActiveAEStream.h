@@ -276,6 +276,8 @@ protected:
   bool m_exactStart{false};
   // the clock sync phase the start sync measures against
   int m_syncPhaseId{0};
+  // the clock epoch of the pending start target at the last start sync pass, -1 without one
+  int m_startTargetEpoch{-1};
   // the sink reports counted when the start sync began
   unsigned int m_syncSinkReports{0};
   // the sum in ms of the clock sync phase shifts the audio follows

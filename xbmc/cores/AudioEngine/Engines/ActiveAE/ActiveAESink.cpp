@@ -358,6 +358,8 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
           {
             m_extReserved = reserve;
             CloseSink(false);
+            if (m_stats)
+              m_stats->SetOutputStamped(false);
             if (m_state == S_TOP_CONFIGURED_IDLE || m_state == S_TOP_CONFIGURED_PLAY ||
                 m_state == S_TOP_CONFIGURED_SILENCE)
             {
@@ -489,6 +491,7 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
           {
             m_sink->Deinitialize();
             m_sink.reset();
+            m_stats->SetOutputStamped(false);
             m_state = S_TOP_CONFIGURED_SUSPEND;
             m_extTimeout = 0ms;
           }
@@ -605,6 +608,8 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
           }
           else
           {
+            // the wire stops, so a start after it has no rhythm to keep
+            m_stats->SetOutputStamped(false);
             m_sink->Drain();
             m_state = S_TOP_CONFIGURED_IDLE;
             if (m_extAppFocused)
@@ -630,6 +635,7 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
           {
             m_sink->Deinitialize();
             m_sink.reset();
+            m_stats->SetOutputStamped(false);
             m_state = S_TOP_CONFIGURED_SUSPEND;
           }
           else

@@ -303,6 +303,10 @@ void CVideoPlayerAudio::Process()
       if (priority)
         continue;
 
+      // input that ran dry leaves no audio to decide a start
+      if (m_audioSink.GetCacheTime() <= 0)
+        m_audioSink.EndStartTarget();
+
       if (m_processInfo.IsTempoAllowed(static_cast<float>(m_speed)/DVD_PLAYSPEED_NORMAL) &&
           !m_stalled && m_syncState == IDVDStreamPlayer::SYNC_INSYNC)
       {

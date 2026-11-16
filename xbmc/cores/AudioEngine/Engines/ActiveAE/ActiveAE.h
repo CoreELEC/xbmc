@@ -210,6 +210,8 @@ public:
   void SetSinkLatency(float time) { m_sinkLatency = time; }
   void SetSinkNeedIec(bool needIEC) { m_sinkNeedIecPack = needIEC; }
   bool GetSinkNeedIec() const { return m_sinkNeedIecPack; }
+  void SetOutputStamped(bool stamped) { m_outputStamped = stamped; }
+  bool IsOutputStamped() const { return m_outputStamped; }
   bool IsSuspended();
   AEAudioFormat GetCurrentSinkFormat();
 protected:
@@ -224,6 +226,8 @@ protected:
   AEAudioFormat m_sinkFormat;
   bool m_pcmOutput;
   bool m_sinkNeedIecPack{false};
+  // whether a raw frame with a silent frame went out since the sink last started its rhythm
+  std::atomic_bool m_outputStamped{false};
   CCriticalSection m_lock;
   struct StreamStats
   {
@@ -329,6 +333,8 @@ protected:
   bool SendYieldDevice(bool yield);
   void DrainSink();
   void UnconfigureSink();
+  // ends the pending start target of every stream, which a sink that stops playing cannot decide
+  void EndStartTargets();
   void Dispose();
   void LoadSettings(AEAudioFormat *format = NULL);
   void ValidateOutputDevices(bool saveChanges);

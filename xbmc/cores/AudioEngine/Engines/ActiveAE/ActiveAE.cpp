@@ -47,6 +47,12 @@ constexpr float MIN_WATER_LEVEL_RESAMPLE = 0.1f; // min buffer time in resample 
 constexpr float BUFFER_LEVEL_INCREMENT = 0.0001f; // increment step for ramp-up
 constexpr double MAX_BUFFER_TIME = 0.1; // max time of a buffer in seconds;
 constexpr double MAX_LATE_START_MS = 500.0; // late start of audio left to the player's clock
+// the spread of the start sync measurement over many starts on every SoC; a start on the frame grid
+// aims no closer
+constexpr double START_GRID_TOLERANCE_MS = 2.0;
+// the longest picture hold that brings a start on the frame grid within the tolerance at any
+// standard display rate (21 vsyncs at 29.97 Hz)
+constexpr double MAX_START_HOLD_MS = 701.0;
 
 //! \brief Retry interval for a sink that will not open, doubling to a ceiling.
 //! A device that returns announces itself, so only a fault that clears by itself needs the
@@ -285,6 +291,7 @@ void CEngineStats::GetSyncInfo(CAESyncInfo& info, CActiveAEStream *stream)
       info.state = str.m_syncState;
       info.lateStartHandedOver = str.m_lateStartHandedOver;
       info.exactStart = str.m_exactStart;
+      info.stamped = m_outputStamped;
       info.rr = str.m_resampleRatio;
       str.m_errorTimeTaken = str.m_errorTime;
       return;
@@ -721,6 +728,7 @@ void CActiveAE::StateMachine(int signal, Protocol *port, Message *msg)
           }
           else
           {
+            EndStartTargets();
             m_state = AE_TOP_ERROR;
             m_extTimeout = 500ms;
           }
@@ -1155,6 +1163,7 @@ void CActiveAE::StateMachine(int signal, Protocol *port, Message *msg)
         case CActiveAEControlProtocol::TIMEOUT:
           if (m_extError)
           {
+            EndStartTargets();
             m_state = AE_TOP_ERROR;
             m_extTimeout = 100ms;
             return;
@@ -2040,6 +2049,8 @@ bool CActiveAE::InitSink()
     if (!stream->m_paused && stream->m_processingBuffers && stream->m_processingBuffers->HasWork())
       config.fill = false;
   }
+  m_stats.SetOutputStamped(false);
+  EndStartTargets();
 
   // send message to sink
   m_sink.m_controlPort.SendOutMessage(CSinkControlProtocol::SETNOISETYPE, &m_settings.streamNoise, sizeof(bool));
@@ -2117,6 +2128,15 @@ void CActiveAE::DrainSink()
   }
 }
 
+void CActiveAE::EndStartTargets()
+{
+  for (CActiveAEStream* stream : m_streams)
+  {
+    if (stream->m_pClock && !stream->m_freed)
+      stream->m_pClock->EndStartTarget();
+  }
+}
+
 void CActiveAE::UnconfigureSink()
 {
   // send message to sink
@@ -2142,6 +2162,7 @@ void CActiveAE::UnconfigureSink()
   m_openedDevice = "";
   m_openedDriver = "";
   m_currentDeviceFollowsDefault = false;
+  EndStartTargets();
 
   m_inMsgEvent.Reset();
 }
@@ -2239,6 +2260,14 @@ bool CActiveAE::RunStages()
       if ((*it)->m_paused || !(*it)->m_started || !(*it)->m_processingBuffers || !(*it)->m_pClock ||
           (*it)->m_freed)
         continue;
+
+      // a stream with nothing queued has no start to decide
+      double first{0.0};
+      double last{0.0};
+      int epoch{0};
+      if ((*it)->m_processingBuffers->IsDrained() &&
+          (*it)->m_pClock->GetStartTarget(first, last, epoch))
+        (*it)->m_pClock->EndStartTarget();
 
       if ((*it)->m_processingBuffers->m_outputSamples.empty())
         continue;
@@ -2607,15 +2636,24 @@ bool CActiveAE::RunStages()
                   ? CAEPassthroughSilence::Find((*it)->m_format.m_streamInfo.m_type,
                                                 front->pkt->data[0], front->pkt->nb_samples)
                   : nullptr};
+          front->pkt->silent_frame = m_stats.IsOutputStamped() ? silentFrame : nullptr;
           buffer = SyncStream(*it);
           m_stats.UpdateStream(*it);
+          // content that waits for a start decision with no pad free stays for the next pass
+          if (!buffer && m_mode == MODE_RAW &&
+              (*it)->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE &&
+              front->pkt->nb_samples > 0)
+            continue;
           if (!buffer)
           {
             buffer = (*it)->m_processingBuffers->m_outputSamples.front();
             (*it)->m_processingBuffers->m_outputSamples.pop_front();
           }
           if (silentFrame && buffer->pkt->nb_samples > 0)
+          {
+            m_stats.SetOutputStamped(true);
             buffer->pkt->silent_frame = silentFrame;
+          }
           if (buffer->pkt->nb_samples > 0)
             m_stats.AddSamples(1, m_streams);
           else
@@ -2692,8 +2730,10 @@ double CActiveAE::FillSyncPad(CActiveAEStream* stream, CSampleBuffer* buf, doubl
   if (m_mode == MODE_RAW)
   {
     const double frame = stream->m_format.m_streamInfo.GetDuration();
-    // a pause shorter than a frame only before anything was heard
-    if (stream->m_silentSinceSyncStart)
+    buf->pkt->silent_frame =
+        stream->m_processingBuffers->m_outputSamples.front()->pkt->silent_frame;
+    // a pause shorter than a frame only before anything was heard, and only without a silent frame
+    if (stream->m_silentSinceSyncStart && !buf->pkt->silent_frame)
       buf->pkt->pause_burst_ms = static_cast<int>(std::lround(std::min(ms, frame)));
     else if (ms > frame / 2)
       buf->pkt->pause_burst_ms = TakeFramePause(stream, frame);
@@ -2722,7 +2762,8 @@ double CActiveAE::SkipSyncSamples(CActiveAEStream* stream, CSampleBuffer* buf, d
   {
     // before anything was heard, the next calls pause for what a skip took too much
     const double frame = stream->m_format.m_streamInfo.GetDuration();
-    if (stream->m_silentSinceSyncStart ? std::lround(ms) <= 0 : ms <= frame / 2)
+    if (stream->m_silentSinceSyncStart && !buf->pkt->silent_frame ? std::lround(ms) <= 0
+                                                                  : ms <= frame / 2)
       return 0.0;
     buf->pkt->nb_samples = 0;
     return frame;
@@ -2769,6 +2810,12 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
     CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - phase shift committed");
   }
 
+  // a stamped stream corrects its error only through a start target
+  if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_ADJUST &&
+      stream->m_processingBuffers->m_outputSamples.front()->pkt->silent_frame &&
+      stream->m_pClock->ArmStartTarget())
+    stream->m_syncState = CAESyncInfo::AESyncState::SYNC_START;
+
   if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_START)
   {
     stream->m_syncState = CAESyncInfo::AESyncState::SYNC_MUTE;
@@ -2799,18 +2846,92 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
   }
 
   double phasePeriod{0.0};
+  bool startTarget{false};
+  bool stampedStart{false};
   if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE)
   {
-    // the start sync measures against one published clock sync phase
+    double first{0.0};
+    double last{0.0};
+    int targetEpoch{0};
+    startTarget = stream->m_pClock->GetStartTarget(first, last, targetEpoch);
+    // only a stream that keeps its rhythm on the wire waits for its decision, and it starts only
+    // through one, which a running clock arms
+    stampedStart =
+        stream->m_processingBuffers->m_outputSamples.front()->pkt->silent_frame != nullptr;
+    if (startTarget && !stampedStart)
+    {
+      stream->m_pClock->EndStartTarget();
+      startTarget = false;
+    }
+    else if (!startTarget && stampedStart && stream->m_pClock->ArmStartTarget())
+      startTarget = stream->m_pClock->GetStartTarget(first, last, targetEpoch);
+
+    // the start sync measures against one published clock sync phase, and a start target's
+    // decision takes only errors sampled between two reads of its epoch
     double shift{0.0};
+    double startError{0.0};
     const int syncPhaseId = stream->m_pClock->GetSyncPhaseId(shift, phasePeriod);
-    if (syncPhaseId == -1 || syncPhaseId != stream->m_syncPhaseId)
+    const bool targetMoved{startTarget && targetEpoch != stream->m_startTargetEpoch};
+    stream->m_startTargetEpoch = startTarget ? targetEpoch : -1;
+    if (syncPhaseId == -1 || syncPhaseId != stream->m_syncPhaseId || targetMoved)
     {
       stream->m_syncPhaseId = syncPhaseId;
       stream->m_syncShift = shift;
       stream->m_syncError.Flush(100ms);
       CLog::Log(LOGDEBUG, LOGAUDIO, "ActiveAE::SyncStream - start sync held, phase id {:d}",
                 syncPhaseId);
+    }
+    else if (startTarget && stream->m_syncError.GetSoFar(startError))
+    {
+      // decided once, on the first error, so nothing moves the picture after it starts: the clock
+      // takes what whole frames of padding cannot
+      const double frame = stream->m_format.m_streamInfo.GetDuration();
+      int frames{0};
+      double move{0.0};
+      if (phasePeriod <= 0)
+      {
+        frames = static_cast<int>(std::ceil((startError - first) / frame - 0.5));
+        if (startError - frames * frame > last)
+          frames++;
+        move = startError - frames * frame;
+      }
+      else
+      {
+        // within the tolerance counts as one step, so a closer start is not bought with a longer
+        // hold
+        double closest{0.0};
+        double distance{0.0};
+        for (int periods = static_cast<int>(std::ceil((first - MAX_START_HOLD_MS) / phasePeriod));
+             periods * phasePeriod <= last; periods++)
+        {
+          const double candidate = periods * phasePeriod;
+          const double whole = std::round((startError - candidate) / frame);
+          const double steps =
+              std::max(1.0, std::ceil(std::abs(startError - candidate - whole * frame) /
+                                      START_GRID_TOLERANCE_MS));
+          if (closest == 0 || steps < closest ||
+              (steps == closest && std::abs(candidate - first) <= distance))
+          {
+            closest = steps;
+            move = candidate;
+            distance = std::abs(candidate - first);
+            frames = static_cast<int>(whole);
+          }
+        }
+      }
+      CLog::Log(LOGDEBUG, LOGAUDIO,
+                "ActiveAE::SyncStream - start error {:f}, clock moved {:f}, {:d} frames pad",
+                startError, move, frames);
+      if (!stream->m_pClock->SetStartTarget(move, targetEpoch))
+      {
+        stream->m_syncState = CAESyncInfo::AESyncState::SYNC_START;
+        return SyncStream(stream);
+      }
+      stream->m_startPad = frames * frame;
+      stream->m_silentSinceSyncStart = false;
+      stream->m_syncState = CAESyncInfo::AESyncState::SYNC_INSYNC;
+      stream->m_syncError.Flush(1000ms);
+      stream->m_resampleIntegral = 0;
     }
   }
   else if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_INSYNC && m_mode == MODE_PCM)
@@ -2861,7 +2982,8 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
                                           ? 100ms
                                           : stream->GetErrorInterval();
   // a start error handed to the player stays reported until the player reads it
-  bool newerror = (!stream->m_lateStartHandedOver || m_stats.IsSyncErrorTaken(stream)) &&
+  bool newerror = !stampedStart &&
+                  (!stream->m_lateStartHandedOver || m_stats.IsSyncErrorTaken(stream)) &&
                   stream->m_syncError.Get(error, timeout);
 
   if (newerror && stream->m_lateStartHandedOver)
@@ -2947,7 +3069,18 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
   if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE && audible)
     stream->m_silentSinceSyncStart = false;
   if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE && !audible)
-    MuteSamples(stream, stream->m_processingBuffers->m_outputSamples.front());
+  {
+    CSampleBuffer *buf = stream->m_processingBuffers->m_outputSamples.front();
+    if (stampedStart && buf->timestamp)
+    {
+      // measured content waits for the decision behind pads, which count as sink reports
+      ret = m_silenceBuffers->GetFreeBuffer();
+      if (ret)
+        FillSyncPad(stream, ret, stream->m_format.m_streamInfo.GetDuration());
+    }
+    else
+      MuteSamples(stream, buf);
+  }
   else if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_ADJUST &&
            stream->m_syncErrorBooked)
   {

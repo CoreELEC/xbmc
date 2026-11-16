@@ -13,6 +13,7 @@
 #include "ServiceBroker.h"
 #include "cores/AudioEngine/Interfaces/AE.h"
 #include "cores/AudioEngine/Utils/AEAudioFormat.h"
+#include "cores/AudioEngine/Utils/AEPassthroughSilence.h"
 #include "cores/AudioEngine/Utils/AEStreamData.h"
 #include "utils/XTimeUtils.h"
 #include "utils/log.h"
@@ -93,6 +94,7 @@ void CAudioSinkAE::Destroy(bool finish)
   m_startSyncError = false;
   m_startSyncErrorExact = false;
   m_startCut = 0.0;
+  EndStartTarget();
 }
 
 unsigned int CAudioSinkAE::AddPackets(const DVDAudioFrame &audioframe)
@@ -169,6 +171,10 @@ unsigned int CAudioSinkAE::AddPackets(const DVDAudioFrame &audioframe)
 
   m_playingPts = audioframe.pts + audioframe.duration - GetDelay();
   m_timeOfPts = m_pClock->GetAbsoluteClock();
+  // a clock start holds the picture for the audio only if it keeps its rhythm on the wire
+  m_pClock->SetAudioStamped(
+      m_bPassthrough && info.stamped &&
+      CAEPassthroughSilence::Find(m_dataType, audioframe.data[0], audioframe.nb_frames));
 
   return total - frames;
 }
@@ -243,6 +249,8 @@ void CAudioSinkAE::Flush()
   m_startSyncError = false;
   m_startSyncErrorExact = false;
   m_startCut = 0.0;
+  if (m_pClock)
+    m_pClock->SetAudioStamped(false);
 }
 
 void CAudioSinkAE::AbortAddPackets()
@@ -386,6 +394,35 @@ int CAudioSinkAE::GetSyncPhaseId(double& shift, double& period)
 bool CAudioSinkAE::TakeSyncShiftCommit()
 {
   return m_pClock && m_pClock->GetVsyncPhase().TakeVsyncShiftCommit();
+}
+
+bool CAudioSinkAE::GetStartTarget(double& first, double& last, int& epoch)
+{
+  first = 0.0;
+  last = 0.0;
+  epoch = 0;
+  if (!m_pClock || !m_pClock->GetStartTarget(first, last, epoch))
+    return false;
+
+  first = first / DVD_TIME_BASE * 1000;
+  last = last / DVD_TIME_BASE * 1000;
+  return true;
+}
+
+bool CAudioSinkAE::SetStartTarget(double move, int epoch)
+{
+  return m_pClock && m_pClock->SetStartTarget(move / 1000 * DVD_TIME_BASE, epoch);
+}
+
+bool CAudioSinkAE::ArmStartTarget()
+{
+  return m_pClock && m_pClock->ArmStartTarget();
+}
+
+void CAudioSinkAE::EndStartTarget()
+{
+  if (m_pClock)
+    m_pClock->EndStartTarget();
 }
 
 double CAudioSinkAE::TakeStartCut()

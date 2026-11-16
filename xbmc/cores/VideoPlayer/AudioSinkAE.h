@@ -65,6 +65,10 @@ public:
   double TakeStartCut() override;
   int GetSyncPhaseId(double& shift, double& period) override;
   bool TakeSyncShiftCommit() override;
+  bool GetStartTarget(double& first, double& last, int& epoch) override;
+  bool SetStartTarget(double move, int epoch) override;
+  bool ArmStartTarget() override;
+  void EndStartTarget() override;
 
   CAEStreamInfo::DataType GetPassthroughStreamType(AVCodecID codecId, int samplerate, int profile);
 
