@@ -273,6 +273,7 @@ bool CRenderManager::Configure()
     m_offTimelineSource = -1;
     for (int i = 0; i < m_QueueSize; i++)
       m_free.push_back(i);
+    PublishQueued();
 
     m_bRenderGUI = true;
     m_videostarted = std::chrono::system_clock::now();
@@ -527,7 +528,8 @@ void CRenderManager::PresentFromVsync()
       double latency = m_displayLatency;
       if (!m_releaseClockTaken)
       {
-        clock = m_dvdClock.GetClock(epoch);
+        bool target{false};
+        clock = m_dvdClock.GetRunningClock(epoch, target);
         clockTime = std::chrono::steady_clock::now();
         latency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_appliedVideoDelay);
       }
@@ -668,6 +670,7 @@ bool CRenderManager::Flush(bool wait, bool saveBuffers)
         m_presentstep = PRESENT_IDLE;
         for (int i = 0; i < m_QueueSize; i++)
           m_free.push_back(i);
+        PublishQueued();
       }
 
       m_flushEvent.Set();
@@ -1198,6 +1201,7 @@ bool CRenderManager::AddVideoPicture(const VideoPicture& picture, volatile std::
   m.pts = picture.pts;
   m_queued.push_back(m_free.front());
   m_free.pop_front();
+  PublishQueued();
   m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
 
   // signal to any waiters to check state
@@ -1340,7 +1344,8 @@ void CRenderManager::PrepareNextRender()
   if (commit)
     m_dvdClock.GetVsyncPhase().CommitVsyncShift();
 
-  const double frameOnScreen = m_dvdClock.GetClock(m_releaseClockEpoch);
+  bool target{false};
+  const double frameOnScreen = m_dvdClock.GetRunningClock(m_releaseClockEpoch, target);
   m_releaseClockTime = std::chrono::steady_clock::now();
   m_releaseClock = frameOnScreen;
   m_releaseClockTaken = true;
@@ -1407,6 +1412,12 @@ void CRenderManager::PrepareNextRender()
               frameOnScreen / DVD_TIME_BASE, renderPts / DVD_TIME_BASE, nextFramePts / DVD_TIME_BASE,
               (renderPts - nextFramePts) / DVD_TIME_BASE, renderPts >= nextFramePts, m_forceNext);
 
+  // a forced picture is no release on the timeline; none goes out while a start target is pending,
+  // and one decided on a clock that a start target moved since is decided again at the next vsync
+  if (!m_forceNext && renderPts >= nextFramePts &&
+      !m_dvdClock.CanRelease(m_releaseClockEpoch, target))
+    return;
+
   bool combined = false;
   if (m_presentsourcePast >= 0)
   {
@@ -1469,10 +1480,12 @@ void CRenderManager::PrepareNextRender()
     m_queued.pop_front();
     m_presentpts = m_Queue[m_presentsource].pts - m_displayLatency;
     m_presentevent.notifyAll();
+    PublishQueued();
 
     m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
   }
-  else if (!combined && !m_presenting && renderPts > (nextFramePts - frametime))
+  else if (!combined && !m_presenting && renderPts > (nextFramePts - frametime) &&
+           m_dvdClock.CanRelease(m_releaseClockEpoch, target))
   {
     m_lateframes = 0;
     m_presentstep = PRESENT_FLIP;
@@ -1481,6 +1494,7 @@ void CRenderManager::PrepareNextRender()
     m_queued.pop_front();
     m_presentpts = m_Queue[m_presentsource].pts - m_displayLatency - frametime / 2;
     m_presentevent.notifyAll();
+    PublishQueued();
   }
 }
 
@@ -1518,11 +1532,21 @@ void CRenderManager::DiscardBuffer()
     m_discard.push_back(m_queued.front());
     m_queued.pop_front();
   }
+  PublishQueued();
   m_offTimelineSource = m_presentsource;
 
   if(m_presentstep == PRESENT_READY)
     m_presentstep = PRESENT_IDLE;
   m_presentevent.notifyAll();
+}
+
+void CRenderManager::PublishQueued()
+{
+  if (m_queued.empty())
+    m_dvdClock.SetQueued(DVD_NOPTS_VALUE, DVD_NOPTS_VALUE);
+  else
+    m_dvdClock.SetQueued(m_Queue[m_queued.front()].pts - m_displayLatency,
+                         m_Queue[m_queued.back()].pts - m_displayLatency);
 }
 
 bool CRenderManager::GetStats(int &lateframes, double &pts, int &queued, int &discard)

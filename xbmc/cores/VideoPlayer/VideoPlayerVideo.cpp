@@ -1051,7 +1051,7 @@ CVideoPlayerVideo::EOutputState CVideoPlayerVideo::OutputPicture(const VideoPict
   // calculate the time we need to delay this picture before displaying
   double iPlayingClock, iCurrentClock;
 
-  iPlayingClock = m_pClock->GetClock(iCurrentClock, false); // snapshot current clock
+  iPlayingClock = m_pClock->GetRunningClock(iCurrentClock, false); // snapshot current clock
 
   if (m_speed < 0)
   {

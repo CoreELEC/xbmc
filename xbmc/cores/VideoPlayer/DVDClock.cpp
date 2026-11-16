@@ -105,12 +105,14 @@ double CDVDClock::GetClockWithVsyncAdjust()
   return clock + m_vSyncAdjust;
 }
 
-double CDVDClock::GetClock(int& epoch)
+double CDVDClock::GetRunningClock(int& epoch, bool& target)
 {
   std::unique_lock lock(m_critSection);
 
-  const double clock = GetClock();
+  double absolute{0.0};
+  const double clock = GetRunningClock(absolute);
   epoch = m_clockEpoch;
+  target = m_startPending;
   return clock;
 }
 

@@ -31,8 +31,9 @@ public:
   double GetRunningClock(double& absolute, bool interpolated = true);
   //! The running clock plus the vsync adjust, read together
   double GetClockWithVsyncAdjust();
-  //! The clock and the epoch of its mapping, read together
-  double GetClock(int& epoch);
+  //! The running clock and the epoch of its mapping, read together, with `target` whether a start
+  //! target is pending
+  double GetRunningClock(int& epoch, bool& target);
 
   //! An `exact` error is moved by in full, as the audio engine already quantised it. A `start`
   //! handover is never skipped as a minor update.

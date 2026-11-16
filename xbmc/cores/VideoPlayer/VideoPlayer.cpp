@@ -996,6 +996,8 @@ bool CVideoPlayer::OpenInputStream()
     } // end loop over all subtitle files
   }
 
+  // pictures queued from the last input are not due on the reset clock
+  m_renderManager.DiscardBuffer();
   m_clock.Reset();
   m_dvd.Clear();
 

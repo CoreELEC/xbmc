@@ -185,6 +185,9 @@ protected:
   void StartPresentThread();
   void StopPresentThread();
   void PresentFromVsync();
+  //! Under m_presentlock: tells the clock when the queued pictures are due, as their release
+  //! test takes them, for a clock start target
+  void PublishQueued();
   int GuiSource() const { return m_presenting ? m_guiPresentSource : m_presentsource; }
 
   CBaseRenderer *m_pRenderer = nullptr;
