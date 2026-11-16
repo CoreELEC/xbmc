@@ -346,6 +346,8 @@ protected:
   CSampleBuffer* SyncStream(CActiveAEStream* stream);
   // rounds a pause of `frame` ms to whole ms and carries the remainder into the next one
   int TakeFramePause(CActiveAEStream* stream, double frame);
+  // silences `buf` in place, in passthrough as a pause of one input frame
+  void MuteSamples(CActiveAEStream* stream, CSampleBuffer* buf);
 
   void ResampleSounds();
   bool ResampleSound(CActiveAESound *sound);

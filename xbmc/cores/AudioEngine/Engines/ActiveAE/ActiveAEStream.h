@@ -253,6 +253,9 @@ protected:
   enum AVAudioServiceType m_audioServiceType;
   bool m_forceResampler;
   IAEClockCallback *m_pClock;
+  // set by the player's free; a free that times out leaves the stream to the engine while the
+  // player's clock goes, so the engine reads no clock of a freed stream
+  std::atomic_bool m_freed{false};
   CSyncError m_syncError;
   double m_lastSyncError;
   CAESyncInfo::AESyncState m_syncState;

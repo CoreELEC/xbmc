@@ -2176,7 +2176,8 @@ bool CActiveAE::RunStages()
       if ((*it)->m_paused && (*it)->m_started && m_settings.lowLatencyMode)
         m_targetBufferLevel = m_initialTargetBufferLevel;
 
-      if ((*it)->m_paused || !(*it)->m_started || !(*it)->m_processingBuffers || !(*it)->m_pClock)
+      if ((*it)->m_paused || !(*it)->m_started || !(*it)->m_processingBuffers || !(*it)->m_pClock ||
+          (*it)->m_freed)
         continue;
 
       if ((*it)->m_processingBuffers->m_outputSamples.empty())
@@ -2599,12 +2600,34 @@ int CActiveAE::TakeFramePause(CActiveAEStream* stream, double frame)
   return pauseMs;
 }
 
+void CActiveAE::MuteSamples(CActiveAEStream* stream, CSampleBuffer* buf)
+{
+  if (m_mode == MODE_RAW)
+  {
+    buf->pkt->nb_samples = 0;
+    buf->pkt->pause_burst_ms = TakeFramePause(
+        stream, stream->m_processingBuffers->m_inputFormat.m_streamInfo.GetDuration());
+  }
+  else
+  {
+    for (int i = 0; i < buf->pkt->planes; i++)
+      memset(buf->pkt->data[i], 0, buf->pkt->linesize);
+  }
+}
+
 CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
 {
   CSampleBuffer *ret = NULL;
 
   if (!stream->m_pClock)
     return ret;
+
+  // a freed stream reads no clock, and what it holds until the engine discards it is muted
+  if (stream->m_freed)
+  {
+    MuteSamples(stream, stream->m_processingBuffers->m_outputSamples.front());
+    return ret;
+  }
 
   if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_START)
   {
@@ -2709,22 +2732,7 @@ CSampleBuffer* CActiveAE::SyncStream(CActiveAEStream *stream)
   if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE && audible)
     stream->m_silentSinceSyncStart = false;
   if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_MUTE && !audible)
-  {
-    CSampleBuffer *buf = stream->m_processingBuffers->m_outputSamples.front();
-    if (m_mode == MODE_RAW)
-    {
-      buf->pkt->nb_samples = 0;
-      buf->pkt->pause_burst_ms = TakeFramePause(
-          stream, stream->m_processingBuffers->m_inputFormat.m_streamInfo.GetDuration());
-    }
-    else
-    {
-      for(int i=0; i<buf->pkt->planes; i++)
-      {
-        memset(buf->pkt->data[i], 0, buf->pkt->linesize);
-      }
-    }
-  }
+    MuteSamples(stream, stream->m_processingBuffers->m_outputSamples.front());
   else if (stream->m_syncState == CAESyncInfo::AESyncState::SYNC_ADJUST &&
            stream->m_syncErrorBooked)
   {
@@ -3811,6 +3819,7 @@ bool CActiveAE::FreeStream(IAEStream *stream, bool finish)
   MsgStreamFree msg;
   msg.stream = static_cast<CActiveAEStream*>(stream);
   msg.finish = finish;
+  msg.stream->m_freed = true;
 
   Message *reply;
   if (m_dataPort.SendOutMessageSync(CActiveAEDataProtocol::FREESTREAM, &reply, 1s, &msg,
