@@ -423,6 +423,7 @@ void CActiveAEBufferPoolResample::Flush()
     m_outputSamples.front()->Return();
     m_outputSamples.pop_front();
   }
+  m_lastSamplePts = 0;
   if (m_resampler)
     ChangeResampler();
 }
@@ -668,6 +669,7 @@ void CActiveAEBufferPoolAtempo::Flush()
     m_outputSamples.front()->Return();
     m_outputSamples.pop_front();
   }
+  m_lastSamplePts = 0;
   if (m_pTempoFilter)
     ChangeFilter();
 }
