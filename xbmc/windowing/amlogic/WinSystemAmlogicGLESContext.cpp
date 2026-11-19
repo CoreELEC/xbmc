@@ -208,6 +208,15 @@ bool CWinSystemAmlogicGLESContext::CreateNewWindow(const std::string& name,
 
   if (!CWinSystemAmlogic::CreateNewWindow(name, fullScreen, res))
   {
+    if (!m_modeSwitchFallback)
+    {
+      CLog::Log(LOGWARNING,
+                "CWinSystemAmlogicGLESContext::{}: failed to set mode {}, staying on {}",
+                __FUNCTION__, res.strId, current_resolution.strId);
+      m_modeSwitchFallback = true;
+      CreateNewWindow(name, fullScreen, current_resolution);
+      m_modeSwitchFallback = false;
+    }
     return false;
   }
 
