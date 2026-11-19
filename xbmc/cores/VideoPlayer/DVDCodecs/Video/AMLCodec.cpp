@@ -3540,7 +3540,7 @@ void CAMLCodec::SetVideoRect(const CRect &SrcRect, const CRect &DestRect)
     // 3D frame packed output: get the screen height from the graphic context
     // (will work in fullscreen mode only)
     RESOLUTION_INFO info = CServiceBroker::GetWinSystem()->GetGfxContext().GetResInfo();
-    dst_rect.y2 = info.iHeight * 2 + info.iBlanking;
+    dst_rect.y2 = dst_rect.y1 + info.iHeight * 2 + info.iBlanking;
   }
 
   if (static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_3d())
