@@ -336,6 +336,7 @@ void CVideoPlayerAudio::Process()
       if (pts > m_audioClock - delay + 0.5 * DVD_TIME_BASE)
       {
         m_audioSink.Flush();
+        audioframe.nb_frames = 0;
       }
       m_audioClock = pts + delay;
       if (m_speed != DVD_PLAYSPEED_PAUSE)
