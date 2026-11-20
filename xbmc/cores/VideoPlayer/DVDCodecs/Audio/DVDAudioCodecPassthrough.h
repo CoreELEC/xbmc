@@ -14,7 +14,9 @@
 #include "cores/AudioEngine/Utils/AEBitstreamPacker.h"
 #include "cores/AudioEngine/Utils/AEStreamInfo.h"
 
+#include <deque>
 #include <list>
+#include <utility>
 #include <vector>
 
 class CProcessInfo;
@@ -52,6 +54,13 @@ private:
   std::string m_codecName;
 
   // TrueHD specifics
+  std::deque<std::pair<uint64_t, double>> m_packetPts; // stream offset of a packet, its pts
+  uint64_t m_streamBytes{0};
+  uint64_t m_parsedBytes{0};
+  // the first unit's pts of the buffer being grouped, and whether a packet gave it
+  double m_trueHDPts{DVD_NOPTS_VALUE};
+  bool m_trueHDPtsFromPacket{false};
+  double m_trueHDBufferPts{DVD_NOPTS_VALUE};
   std::vector<uint8_t> m_trueHDBuffer;
   unsigned int m_trueHDoffset = 0;
   unsigned int m_trueHDframes = 0;
