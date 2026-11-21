@@ -375,6 +375,7 @@ void CAMLDRMUtils::aml_init_drmDevice_display()
     if (m_encoder->possible_crtcs & (1 << i) && m_crtc->crtc_id == m_encoder->crtc_id)
     {
       CLog::Log(LOGDEBUG, "CAMLDRMUtils::{} - using crtc {}", __FUNCTION__, m_crtc->crtc_id);
+      m_crtcIndex = i;
       break;
     }
     else
@@ -560,7 +561,10 @@ bool CAMLDRMUtils::aml_set_drmDevice_mode(const RESOLUTION_INFO &res, std::strin
   if (!m_crtc && _force_mode_switch)
   {
     if (m_resources && m_resources->count_crtcs > 0)
+    {
       m_crtc = drmModeGetCrtc(m_fd, m_resources->crtcs[0]);
+      m_crtcIndex = 0;
+    }
 
     if (!m_crtc)
     {

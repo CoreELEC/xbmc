@@ -8,6 +8,7 @@
 #include <gbm.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+#include <atomic>
 #include <memory>
 #include <unistd.h>
 #include <utility>
@@ -85,6 +86,7 @@ public:
   virtual ~CAMLDRMUtils();
 
   int aml_get_drmDevice_handle() const { return m_fd; }
+  int aml_get_drmDevice_crtc_index() const { return m_crtcIndex; }
   void aml_init_drmDevice();
   void aml_drmDevice_vsync();
   std::string aml_get_drmDevice_mode();
@@ -139,6 +141,8 @@ private:
   drmModeConnection m_connection{DRM_MODE_DISCONNECTED};
   drmModeEncoderPtr m_encoder{nullptr};
   drmModeCrtcPtr m_crtc{nullptr};
+  //! index of m_crtc in the device's CRTC list
+  std::atomic<int> m_crtcIndex{0};
   drmModeCrtcPtr m_orig_crtc{nullptr};
   drmModePlanePtr m_plane{nullptr};
 
@@ -153,6 +157,7 @@ public:
 
   void aml_refresh_display_caps();
   int aml_get_Device_handle() const { return m_amlDRMUtils->aml_get_drmDevice_handle(); }
+  int aml_get_crtc_index() const { return m_amlDRMUtils->aml_get_drmDevice_crtc_index(); }
   void aml_init_drmDevice() { m_amlDRMUtils->aml_init_drmDevice(); }
   void aml_drmDevice_vsync() { m_amlDRMUtils->aml_drmDevice_vsync(); };
   bool aml_get_display_connected() const { return m_amlDRMUtils->aml_get_drmDevice_connected(); }

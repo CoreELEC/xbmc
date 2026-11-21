@@ -302,9 +302,13 @@ protected:
   int m_planeSource{-1};
   //! Under m_presentlock: a discarded frame left on the plane until a new one replaces it
   int m_offTimelineSource{-1};
-  //! Under m_presentlock: the clock and its epoch of the last release decision, and whether
-  //! the current vsync step made one
+  //! Under m_presentlock: the clock, when it was read and its epoch of the last release
+  //! decision, and whether the current vsync step made one
   double m_releaseClock{0.0};
+  std::chrono::steady_clock::time_point m_releaseClockTime{};
   int m_releaseClockEpoch{0};
   bool m_releaseClockTaken{false};
+  //! Presenter thread, or the render thread when not presenting: the display vsync period while
+  //! the clock sync is on
+  double m_vsyncPeriod{0.0};
 };
