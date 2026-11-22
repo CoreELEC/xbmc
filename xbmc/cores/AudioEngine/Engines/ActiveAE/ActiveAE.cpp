@@ -175,7 +175,7 @@ void CEngineStats::UpdateStream(CActiveAEStream *stream)
       {
         if (m_pcmOutput)
           delay += (float)(*itBuf)->pkt->nb_samples / (*itBuf)->pkt->config.sample_rate;
-        else
+        else if ((*itBuf)->pkt->nb_samples > 0)
           delay += static_cast<float>(m_sinkFormat.m_streamInfo.GetDuration() / 1000.0);
       }
       str.m_bufferedTime = static_cast<double>(delay);
