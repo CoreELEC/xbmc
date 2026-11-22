@@ -1965,6 +1965,13 @@ bool CActiveAE::InitSink()
   config.stats = &m_stats;
   config.device = (m_sinkRequestFormat.m_dataFormat == AE_FMT_RAW) ? &m_settings.passthroughdevice :
                                                                      &m_settings.device;
+  config.streaming = !m_streams.empty();
+  config.fill = config.streaming;
+  for (const auto* stream : m_streams)
+  {
+    if (!stream->m_paused && stream->m_processingBuffers && stream->m_processingBuffers->HasWork())
+      config.fill = false;
+  }
 
   // send message to sink
   m_sink.m_controlPort.SendOutMessage(CSinkControlProtocol::SETNOISETYPE, &m_settings.streamNoise, sizeof(bool));
