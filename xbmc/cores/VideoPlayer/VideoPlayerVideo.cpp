@@ -842,6 +842,22 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(double &frametime, double &pts)
       }
     }
 
+    // sized as a whole frame, a full packed eye is wider (sbs) or narrower (tab) than released
+    // 3d films
+    if (m_picture.iDisplayHeight > 0)
+    {
+      constexpr float MAX_SBS_EYE_ASPECT = 2.6f;
+      constexpr float MIN_TAB_EYE_ASPECT = 1.3f;
+      const float eyeAspect =
+          static_cast<float>(m_picture.iDisplayWidth) / m_picture.iDisplayHeight;
+      if ((m_picture.stereoMode == "left_right" || m_picture.stereoMode == "right_left") &&
+          eyeAspect > MAX_SBS_EYE_ASPECT)
+        m_picture.iDisplayWidth /= 2;
+      else if ((m_picture.stereoMode == "top_bottom" || m_picture.stereoMode == "bottom_top") &&
+               eyeAspect < MIN_TAB_EYE_ASPECT)
+        m_picture.iDisplayHeight /= 2;
+    }
+
     // if frame has a pts (usually originating from demux packet), use that
     if (m_picture.pts != DVD_NOPTS_VALUE)
     {
