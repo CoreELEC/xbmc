@@ -106,7 +106,7 @@ public:
 
   bool Configure(const VideoPicture& picture, float fps, unsigned int orientation, int buffers = 0);
   bool AddVideoPicture(const VideoPicture& picture, volatile std::atomic_bool& bStop, EINTERLACEMETHOD deintMethod, bool wait);
-  void AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts);
+  void AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts, int depth = 0);
   void ShowVideo(bool enable);
 
   /*!

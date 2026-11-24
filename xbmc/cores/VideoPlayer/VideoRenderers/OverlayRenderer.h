@@ -111,7 +111,7 @@ namespace OVERLAY {
     // Implementation of Observer
     void Notify(const Observable& obs, const ObservableMessage msg) override;
 
-    void AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts, int index);
+    void AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts, int index, int depth = 0);
     virtual void Render(int idx, float depth = 0.0f);
 
     // render overlays already in HDR (not sRGB)
@@ -182,6 +182,7 @@ namespace OVERLAY {
     {
       SElement() : overlay_dvd(NULL) { pts = 0.0; }
       double pts;
+      int depth{0};
       std::shared_ptr<CDVDOverlay> overlay_dvd;
       // libass output cached by PrepareOverlays; read by ConvertLibass during
       // render. libass owns the pointer; valid only until the next
@@ -191,7 +192,7 @@ namespace OVERLAY {
       float renderedFrameHeight{0.0f};
     };
 
-    void Render(COverlay* o);
+    void Render(COverlay* o, int subtitleDepth = 0);
     std::shared_ptr<COverlay> Convert(SElement& e);
     // Build a COverlay (cached or freshly created) from the libass output
     // already produced by PrepareOverlays. Does not call ass_render_frame.
