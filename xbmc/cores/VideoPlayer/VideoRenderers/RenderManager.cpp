@@ -1150,7 +1150,7 @@ bool CRenderManager::AddVideoPicture(const VideoPicture& picture, volatile std::
   return true;
 }
 
-void CRenderManager::AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts)
+void CRenderManager::AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts, int depth)
 {
   int idx;
   {
@@ -1160,7 +1160,7 @@ void CRenderManager::AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts)
     idx = m_free.front();
   }
   std::unique_lock lock(m_datalock);
-  m_overlays.AddOverlay(std::move(o), pts, idx);
+  m_overlays.AddOverlay(std::move(o), pts, idx, depth);
 }
 
 bool CRenderManager::Supports(ERENDERFEATURE feature) const

@@ -983,6 +983,7 @@ void CVideoPlayerVideo::ProcessOverlays(const VideoPicture* pSource, double pts)
     m_pOverlayContainer->CleanUp(matchPts - m_iSubtitleDelay);
 
   VecOverlays overlays;
+  std::vector<int> depths;
 
   {
     std::unique_lock lock(*m_pOverlayContainer);
@@ -1008,13 +1009,15 @@ void CVideoPlayerVideo::ProcessOverlays(const VideoPicture* pSource, double pts)
                           static_cast<CDVDOverlayGroup&>(*pOverlay).m_overlays.end());
         else
           overlays.push_back(pOverlay);
+
+        depths.resize(overlays.size(), pOverlay->IsDiscMenu() ? 0 : pSource->m_3dSubtitleDepth);
       }
     }
 
-    for(it = overlays.begin(); it != overlays.end(); ++it)
+    for (size_t i = 0; i < overlays.size(); i++)
     {
-      double pts2 = (*it)->bForced ? pts : pts - m_iSubtitleDelay;
-      m_renderManager.AddOverlay(*it, pts2);
+      double pts2 = overlays[i]->bForced ? pts : pts - m_iSubtitleDelay;
+      m_renderManager.AddOverlay(overlays[i], pts2, depths[i]);
     }
   }
 }
