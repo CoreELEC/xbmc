@@ -66,12 +66,13 @@ CRenderer::~CRenderer()
   Flush();
 }
 
-void CRenderer::AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts, int index)
+void CRenderer::AddOverlay(std::shared_ptr<CDVDOverlay> o, double pts, int index, int depth)
 {
   std::unique_lock lock(m_section);
 
   SElement   e;
   e.pts = pts;
+  e.depth = depth;
   e.overlay_dvd = std::move(o);
   m_buffers[index].push_back(e);
 }
@@ -173,7 +174,7 @@ void CRenderer::Render(int idx, float depth)
         continue;
 
       if (!(hdrComposite && o->m_isHDROverlay))
-        Render(o.get());
+        Render(o.get(), it->overlay_dvd->IsOverlayType(DVDOVERLAY_TYPE_IMAGE) ? it->depth : 0);
     }
   }
 
@@ -212,7 +213,7 @@ void CRenderer::RenderHDROverlays(int idx)
                                                              stereoView, m_stereomode))
         continue;
 
-      Render(o.get());
+      Render(o.get(), it->overlay_dvd->IsOverlayType(DVDOVERLAY_TYPE_IMAGE) ? it->depth : 0);
     }
   }
 
@@ -221,7 +222,7 @@ void CRenderer::RenderHDROverlays(int idx)
   ReleaseUnused();
 }
 
-void CRenderer::Render(COverlay* o)
+void CRenderer::Render(COverlay* o, int subtitleDepth)
 {
   SRenderState state;
   state.x = o->m_x;
@@ -231,6 +232,7 @@ void CRenderer::Render(COverlay* o)
 
   COverlay::EPosition pos = o->m_pos;
   COverlay::EAlign align = o->m_align;
+  float depthScale = 1.0f;
 
   if (pos == COverlay::POSITION_RELATIVE)
   {
@@ -256,6 +258,7 @@ void CRenderer::Render(COverlay* o)
       scale_y = m_rv.Height();
       scale_w = ratio;
       scale_h = ratio;
+      depthScale = ratio;
     }
     else if (align == COverlay::ALIGN_VIDEO)
     {
@@ -299,13 +302,14 @@ void CRenderer::Render(COverlay* o)
       state.y *= scale_y;
       state.width *= scale_x;
       state.height *= scale_y;
+      depthScale = scale_x;
 
       state.x += m_rd.x1;
       state.y += m_rd.y1;
     }
   }
 
-  state.x += GetStereoscopicDepth();
+  state.x += GetStereoscopicDepth(static_cast<int>(std::lround(subtitleDepth * depthScale)));
 
   o->Render(state);
 }

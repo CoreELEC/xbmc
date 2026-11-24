@@ -529,7 +529,7 @@ void ConvertPQPaletteToSRGB(std::vector<uint32_t>& palette)
   }
 }
 
-int GetStereoscopicDepth()
+int GetStereoscopicDepth(int subtitleDepth)
 {
   int depth = 0;
 
@@ -537,6 +537,14 @@ int GetStereoscopicDepth()
       CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode() != RenderStereoMode::OFF)
   {
     depth  = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_SUBTITLES_STEREOSCOPICDEPTH);
+
+    const RenderStereoMode stereoMode =
+        CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoMode();
+    if (stereoMode == RenderStereoMode::HARDWAREBASED ||
+        stereoMode == RenderStereoMode::SPLIT_VERTICAL ||
+        stereoMode == RenderStereoMode::SPLIT_HORIZONTAL)
+      depth += subtitleDepth;
+
     depth *=
         (CServiceBroker::GetWinSystem()->GetGfxContext().GetStereoView() == RenderStereoView::LEFT
              ? 1
