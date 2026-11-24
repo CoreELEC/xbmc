@@ -15,6 +15,7 @@
 #include "cores/VideoPlayer/Buffers/VideoBuffer.h"
 #include "utils/BitstreamConverter.h"
 #include "utils/MVCFrameNumRewriter.h"
+#include "utils/MVCOffsetMetadata.h"
 
 #include <memory>
 #include <set>
@@ -120,6 +121,8 @@ protected:
   // MVC: avoid frame_num wrap-arounds in the MVC firmware
   std::unique_ptr<CMVCFrameNumRewriter> m_frameNumRewriter;
   std::vector<uint8_t> m_frameNumBuffer;
+  std::unique_ptr<CMVCOffsetMetadata> m_mvcOffsets;
+  int m_subtitlePlane{CMVCOffsetMetadata::NO_PLANE};
 private:
   std::shared_ptr<CAMLVideoBufferPool> m_videoBufferPool;
   static std::atomic<bool> m_InstanceGuard;
