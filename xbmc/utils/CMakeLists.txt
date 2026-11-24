@@ -51,6 +51,7 @@ set(SOURCES ActorProtocol.cpp
             MovingSpeed.cpp
             Mp4ChplReader.cpp
             MVCFrameNumRewriter.cpp
+            MVCOffsetMetadata.cpp
             Observer.cpp
             POUtils.cpp
             PlayerUtils.cpp
@@ -157,6 +158,7 @@ set(HEADERS ActorProtocol.h
             MovingSpeed.h
             Mp4ChplReader.h
             MVCFrameNumRewriter.h
+            MVCOffsetMetadata.h
             Observer.h
             params_check_macros.h
             POUtils.h
