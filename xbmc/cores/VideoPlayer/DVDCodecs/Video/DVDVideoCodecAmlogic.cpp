@@ -235,6 +235,7 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       {
         m_pFormatName = "am-h264mvc";
         m_frameNumRewriter = std::make_unique<CMVCFrameNumRewriter>();
+        m_mvcOffsets = std::make_unique<CMVCOffsetMetadata>();
         if (m_hints.extradata && m_frameNumRewriter->ProcessAnnexB(m_hints.extradata.GetData(),
                                                                    m_hints.extradata.GetSize(),
                                                                    m_frameNumBuffer))
@@ -610,12 +611,21 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
         m_has_keyframe = true;
     }
 
+    if (m_mvcOffsets)
+    {
+      m_mvcOffsets->Parse(pData, iSize);
+      m_subtitlePlane = packet.subtitlePlane;
+    }
+
     if (m_frameNumRewriter &&
         m_frameNumRewriter->ProcessAnnexB(pData, iSize, m_frameNumBuffer))
     {
       if (m_frameNumBuffer.empty())
       {
         // leading picture after an inserted IDR, drop it
+        if (m_mvcOffsets)
+          m_mvcOffsets->Commit(m_hints.ptsinvalid ? DVD_NOPTS_VALUE : packet.pts);
+
         m_pendingMeta = m_streamMeta;
         return true;
       }
@@ -673,6 +683,9 @@ bool CDVDVideoCodecAmlogic::AddData(const DemuxPacket &packet)
 
   if (data_added && packet.pData)
   {
+    if (m_mvcOffsets)
+      m_mvcOffsets->Commit(m_hints.ptsinvalid ? DVD_NOPTS_VALUE : packet.pts);
+
     m_pendingMeta.Inherit(*m_lastMeta);
     // consecutive frames with equal values share one copy
     if (!(m_pendingMeta == *m_lastMeta))
@@ -695,6 +708,8 @@ void CDVDVideoCodecAmlogic::Reset(void)
   m_has_keyframe = false;
   if (m_frameNumRewriter)
     m_frameNumRewriter->ResetState();
+  if (m_mvcOffsets)
+    m_mvcOffsets->Reset();
   m_metadataSequencer.Reset();
   m_pendingMeta = m_streamMeta;
   if (m_bitstream)
@@ -731,6 +746,10 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecAmlogic::GetPicture(VideoPicture* pVideoP
       pVideoPicture->videoBuffer->Release();
     pVideoPicture->videoBuffer = nullptr;
     pVideoPicture->SetParams(m_videobuffer);
+    pVideoPicture->m_3dSubtitleDepth =
+        m_mvcOffsets ? m_mvcOffsets->GetDepth(static_cast<double>(m_Codec->GetOMXPts()),
+                                              m_subtitlePlane)
+                     : 0;
 
     m_metadataSequencer.Consume(static_cast<double>(m_Codec->GetOMXPts()), m_frameMeta);
     pVideoPicture->videoBuffer = m_videoBufferPool->Get();
