@@ -300,8 +300,14 @@ std::string CStereoscopicsManager::GetLabelForStereoMode(const RenderStereoMode 
 
 RenderStereoMode CStereoscopicsManager::GetPreferredPlaybackMode(void) const
 {
-  return static_cast<RenderStereoMode>(
-      m_settings->GetInt(CSettings::SETTING_VIDEOSCREEN_PREFEREDSTEREOSCOPICMODE));
+  const RenderStereoMode preferred{static_cast<RenderStereoMode>(
+      m_settings->GetInt(CSettings::SETTING_VIDEOSCREEN_PREFEREDSTEREOSCOPICMODE))};
+
+  if (preferred != RenderStereoMode::AUTO &&
+      !CServiceBroker::GetRenderSystem()->SupportsStereo(preferred))
+    return RenderStereoMode::AUTO;
+
+  return preferred;
 }
 
 RenderStereoMode CStereoscopicsManager::ConvertVideoToGuiStereoMode(const std::string& mode)
