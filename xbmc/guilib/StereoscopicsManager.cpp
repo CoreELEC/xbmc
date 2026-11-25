@@ -531,6 +531,8 @@ void CStereoscopicsManager::ApplyStereoMode(const RenderStereoMode mode, bool no
             curInfo.fRefreshRate, curInfo.iScreenWidth, curInfo.iScreenHeight, is3D);
         CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(res, true);
       }
+      else if (appPlayer)
+        Notify();
     }
 
     if (notify)
