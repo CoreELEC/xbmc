@@ -809,6 +809,11 @@ int CDVDVideoCodecAmlogic::GetDataLevel() const
   return 0;
 }
 
+bool CDVDVideoCodecAmlogic::SupportsExtention()
+{
+  return aml_support_h264mvc();
+}
+
 void CDVDVideoCodecAmlogic::SetSpeed(int iSpeed)
 {
   if (m_Codec)
