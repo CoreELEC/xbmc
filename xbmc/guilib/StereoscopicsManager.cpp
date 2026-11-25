@@ -581,6 +581,13 @@ void CStereoscopicsManager::OnStreamChange()
     return;
   }
 
+  if (playbackMode != STEREOSCOPIC_PLAYBACK_MODE_IGNORE &&
+      !CServiceBroker::GetRenderSystem()->SupportsStereo(mode))
+  {
+    SetStereoMode(RenderStereoMode::OFF);
+    mode = RenderStereoMode::OFF;
+  }
+
   // if we're not in stereomode yet, restore previously selected stereo mode in case it was user selected
   if (m_stereoModeSetByUser != RenderStereoMode::UNDEFINED)
   {
