@@ -2344,7 +2344,8 @@ CDemuxStream* CDVDDemuxFFmpeg::AddStream(int streamIdx)
           st->m_description = av_dict_get(pStream->metadata, "title", NULL, 0)->value;
 
         if (pStream->codecpar->codec_id == AV_CODEC_ID_H264 &&
-            static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_3d())
+            static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay()->aml_display_support_3d() &&
+            aml_support_h264mvc())
         {
           if (CDVDCodecUtils::IsH264AnnexB(m_pFormatContext->iformat->name, pStream))
           {

@@ -160,6 +160,16 @@ bool aml_support_h266()
   return (has_h266 == 1);
 }
 
+bool aml_support_h264mvc()
+{
+  static int has_h264mvc = -1;
+
+  if (has_h264mvc == -1)
+    has_h264mvc = aml_support_vcodec_profile("\\bh264mvc:");
+
+  return (has_h264mvc == 1);
+}
+
 AML_SUPPORT_H264_4K2K aml_support_h264_4k2k()
 {
   static AML_SUPPORT_H264_4K2K has_h264_4k2k = AML_SUPPORT_H264_4K2K_UNINIT;
