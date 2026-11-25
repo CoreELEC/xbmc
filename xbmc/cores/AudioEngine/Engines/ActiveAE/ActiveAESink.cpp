@@ -1244,15 +1244,12 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples, unsigned int* 
       m_stats->UpdateSinkDelay(status, samples->pool ? written : 0);
   }
 
+  // a skipped packet or an emptied buffer writes nothing, the device still holds what it had
+  if (totalFrames == 0)
+    m_sink->GetDelay(status);
+
   if (m_requestedFormat.m_dataFormat == AE_FMT_RAW && !filled)
-  {
-    // A packet dropped for a/v sync has no frames and never enters the loop above. Query the
-    // sink anyway, otherwise the engine is told the sink holds no audio at all and the next
-    // sync error measurements are off by the whole sink delay.
-    if (totalFrames == 0)
-      m_sink->GetDelay(status);
     m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
-  }
 
   return status.delay * 1000;
 }
