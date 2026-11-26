@@ -452,7 +452,8 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
       m_stripHdr10Plus = true;
     }
     if (caps.SupportsDolbyVision() == DolbyVisionFormat::DOLBYVISION_TYPE_NONE &&
-        m_hints.dovi.dv_profile != 5)
+        m_hints.dovi.dv_profile != 5 &&
+        !(m_hints.dovi.dv_profile == 20 && m_hints.dovi.dv_bl_signal_compatibility_id == 0))
     {
       m_bitstream->SetRemoveDovi(true);
       if (m_hints.dovi.dv_profile > 0)
