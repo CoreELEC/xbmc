@@ -305,6 +305,10 @@ public:
 #define MODE_3D_TO_2D_B         0x00000a02
 #define MODE_3D_OUT_TB          0x00010000
 #define MODE_3D_OUT_LR          0x00020000
+#define MODE_3D_IN_LR           0x00000004
+#define MODE_3D_IN_TB           0x00000008
+#define MODE_3D_FULL_LRTB       0x00000040
+#define MODE_3D_FP              0x04000000
 
 #define PTS_FREQ        90000
 #define UNIT_FREQ       96000
@@ -2692,6 +2696,12 @@ void CAMLCodec::CloseDecoder()
 
   SetPollDevice(-1);
 
+  if (m_fullStereoFramePacking)
+  {
+    aml_set_3d_video_mode(MODE_3D_DISABLE, false, 3);
+    m_fullStereoFramePacking = false;
+  }
+
   // never leave vcodec ff/rw or paused.
   if (m_speed != DVD_PLAYSPEED_NORMAL)
   {
@@ -3576,8 +3586,21 @@ void CAMLCodec::SetVideoRect(const CRect &SrcRect, const CRect &DestRect)
           break;
         }
       default:
-        aml_set_3d_video_mode(MODE_3D_DISABLE, false, mvc_view_mode);
-        break;
+        {
+          const std::string videoStereoMode{m_processInfo.GetVideoStereoMode()};
+          unsigned int mode{MODE_3D_DISABLE};
+
+          if (m_guiStereoMode == RenderStereoMode::HARDWAREBASED &&
+              (video_res_info.dwFlags & D3DPRESENTFLAG_MODE3DFP) &&
+              aml_full_stereo_eye_height(videoStereoMode, m_hints.width, m_hints.height) ==
+                  video_res_info.iScreenHeight)
+            mode = MODE_3D_ENABLE | MODE_3D_FULL_LRTB | MODE_3D_FP |
+                   (videoStereoMode == "left_right" ? MODE_3D_IN_LR : MODE_3D_IN_TB);
+
+          aml_set_3d_video_mode(mode, mode != MODE_3D_DISABLE, mvc_view_mode);
+          m_fullStereoFramePacking = mode != MODE_3D_DISABLE;
+          break;
+        }
     }
   }
 

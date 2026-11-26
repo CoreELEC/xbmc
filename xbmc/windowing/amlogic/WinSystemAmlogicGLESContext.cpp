@@ -14,15 +14,19 @@
 #include "guilib/GUIWindowManager.h"
 #include "platform/linux/SysfsPath.h"
 #include "ServiceBroker.h"
+#include "settings/DisplaySettings.h"
 #include "settings/Settings.h"
 #include "settings/SettingsComponent.h"
 #include "utils/AMLUtils.h"
 #include "utils/MathUtils.h"
+#include "utils/Variant.h"
 #include "utils/XTimeUtils.h"
 #include "utils/log.h"
 #include "threads/SingleLock.h"
 #include "windowing/GraphicContext.h"
 #include "windowing/WindowSystemFactory.h"
+
+#include <algorithm>
 
 extern "C"
 {
@@ -730,6 +734,45 @@ bool CWinSystemAmlogicGLESContext::SupportsStereo(const RenderStereoMode mode) c
        videoStereoMode == "block_rl")) {
     // yes, we support hardware based MVC decoding
     return true;
+  }
+
+  if (m_amlDisplay->aml_display_support_3d() && mode == RenderStereoMode::HARDWAREBASED &&
+      aml_support_h264mvc())
+  {
+    CDataCacheCore& dataCache{CServiceBroker::GetDataCacheCore()};
+    CDisplaySettings& displaySettings{CDisplaySettings::GetInstance()};
+    const std::shared_ptr<CSettings> settings{
+        CServiceBroker::GetSettingsComponent()->GetSettings()};
+    const std::vector<CVariant> whitelist{
+        settings->GetList(CSettings::SETTING_VIDEOSCREEN_WHITELIST)};
+    const int desktopWidth{
+        displaySettings.GetResolutionInfo(displaySettings.GetCurrentResolution()).iScreenWidth};
+    const float fps{dataCache.GetVideoFps()};
+
+    if (aml_full_stereo_eye_height(videoStereoMode, dataCache.GetVideoWidth(),
+                                   dataCache.GetVideoHeight()) == 1080 &&
+        settings->GetInt(CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) !=
+            ADJUST_REFRESHRATE_OFF)
+    {
+      for (size_t i = RES_DESKTOP; i < displaySettings.ResolutionInfoSize(); ++i)
+      {
+        const RESOLUTION_INFO& info{displaySettings.GetResolutionInfo(static_cast<RESOLUTION>(i))};
+        const std::string resString{displaySettings.GetStringFromRes(static_cast<RESOLUTION>(i))};
+        const bool listed{
+            whitelist.empty()
+                ? info.iScreenWidth >= desktopWidth &&
+                      (info.fRefreshRate > 30 ||
+                       MathUtils::FloatEquals(info.fRefreshRate, 24.0f, 0.1f))
+                : std::any_of(whitelist.begin(), whitelist.end(),
+                              [&resString](const CVariant& entry)
+                              { return entry.asString() == resString; })};
+
+        if (listed && (info.dwFlags & D3DPRESENTFLAG_MODE3DFP) &&
+            (info.dwFlags & D3DPRESENTFLAG_PROGRESSIVE) && info.iScreenHeight == 1080 &&
+            MathUtils::FloatEquals(info.fRefreshRate, fps, 0.01f))
+          return true;
+      }
+    }
   }
 
   if (mode == RenderStereoMode::SPLIT_VERTICAL &&
