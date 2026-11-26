@@ -114,6 +114,7 @@ protected:
   bool m_doviELTested{false};
   bool m_IsHdr10Plus{false};
   bool m_Hdr10PlusTested{false};
+  bool m_hevcMultiLayer{false};
 
 private:
   bool BitstreamConvertInit(const char* filterName, const uint8_t* extraData, int extraDataSize);

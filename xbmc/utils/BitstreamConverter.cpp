@@ -154,7 +154,12 @@ static const uint8_t* avc_find_startcode(const uint8_t* p, const uint8_t* end)
   return out;
 }
 
-static FFmpegExtraData hevc_parameter_sets(const uint8_t* data, int size)
+static uint8_t hevc_layer_id(const uint8_t* nal)
+{
+  return ((nal[0] & 0x1) << 5) | (nal[1] >> 3);
+}
+
+static FFmpegExtraData hevc_parameter_sets(const uint8_t* data, int size, bool& multiLayer)
 {
   const uint8_t* const end = data + size;
   const uint8_t* start = avc_find_startcode(data, end);
@@ -169,7 +174,9 @@ static FFmpegExtraData hevc_parameter_sets(const uint8_t* data, int size)
 
     const uint8_t* next = avc_find_startcode(nal, end);
     const uint8_t type = (*nal >> 1) & 0x3f;
-    if (type == HEVC_NAL_VPS || type == HEVC_NAL_SPS || type == HEVC_NAL_PPS)
+    if (next - nal >= 2 && hevc_layer_id(nal) > 0)
+      multiLayer = true;
+    else if (type == HEVC_NAL_VPS || type == HEVC_NAL_SPS || type == HEVC_NAL_PPS)
       parameterSets.insert(parameterSets.end(), start, next);
     start = next;
   }
@@ -576,7 +583,7 @@ bool CBitstreamConverter::BitstreamConvertInit(const char* filterName,
     // Decoder configuration contains parameter sets; SEI filtering happens on packets.
     m_extraData =
         m_codec == AV_CODEC_ID_HEVC
-            ? hevc_parameter_sets(output->extradata, output->extradata_size)
+            ? hevc_parameter_sets(output->extradata, output->extradata_size, m_hevcMultiLayer)
             : FFmpegExtraData{output->extradata, static_cast<size_t>(output->extradata_size)};
   }
 
@@ -743,7 +750,8 @@ bool CBitstreamConverter::ProcessAnnexB(uint8_t* data, int size)
 
   std::vector<uint8_t> finalPrefixSeiNalu;
   std::vector<uint8_t> output;
-  const bool rewrite{m_removeDovi || m_removeHdr10Plus || m_convert_dovi || m_setDoviZeroLevel5};
+  const bool rewrite{m_removeDovi || m_removeHdr10Plus || m_convert_dovi || m_setDoviZeroLevel5 ||
+                     m_hevcMultiLayer};
   while (nalStart < bufferEnd)
   {
     while (nalStart < bufferEnd && !*nalStart)
@@ -763,6 +771,10 @@ bool CBitstreamConverter::ProcessAnnexB(uint8_t* data, int size)
     bool containsHdr10Plus{false};
 
     if (m_removeDovi && (unitType == HEVC_NAL_UNSPEC62 || unitType == HEVC_NAL_UNSPEC63))
+      writeBuffer = false;
+
+    // some hw hevc decoders do not ignore units of non-base layers
+    if (m_hevcMultiLayer && nalSize >= 2 && hevc_layer_id(nalStart) > 0)
       writeBuffer = false;
 
     // Try removing HDR10+ only if the NAL is big enough, optimization
