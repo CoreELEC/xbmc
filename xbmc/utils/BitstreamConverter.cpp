@@ -303,6 +303,11 @@ static bool hevc_has_parameter_set(const uint8_t* data, int size)
   return false;
 }
 
+static uint8_t hevc_layer_id(const uint8_t* nal)
+{
+  return ((nal[0] & 0x1) << 5) | (nal[1] >> 3);
+}
+
 static bool has_sei_recovery_point(const uint8_t* p, const uint8_t* end)
 {
   int pt(0), ps(0), offset(1);
@@ -1144,7 +1149,8 @@ bool CBitstreamConverter::BitstreamConvertInitHEVC(void* in_extradata, int in_ex
 
       unit_size = extradata[0] << 8 | extradata[1];
       extradata += 2;
-      if (nal_type != HEVC_NAL_SPS && nal_type != HEVC_NAL_PPS && nal_type != HEVC_NAL_VPS)
+      if ((nal_type != HEVC_NAL_SPS && nal_type != HEVC_NAL_PPS && nal_type != HEVC_NAL_VPS) ||
+          (unit_size >= 2 && hevc_layer_id(extradata) > 0))
       {
         extradata += unit_size;
         continue;
@@ -1398,6 +1404,14 @@ bool CBitstreamConverter::BitstreamConvert(uint8_t* pData,
     else
     {
       unit_type = (*buf >> 1) & 0x3f;
+    }
+
+    // some hw hevc decoders do not ignore units of non-base layers
+    if (m_codec == AV_CODEC_ID_HEVC && nal_size >= 2 && hevc_layer_id(buf) > 0)
+    {
+      buf += nal_size;
+      cumul_size += nal_size + m_sps_pps_context.length_size;
+      continue;
     }
 
     // Don't add sps/pps if the unit already contain them
