@@ -140,6 +140,13 @@ private:
   unsigned int  GetDecoderVideoRate();
   std::string   GetHDRStaticMetadata(bool dv_enable);
 
+  struct DequeuedFrame
+  {
+    uint32_t index{0};
+    bool released{false};
+    bool drop{false};
+  };
+
   DllLibAmCodec   *m_dll;
   std::atomic<bool> m_opened;
   bool             m_drain = false;
@@ -170,6 +177,7 @@ private:
 
   PosixFilePtr     m_amlVideoFile;
   std::mutex       m_amlVideoFileMutex;
+  std::deque<DequeuedFrame> m_dequeuedFrames;
   std::string      m_defaultVfmMap;
 
   static std::atomic_flag  m_pollSync;
