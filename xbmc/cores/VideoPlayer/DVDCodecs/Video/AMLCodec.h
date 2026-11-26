@@ -161,6 +161,7 @@ private:
   int              m_brightness = -1;
   bool             m_vadj1_enabled = false;
   RESOLUTION       m_video_res = RES_INVALID;
+  bool             m_fullStereoFramePacking = false;
 
   static const unsigned int STATE_PREFILLED  = 1;
   static const unsigned int STATE_HASPTS     = 2;

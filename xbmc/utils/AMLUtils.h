@@ -89,3 +89,6 @@ AMLVideoOutput aml_video_output(const CDVDStreamInfo& source);
 bool aml_video_started();
 int aml_amdv_wait(StreamHdrType hdrType);
 void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int view_mode);
+
+// height of one eye of a full side-by-side or top-and-bottom picture, 0 for any other picture
+int aml_full_stereo_eye_height(const std::string& stereoMode, int width, int height);

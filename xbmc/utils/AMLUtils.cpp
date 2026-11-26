@@ -440,3 +440,21 @@ void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int vie
     CSysfsPath("/sys/module/amvdec_h264mvc/parameters/view_mode", view_mode);
   }
 }
+
+int aml_full_stereo_eye_height(const std::string& stereoMode, int width, int height)
+{
+  constexpr float MAX_SBS_EYE_ASPECT = 2.6f;
+  constexpr float MIN_TAB_EYE_ASPECT = 1.3f;
+
+  if (height <= 0)
+    return 0;
+
+  const float aspect = static_cast<float>(width) / height;
+  if (stereoMode == "left_right" && aspect > MAX_SBS_EYE_ASPECT)
+    return height;
+
+  if (stereoMode == "top_bottom" && aspect < MIN_TAB_EYE_ASPECT)
+    return height / 2;
+
+  return 0;
+}
