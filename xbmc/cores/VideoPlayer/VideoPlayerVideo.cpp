@@ -365,7 +365,8 @@ void CVideoPlayerVideo::Process()
     std::shared_ptr<CDVDMsg> pMsg;
     MsgQueueReturnCode ret = GetMessage(pMsg, timeout, iPriority);
 
-    onlyPrioMsgs = false;
+    // a packet decoded over a held picture releases it unrendered
+    onlyPrioMsgs = m_outputSate == OUTPUT_AGAIN && m_picture.videoBuffer;
 
     if (MSGQ_IS_ERROR(ret))
     {

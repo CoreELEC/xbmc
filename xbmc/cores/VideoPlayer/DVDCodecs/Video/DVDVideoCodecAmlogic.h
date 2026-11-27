@@ -136,4 +136,11 @@ private:
   AMLFrameMetadataPtr m_lastMeta;
   AMLFrameMetadataPtr m_frameMeta;
   CAMLFrameMetadataSequencer m_metadataSequencer;
+  struct DropRange
+  {
+    double startDts{DVD_NOPTS_VALUE};
+    double endDts{DVD_NOPTS_VALUE};
+  };
+  // the dts range of each run of packets added under a drop request, open while the run lasts
+  std::vector<DropRange> m_dropRanges;
 };

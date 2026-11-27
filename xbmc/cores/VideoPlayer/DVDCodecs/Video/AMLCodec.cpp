@@ -320,6 +320,19 @@ public:
 
 static const uint64_t UINT64_0 = 0x8000000000000000ULL;
 
+namespace
+{
+// the decoder takes 0 as no pts and keeps a 32-bit 90 kHz copy; this base is nine full wraps of
+// that copy, so it lifts negative pts above 0 and leaves the 32-bit value unchanged
+constexpr uint64_t PTS_US64_BASE = 100ULL << 32;
+
+uint64_t PtsToDecoder(double pts)
+{
+  pts += PTS_US64_BASE;
+  return pts >= 1.0 ? static_cast<uint64_t>(pts) : UINT64_0;
+}
+} // namespace
+
 #define EXTERNAL_PTS    (1)
 #define SYNC_OUTSIDE    (2)
 #define KEYFRAME_PTS_ONLY 0x100
@@ -2774,6 +2787,7 @@ void CAMLCodec::CloseAmlVideo()
   {
     std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
     closing.swap(m_amlVideoFile);
+    m_dequeuedFrames.clear();
   }
   closing.reset();
 
@@ -2811,6 +2825,11 @@ void CAMLCodec::Reset()
 
   // reset the decoder
   m_dll->codec_reset(&am_private->vcodec);
+  {
+    // codec_reset empties the amlvideo queue, so frames dequeued before it are not queued back
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    m_dequeuedFrames.clear();
+  }
   m_dll->codec_set_video_delay_limited_ms(&am_private->vcodec, 1000);
 
   dumpfile_close(am_private);
@@ -2921,7 +2940,7 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
     am_private->am_pkt.avpts = UINT64_0;
   else
   {
-    am_private->am_pkt.avpts = pts;
+    am_private->am_pkt.avpts = PtsToDecoder(pts);
     m_state |= STATE_HASPTS;
   }
 
@@ -2930,7 +2949,7 @@ bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
     am_private->am_pkt.avdts = am_private->am_pkt.avpts;
   else
   {
-    am_private->am_pkt.avdts = dts;
+    am_private->am_pkt.avdts = PtsToDecoder(dts);
 
     // For VC1 AML decoder uses PTS only on I-Frames
     if (am_private->am_pkt.avpts == UINT64_0 && (((size_t)am_private->gcodec.param) & KEYFRAME_PTS_ONLY))
@@ -3198,27 +3217,40 @@ bool CAMLCodec::WaitPresentStep(uint64_t& seen, int fenceFd)
 
 int CAMLCodec::ReleaseFrame(const uint32_t index, bool drop)
 {
-  int ret;
-  v4l2_buffer vbuf = v4l2_buffer();
-  vbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  vbuf.index = index;
+  int ret = 0;
 
-  PosixFilePtr amlVideoFile;
-  {
-    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
-    amlVideoFile = m_amlVideoFile;
-  }
+  std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
 
-  if (!amlVideoFile)
+  if (!m_amlVideoFile)
     return 0;
 
-  if (drop)
-    vbuf.flags |= V4L2_BUF_FLAG_DONE;
+  auto frame = std::find_if(m_dequeuedFrames.begin(), m_dequeuedFrames.end(),
+                            [index](const DequeuedFrame& f) { return f.index == index; });
+  if (frame == m_dequeuedFrames.end())
+    return 0;
 
-  CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::ReleaseFrame idx:{:d}, drop:{:d}", index, static_cast<int>(drop));
+  frame->released = true;
+  frame->drop = drop;
 
-  if ((ret = amlVideoFile->IOControl(VIDIOC_QBUF, &vbuf)) < 0)
-    CLog::Log(LOGERROR, "CAMLCodec::ReleaseFrame - VIDIOC_QBUF failed: {}", strerror(errno));
+  // amlvideo takes a queued index as the return of every frame dequeued before it
+  while (!m_dequeuedFrames.empty() && m_dequeuedFrames.front().released)
+  {
+    const DequeuedFrame front = m_dequeuedFrames.front();
+    m_dequeuedFrames.pop_front();
+
+    v4l2_buffer vbuf = v4l2_buffer();
+    vbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    vbuf.index = front.index;
+
+    if (front.drop)
+      vbuf.flags |= V4L2_BUF_FLAG_DONE;
+
+    CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::ReleaseFrame idx:{:d}, drop:{:d}",
+      front.index, static_cast<int>(front.drop));
+
+    if ((ret = m_amlVideoFile->IOControl(VIDIOC_QBUF, &vbuf)) < 0)
+      CLog::Log(LOGERROR, "CAMLCodec::ReleaseFrame - VIDIOC_QBUF failed: {}", strerror(errno));
+  }
   return ret;
 }
 
@@ -3270,6 +3302,9 @@ int CAMLCodec::DequeueBuffer()
   			static_cast<double>(m_cur_pts) /  DVD_TIME_BASE, vbuf.index);
 
     m_bufferIndex = vbuf.index;
+
+    std::lock_guard<std::mutex> lock(m_amlVideoFileMutex);
+    m_dequeuedFrames.push_back({vbuf.index});
   }
   else if (ret != EAGAIN)
   {
@@ -3315,6 +3350,9 @@ CDVDVideoCodec::VCReturn CAMLCodec::GetPicture(VideoPicture *pVideoPicture)
 
     pVideoPicture->dts = DVD_NOPTS_VALUE;
     pVideoPicture->pts = static_cast<double>(m_cur_pts);
+    // a pts the decoder counted up from 0 for a missed lookup sits far below the base
+    if (m_cur_pts >= PTS_US64_BASE / 2)
+      pVideoPicture->pts -= PTS_US64_BASE;
 
     CLog::Log(LOGDEBUG, LOGVIDEO, "CAMLCodec::GetPicture: index: {:d}, pts: {:.3f}, dur:{:.3f}ms elf:{:d}ms",
       m_bufferIndex, pVideoPicture->pts / DVD_TIME_BASE, pVideoPicture->iDuration / 1000, elapsed_since_last_frame.count());
