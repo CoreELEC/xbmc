@@ -34,6 +34,11 @@ public:
    */
   void OnSliderChange(void *data, CGUISliderControl *slider) override;
 
+  /*! \brief Callback from the slider dialog when it closes.
+   \sa CGUIDialogSlider
+   */
+  void OnSliderClose(void* data) override;
+
 protected:
   CPlayerController();
   CPlayerController(const CPlayerController&) = delete;
@@ -58,5 +63,6 @@ private:
   bool NextAudioStream();
 
   int m_sliderAction = 0; ///< \brief set to the action id for a slider being displayed \sa ShowSlider
+  bool m_audioDelayChanged{false};
   KODI::UTILS::MOVING_SPEED::CMovingSpeed m_movingSpeed;
 };

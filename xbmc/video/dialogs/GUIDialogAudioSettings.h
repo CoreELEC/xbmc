@@ -27,6 +27,7 @@ public:
 
   // specialization of CGUIWindow
   void FrameMove() override;
+  void OnDeinitWindow(int nextWindowID) override;
 
   static std::string FormatDelay(float value, float interval);
   static std::string FormatDecibel(float value);
@@ -73,6 +74,7 @@ protected:
   float m_volume;
   int m_audioStream;
   bool m_passthrough = false;
+  bool m_audioDelayChanged{false};
 
   std::vector<IPlayerAudioCaps> m_audioCaps;
 

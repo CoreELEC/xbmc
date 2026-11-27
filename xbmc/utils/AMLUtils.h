@@ -87,6 +87,9 @@ struct AMLVideoOutput
 };
 AMLVideoOutput aml_video_output(const CDVDStreamInfo& source);
 bool aml_video_started();
+// the time of the last vblank of the display, on CLOCK_MONOTONIC as the steady clock; false while
+// the output is off
+bool aml_display_last_vblank(std::chrono::steady_clock::time_point& time);
 int aml_amdv_wait(StreamHdrType hdrType);
 void aml_set_3d_video_mode(unsigned int mode, bool framepacking_support, int view_mode);
 

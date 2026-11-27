@@ -454,6 +454,7 @@ JSONRPC_STATUS CPlayerOperations::SetAudioDelay(const std::string& method,
           offset = -videoAudioDelayRange;
 
         appPlayer->SetAVDelay(offset);
+        appPlayer->CommitAVDelay();
       }
       else if (parameterObject["offset"].isString())
       {
@@ -472,6 +473,7 @@ JSONRPC_STATUS CPlayerOperations::SetAudioDelay(const std::string& method,
             vs.m_AudioDelay = -videoAudioDelayRange;
           appPlayer->SetAVDelay(vs.m_AudioDelay);
         }
+        appPlayer->CommitAVDelay();
       }
       else
         return InvalidParams;

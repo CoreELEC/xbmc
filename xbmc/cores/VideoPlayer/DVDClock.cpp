@@ -68,6 +68,7 @@ double CDVDClock::GetClock(bool interpolated /*= true*/)
 
 double CDVDClock::GetClock(double& absolute, bool interpolated /*= true*/)
 {
+  std::unique_lock critLock(m_critSection);
   int64_t current = m_videoRefClock->GetTime(interpolated);
 
   std::unique_lock lock(m_systemsection);
@@ -79,16 +80,28 @@ double CDVDClock::GetClock(double& absolute, bool interpolated /*= true*/)
   return SystemToPlaying(current);
 }
 
+double CDVDClock::GetClockWithVsyncAdjust()
+{
+  std::unique_lock lock(m_critSection);
+
+  const double clock = GetClock();
+  return clock + m_vSyncAdjust;
+}
+
+double CDVDClock::GetClock(int& epoch)
+{
+  std::unique_lock lock(m_critSection);
+
+  const double clock = GetClock();
+  epoch = m_clockEpoch;
+  return clock;
+}
+
 void CDVDClock::SetVsyncAdjust(double adjustment)
 {
   std::unique_lock lock(m_critSection);
   m_vSyncAdjust = adjustment;
-}
-
-double CDVDClock::GetVsyncAdjust()
-{
-  std::unique_lock lock(m_critSection);
-  return m_vSyncAdjust;
+  m_vsyncPhase.Reset();
 }
 
 void CDVDClock::Pause(bool pause)
@@ -142,12 +155,18 @@ void CDVDClock::SetSpeed(int iSpeed)
   if (iSpeed == DVD_PLAYSPEED_PAUSE)
   {
     if (!m_pauseClock)
+    {
       m_pauseClock = m_videoRefClock->GetTime();
+      m_clockEpoch++;
+    }
     return;
   }
 
   int64_t current;
   int64_t newfreq = m_systemFrequency * DVD_PLAYSPEED_NORMAL / iSpeed;
+
+  if (m_pauseClock || newfreq != m_systemUsed)
+    m_clockEpoch++;
 
   current = m_videoRefClock->GetTime();
   if (m_pauseClock)
@@ -174,7 +193,10 @@ double CDVDClock::GetSpeedAdjust() const
   return m_speedAdjust;
 }
 
-double CDVDClock::ErrorAdjust(double error, const char* log)
+double CDVDClock::ErrorAdjust(double error,
+                              const char* log,
+                              bool exact /* = false */,
+                              bool start /* = false */)
 {
   std::unique_lock lock(m_critSection);
 
@@ -183,14 +205,15 @@ double CDVDClock::ErrorAdjust(double error, const char* log)
 
   // skip minor updates while speed adjust is active
   // -> adjusting buffer levels
-  if (m_speedAdjust != 0 && error < DVD_MSEC_TO_TIME(100))
+  if (!exact && !start && m_speedAdjust != 0 && error < DVD_MSEC_TO_TIME(100))
   {
     return 0;
   }
 
   adjustment = error;
 
-  if (m_vSyncAdjust != 0)
+  // a start under speed adjust has no clock sync phase to keep
+  if (!exact && m_vSyncAdjust != 0 && (!start || m_speedAdjust == 0))
   {
     // Audio ahead is more noticeable then audio behind video.
     // Correct if aufio is more than 20ms ahead or more then
@@ -224,6 +247,7 @@ void CDVDClock::Discontinuity(double clock, double absolute)
   m_bReset = false;
   m_systemAdjust = 0;
   m_speedAdjust = 0;
+  m_clockEpoch++;
 }
 
 void CDVDClock::SetMaxSpeedAdjust(double speed)
@@ -297,6 +321,7 @@ double CDVDClock::SystemToPlaying(int64_t system)
     m_speedAdjust = 0;
     m_vSyncAdjust = 0;
     m_bReset = false;
+    m_clockEpoch++;
   }
 
   if (m_pauseClock)

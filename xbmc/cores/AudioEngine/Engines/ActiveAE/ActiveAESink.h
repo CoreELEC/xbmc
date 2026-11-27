@@ -35,6 +35,9 @@ struct SinkConfig
   AEAudioFormat format;
   CEngineStats *stats;
   const std::string *device;
+  bool streaming{false};
+  // the keep-alive silence is what reaches the device first
+  bool fill{false};
 };
 
 struct SinkReply
@@ -125,7 +128,9 @@ protected:
   void SetSilenceTimer();
   bool NeedIECPacking();
 
-  unsigned int OutputSamples(CSampleBuffer* samples);
+  // with `filled`, adds the frames the device took and leaves the delay unreported
+  unsigned int OutputSamples(CSampleBuffer* samples, unsigned int* filled = nullptr);
+  void ReportDelay();
   void SwapInit(CSampleBuffer* samples);
 
   void GenerateNoise();

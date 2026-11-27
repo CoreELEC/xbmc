@@ -279,6 +279,8 @@ void CDVDAudioCodecPassthrough::Reset()
   m_currentPts = DVD_NOPTS_VALUE;
   m_nextPts = DVD_NOPTS_VALUE;
   m_parser.Reset();
+  if (m_packerMAT)
+    m_packerMAT->Reset();
 }
 
 int CDVDAudioCodecPassthrough::GetBufferSize()

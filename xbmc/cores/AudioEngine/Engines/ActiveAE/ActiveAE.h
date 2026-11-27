@@ -16,6 +16,7 @@
 #include "threads/SystemClock.h"
 #include "threads/Thread.h"
 
+#include <atomic>
 #include <list>
 #include <memory>
 #include <queue>
@@ -187,14 +188,18 @@ class CEngineStats
 {
 public:
   void Reset(unsigned int sampleRate, bool pcm);
-  void UpdateSinkDelay(const AEDelayStatus& status, int samples);
-  void AddSamples(int samples, const std::list<CActiveAEStream*>& streams);
+  void UpdateSinkDelay(const AEDelayStatus& status, int samples, int pauseMs = 0);
+  void AddSamples(int samples, const std::list<CActiveAEStream*>& streams, int pauseMs = 0);
   void GetDelay(AEDelayStatus& status);
+  unsigned int GetSinkReports();
   void AddStream(unsigned int streamid);
   void RemoveStream(unsigned int streamid);
   void UpdateStream(CActiveAEStream *stream);
+  void PauseStream(CActiveAEStream* stream);
+  bool TakeSyncPaused(CActiveAEStream* stream);
   void GetDelay(AEDelayStatus& status, CActiveAEStream *stream);
   void GetSyncInfo(CAESyncInfo& info, CActiveAEStream *stream);
+  bool IsSyncErrorTaken(CActiveAEStream* stream);
   float GetCacheTime(CActiveAEStream *stream);
   float GetCacheTotal();
   float GetMaxDelay() const;
@@ -210,8 +215,10 @@ protected:
   float m_sinkCacheTotal;
   float m_sinkLatency;
   int m_bufferedSamples;
+  int m_bufferedPauseMs{0};
   unsigned int m_sinkSampleRate;
   AEDelayStatus m_sinkDelay;
+  std::atomic<unsigned int> m_sinkReports{0};
   bool m_suspended;
   AEAudioFormat m_sinkFormat;
   bool m_pcmOutput;
@@ -223,8 +230,14 @@ protected:
     double m_bufferedTime;
     double m_resampleRatio;
     double m_syncError;
-    unsigned int m_errorTime;
+    unsigned int m_errorTime{0};
+    // the error time the player last read
+    unsigned int m_errorTimeTaken{0};
     CAESyncInfo::AESyncState m_syncState;
+    bool m_lateStartHandedOver{false};
+    bool m_exactStart{false};
+    // paused by the player since the engine last restarted the stream's sync
+    bool m_syncPaused{false};
   };
   std::vector<StreamStats> m_streamStats;
 };
@@ -339,6 +352,14 @@ protected:
   bool RunStages();
   bool HasWork();
   CSampleBuffer* SyncStream(CActiveAEStream* stream);
+  // rounds a pause of `frame` ms to whole ms and carries the remainder into the next one
+  int TakeFramePause(CActiveAEStream* stream, double frame);
+  // silences `buf` in place, in passthrough as a pause of one input frame
+  void MuteSamples(CActiveAEStream* stream, CSampleBuffer* buf);
+  // makes `buf` a pause of up to `ms`, returns the ms it holds
+  double FillSyncPad(CActiveAEStream* stream, CSampleBuffer* buf, double ms);
+  // takes up to `ms` from the front of `buf`, returns the ms taken
+  double SkipSyncSamples(CActiveAEStream* stream, CSampleBuffer* buf, double ms);
 
   void ResampleSounds();
   bool ResampleSound(CActiveAESound *sound);

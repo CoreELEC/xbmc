@@ -799,6 +799,13 @@ void CApplicationPlayer::SetAVDelay(float fValue)
     player->SetAVDelay(fValue);
 }
 
+void CApplicationPlayer::CommitAVDelay()
+{
+  std::shared_ptr<IPlayer> player = GetInternal();
+  if (player)
+    player->CommitAVDelay();
+}
+
 void CApplicationPlayer::SetDynamicRangeCompression(long drc)
 {
   std::shared_ptr<IPlayer> player = GetInternal();

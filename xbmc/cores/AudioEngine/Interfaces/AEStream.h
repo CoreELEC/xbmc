@@ -26,6 +26,19 @@ public:
   virtual ~IAEClockCallback() = default;
   virtual double GetClock() = 0;
   virtual double GetClockSpeed() { return 1.0; }
+  //! The audio in ms the clock start left out on purpose, once per start
+  virtual double TakeStartCut() { return 0.0; }
+  //! 0 without a clock sync phase, -1 while it is pending, else the id of the published phase.
+  //! `shift` is the sum in ms of the clock moves by phase shifts, which the caller follows now.
+  //! Clock moves by whole multiples of `period` in ms keep the display sync, 0 if none.
+  virtual int GetSyncPhaseId(double& shift, double& period)
+  {
+    shift = 0.0;
+    period = 0.0;
+    return 0;
+  }
+  //! Whether the clock asks once to book the phase shifts not followed so far
+  virtual bool TakeSyncShiftCommit() { return false; }
 };
 
 class CAESyncInfo
@@ -44,6 +57,10 @@ public:
     SYNC_ADJUST
   };
   AESyncState state;
+  //! The error is a late start the engine left to the player's clock
+  bool lateStartHandedOver{false};
+  //! The start error is in whole phase periods, for the clock to move by in full
+  bool exactStart{false};
 };
 
 /**

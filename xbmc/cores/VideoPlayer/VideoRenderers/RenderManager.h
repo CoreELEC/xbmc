@@ -141,11 +141,19 @@ public:
 
   void SetDelay(int delay) { m_videoDelay = delay; }
   int GetDelay() { return m_videoDelay; }
+  // the audio books what it has not followed of the delay changes set so far
+  void CommitDelay() { m_videoDelayCommit = true; }
 
   /*!
    * \brief How far ahead of the clock the picture on screen is, in DVD clock units.
    */
   double GetDisplayLatency() const { return m_displayLatency; }
+
+  /**
+   * The time in ms from the release of a frame to its scan-out, without the video delay;
+   * 100 until a renderer is configured or when it does not know its present latency
+   */
+  double GetReleaseLead();
 
   void SetVideoSettings(const CVideoSettings& settings);
 
@@ -169,6 +177,8 @@ protected:
   void ServiceVideoCaptures();
 
   void UpdateLatencyTweak();
+  //! Release lead in ms without the video delay; needs m_pRenderer
+  double CalcReleaseLead();
   void CheckEnableClockSync();
 
   //! The vsync thread picks and presents; the render loop draws the frame it last presented
@@ -185,7 +195,7 @@ protected:
   mutable CCriticalSection m_statelock;
   CCriticalSection m_presentlock;
   CCriticalSection m_datalock;
-  bool m_bTriggerUpdateResolution = false;
+  std::atomic_bool m_bTriggerUpdateResolution{false};
   bool m_bRenderGUI = true;
   bool m_renderedDebugOverlay = false;
   bool m_renderDebug = false;
@@ -224,6 +234,9 @@ protected:
   /// Display latency updated in PrepareNextRender in DVD clock units, includes m_latencyTweak
   std::atomic<double> m_displayLatency = 0.0;
   std::atomic_int m_videoDelay = {};
+  // the video delay the release and the clock sync phase use, presenter or render thread only
+  int m_appliedVideoDelay{0};
+  std::atomic_bool m_videoDelayCommit{false};
 
   int m_QueueSize = 2;
   int m_QueueSkip = 0;
@@ -268,6 +281,7 @@ protected:
     int m_errCount;
     double m_syncOffset;
     bool m_enabled;
+    double m_phasePeriod;
   };
   CClockSync m_clockSync;
 
@@ -286,4 +300,15 @@ protected:
   //! Vsync thread, under m_presentlock: the frame on the video plane when a GUI flip made now
   //! latches
   int m_planeSource{-1};
+  //! Under m_presentlock: a discarded frame left on the plane until a new one replaces it
+  int m_offTimelineSource{-1};
+  //! Under m_presentlock: the clock, when it was read and its epoch of the last release
+  //! decision, and whether the current vsync step made one
+  double m_releaseClock{0.0};
+  std::chrono::steady_clock::time_point m_releaseClockTime{};
+  int m_releaseClockEpoch{0};
+  bool m_releaseClockTaken{false};
+  //! Presenter thread, or the render thread when not presenting: the display vsync period while
+  //! the clock sync is on
+  double m_vsyncPeriod{0.0};
 };

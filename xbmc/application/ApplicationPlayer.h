@@ -156,6 +156,12 @@ public:
   void SeekTimeRelative(int64_t iTime = 0);
   void SetAudioStream(int iStream);
   void SetAVDelay(float fValue = 0.0f);
+
+  /*!
+   * \brief Ends an interactive change of the audio delay: the player applies it
+   */
+  void CommitAVDelay();
+
   void SetBookmarks(const std::vector<std::chrono::milliseconds>& bookmarks);
   void SetDynamicRangeCompression(long drc);
   void SetMute(bool bOnOff);

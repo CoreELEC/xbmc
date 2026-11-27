@@ -19,6 +19,7 @@
 #include "utils/MathUtils.h"
 #include "utils/log.h"
 
+#include <algorithm>
 #include <mutex>
 
 #ifdef TARGET_RASPBERRY_PI
@@ -328,15 +329,21 @@ void CVideoPlayerAudio::Process()
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_RESYNC))
     { //player asked us to set internal clock
-      double pts = std::static_pointer_cast<CDVDMsgDouble>(pMsg)->m_value;
+      const SResyncMsg resync{std::static_pointer_cast<CDVDMsgType<SResyncMsg>>(pMsg)->m_value};
+      double pts = resync.clock;
       CLog::Log(LOGDEBUG, LOGAUDIO, "CVideoPlayerAudio - CDVDMsg::GENERAL_RESYNC({:.3f} level: {:d} cache:{:.3f}",
                 pts / DVD_TIME_BASE, m_messageQueue.GetLevel(), m_audioSink.GetDelay() / DVD_TIME_BASE);
 
       double delay = m_audioSink.GetDelay();
+      double startCut{0.0};
       if (pts > m_audioClock - delay + 0.5 * DVD_TIME_BASE)
       {
         m_audioSink.Flush();
+        audioframe.nb_frames = 0;
       }
+      else if (resync.seekStart)
+        startCut = std::max(0.0, pts - (m_audioClock - delay));
+      m_audioSink.SetStartCut(startCut);
       m_audioClock = pts + delay;
       if (m_speed != DVD_PLAYSPEED_PAUSE)
         m_audioSink.Resume();
@@ -404,7 +411,14 @@ void CVideoPlayerAudio::Process()
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_PAUSE))
     {
-      m_paused = std::static_pointer_cast<CDVDMsgBool>(pMsg)->m_value;
+      const bool paused{std::static_pointer_cast<CDVDMsgBool>(pMsg)->m_value};
+      // the clock stands while paused, a sink that survives must not play on
+      if (paused && !m_paused)
+        m_audioSink.Pause();
+      else if (!paused && m_paused && m_syncState == IDVDStreamPlayer::SYNC_INSYNC &&
+               m_processInfo.IsTempoAllowed(static_cast<float>(m_speed) / DVD_PLAYSPEED_NORMAL))
+        m_audioSink.Resume();
+      m_paused = paused;
       CLog::Log(LOGDEBUG, "CVideoPlayerAudio - CDVDMsg::GENERAL_PAUSE: {}", m_paused);
     }
     else if (pMsg->IsType(CDVDMsg::PLAYER_REQUEST_STATE))
@@ -544,10 +558,14 @@ bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe)
   if (m_synctype == SYNC_DISCON)
   {
     double syncerror = m_audioSink.GetSyncError();
+    // a late start the engine left to the clock is applied at any size
+    bool exactStart{false};
+    const bool startSyncError{m_audioSink.TakeStartSyncError(exactStart)};
 
-    if (std::abs(syncerror) > DVD_MSEC_TO_TIME(m_disconAdjustTimeMs))
+    if (startSyncError || std::abs(syncerror) > DVD_MSEC_TO_TIME(m_disconAdjustTimeMs))
     {
-      double correction = m_pClock->ErrorAdjust(syncerror, "CVideoPlayerAudio::OutputPacket");
+      double correction = m_pClock->ErrorAdjust(syncerror, "CVideoPlayerAudio::OutputPacket",
+                                                exactStart, startSyncError);
       if (correction != 0)
       {
         m_audioSink.SetSyncErrorCorrection(-correction);
