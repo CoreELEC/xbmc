@@ -16,6 +16,7 @@
 #include "utils/BitstreamReader.h"
 #include "utils/log.h"
 
+#include <algorithm>
 #include <array>
 #include <assert.h>
 #include <utility>
@@ -34,6 +35,12 @@ constexpr auto BURST_HEADER_SIZE = 8;
 constexpr auto MAT_BUFFER_SIZE = 61440;
 constexpr auto MAT_BUFFER_LIMIT = MAT_BUFFER_SIZE - 24; // MAT end code size
 constexpr auto MAT_POS_MIDDLE = 30708 + BURST_HEADER_SIZE; // middle point + IEC header in front
+constexpr auto MAT_UNIT_TIME = MAT_BUFFER_SIZE / 24; // the time of one TrueHD unit
+// a unit plays at most ceil(3 fs / 40) samples (75 ms) after its place on the wire, at most
+// MAT_MAX_LEAD bytes at any rate; a gap keeps that much unwritten, rounded up to whole frames
+constexpr auto MAT_MAX_LEAD = 3 * 48000 * 64 / 40;
+constexpr auto MAT_GAP_HEADROOM =
+    (MAT_MAX_LEAD + MAT_BUFFER_SIZE - 1) / MAT_BUFFER_SIZE * MAT_BUFFER_SIZE;
 
 // magic MAT format values, meaning is unknown at this point
 constexpr std::array<uint8_t, 20> mat_start_code = {0x07, 0x9E, 0x00, 0x03, 0x84, 0x01, 0x01,
@@ -147,6 +154,22 @@ CPackerMAT::CPackerMAT()
   m_buffer.reserve(MAT_BUFFER_SIZE);
 }
 
+void CPackerMAT::PackUnits(const uint8_t* data, int size)
+{
+  for (bool first = true; size >= 4; first = false)
+  {
+    const int unitSize = (AV_RB16(data) & 0xfff) * 2;
+    if (unitSize < 4 || unitSize > size)
+      break;
+
+    PackTrueHD(data, unitSize);
+    if (first)
+      m_bookedEnd = m_unitPos + MAT_BUFFER_SIZE;
+    data += unitSize;
+    size -= unitSize;
+  }
+}
+
 // On a high level, a MAT frame consists of a sequence of padded TrueHD frames
 // The size of the padded frame can be determined from the frame time/sequence code in the frame header,
 // since it varies to accommodate spikes in bitrate.
@@ -155,11 +178,11 @@ CPackerMAT::CPackerMAT()
 // case they'll be preceded by smaller frames to keep the average bitrate constant.
 // A constant padding to 2560 bytes can work (this is how the ffmpeg spdifenc module works), however
 // high-bitrate streams can overshoot this size and therefor require proper handling of dynamic padding.
-bool CPackerMAT::PackTrueHD(const uint8_t* data, int size)
+void CPackerMAT::PackTrueHD(const uint8_t* data, int size)
 {
   // discard too small packets (cannot be valid)
   if (size < 10)
-    return false;
+    return;
 
   const bool isMajorSync = (AV_RB32(data + 4) == FORMAT_MAJOR_SYNC);
 
@@ -176,13 +199,37 @@ bool CPackerMAT::PackTrueHD(const uint8_t* data, int size)
     // seamless-branch detection) instead of being dropped.
     m_state.ratebits = info.valid ? info.ratebits : (data[8] >> 4);
   }
-  else if (!m_state.prevFrametimeValid)
-  {
-    // only start streaming on a major sync frame
-    return false;
-  }
 
   const uint16_t frameTime = AV_RB16(data + 2);
+
+  // after a gap a unit plays where the gap ends, and the units refused before a major sync are
+  // gap time; the major sync goes on the wire its lead before that
+  if (!m_state.prevFrametimeValid)
+  {
+    if (m_refused)
+      m_gapEnd += MAT_UNIT_TIME;
+    else
+      m_gapEnd = std::max(m_gapEnd, m_outputBytes);
+    m_unitPos = m_gapEnd;
+
+    double place = m_gapEnd;
+    if (info.outputTimingPresent)
+      place -=
+          static_cast<int16_t>(info.outputTiming - (40 << (m_state.ratebits & 7)) - frameTime) *
+          (64 >> (m_state.ratebits & 7));
+
+    // only start streaming on a major sync frame whose lead still fits on the wire
+    if (!isMajorSync || place < m_outputBytes)
+    {
+      FillGap(m_gapEnd - MAT_GAP_HEADROOM);
+      m_refused = true;
+      return;
+    }
+    m_refused = false;
+
+    FillGap(place);
+    m_state.padding = static_cast<uint32_t>(std::max(place - m_outputBytes, 0.0));
+  }
   uint32_t spaceSize = 0;
   const uint16_t frameSamples = 40 << (m_state.ratebits & 7);
 
@@ -252,11 +299,12 @@ bool CPackerMAT::PackTrueHD(const uint8_t* data, int size)
   if (m_state.padding > MAT_BUFFER_SIZE * 5)
   {
     CLog::Log(LOGINFO, "CPackerMAT::PackTrueHD: seek detected, re-initializing MAT packer state");
-    m_state = {};
-    m_state.init = true;
-    m_buffer.clear();
-    m_bufferCount = 0;
-    return false;
+    // the units fed so far go out whole, the dropped ones are gap time
+    const double end = m_unitPos + MAT_UNIT_TIME;
+    Close(false);
+    m_gapEnd = end;
+    PackTrueHD(data, size);
+    return;
   }
 
   // Record the offset of frame time to output time, used to size the padding
@@ -305,6 +353,12 @@ bool CPackerMAT::PackTrueHD(const uint8_t* data, int size)
     }
   }
 
+  // a unit is booked where it plays, its lead after its place on the wire
+  m_unitPos = m_outputBytes + GetCount();
+  if (m_state.outputTimingValid)
+    m_unitPos += static_cast<int16_t>(m_state.outputTiming - frameSamples - frameTime) *
+                 (64 >> (m_state.ratebits & 7));
+
   // write actual audio data to the buffer
   int remaining = FillDataBuffer(data, size, Type::DATA);
 
@@ -323,15 +377,57 @@ bool CPackerMAT::PackTrueHD(const uint8_t* data, int size)
       remaining = FillDataBuffer(data + (size - remaining), remaining, Type::DATA);
 
       assert(remaining == 0);
+
+      m_straddleEnd = GetCount();
+      m_straddlePos = m_unitPos;
     }
   }
 
   // store the size of the current MAT frame, so we can add padding later
   m_state.prevMatFramesize = m_state.matFramesize;
   m_state.matFramesize = 0;
+}
 
-  // return true if have MAT packet
-  return !m_outputQueue.empty();
+void CPackerMAT::PackGap(double frames)
+{
+  Close(false);
+  m_gapEnd += frames * MAT_BUFFER_SIZE;
+  m_bookedEnd = m_gapEnd;
+  FillGap(m_gapEnd - MAT_GAP_HEADROOM);
+}
+
+void CPackerMAT::PackFiller()
+{
+  Close(false);
+  if (!m_outputQueue.empty())
+    return;
+
+  m_gapEnd = std::max(m_gapEnd, m_outputBytes) + MAT_BUFFER_SIZE;
+  m_bookedEnd = m_gapEnd;
+  FillGap(m_gapEnd);
+}
+
+bool CPackerMAT::Close(bool discard)
+{
+  // a unit with bytes output already goes out whole, the units after it are dropped
+  if (discard)
+  {
+    if (GetCount() > m_straddleEnd)
+      memset(m_buffer.data() + m_straddleEnd, 0, GetCount() - m_straddleEnd);
+    m_bufferCount = m_straddleEnd;
+    m_bookedEnd = m_straddleEnd > 0 ? m_straddlePos + MAT_UNIT_TIME : m_outputBytes;
+  }
+
+  const bool completed = GetCount() > 0;
+  if (completed)
+  {
+    m_state.padding = MAT_BUFFER_SIZE - GetCount();
+    WritePadding();
+    FlushPacket();
+  }
+  m_gapEnd = m_bookedEnd;
+  Restart();
+  return completed;
 }
 
 std::vector<uint8_t> CPackerMAT::GetOutputFrame()
@@ -343,6 +439,43 @@ std::vector<uint8_t> CPackerMAT::GetOutputFrame()
   m_outputQueue.pop_front();
 
   return buffer;
+}
+
+void CPackerMAT::Reset()
+{
+  Restart();
+  m_outputQueue.clear();
+  m_outputBytes = 0.0;
+  m_bookedEnd = 0.0;
+  m_gapEnd = 0.0;
+}
+
+double CPackerMAT::GetPending() const
+{
+  return (m_bookedEnd - m_outputBytes) / MAT_BUFFER_SIZE;
+}
+
+void CPackerMAT::Restart()
+{
+  // the rate stays for the units refused before the next major sync
+  const int ratebits = m_state.ratebits;
+  m_state = {};
+  m_state.ratebits = ratebits;
+  m_buffer.clear();
+  m_bufferCount = 0;
+  m_refused = false;
+  m_straddleEnd = 0;
+}
+
+void CPackerMAT::FillGap(double end)
+{
+  while (end - m_outputBytes >= MAT_BUFFER_SIZE)
+  {
+    WriteHeader();
+    m_state.padding = MAT_BUFFER_SIZE - GetCount();
+    WritePadding();
+    FlushPacket();
+  }
 }
 
 void CPackerMAT::WriteHeader()
@@ -484,7 +617,9 @@ void CPackerMAT::FlushPacket()
 
   // push MAT packet to output queue
   m_outputQueue.emplace_back(std::move(m_buffer));
+  m_outputBytes += MAT_BUFFER_SIZE;
 
   m_buffer.clear();
   m_bufferCount = 0;
+  m_straddleEnd = 0;
 }

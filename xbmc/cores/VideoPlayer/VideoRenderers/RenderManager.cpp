@@ -34,10 +34,17 @@
 #include "windowing/GraphicContext.h"
 #include "windowing/WinSystem.h"
 
+#include <cmath>
 #include <memory>
 #include <mutex>
 
 using namespace std::chrono_literals;
+
+namespace
+{
+// the video start delay the player assumes for a renderer that cannot report its release lead
+constexpr double UNKNOWN_RELEASE_LEAD_MS = 100.0;
+} // namespace
 
 class CRenderManager::CPresentThread : public CThread
 {
@@ -67,6 +74,7 @@ void CRenderManager::CClockSync::Reset()
   m_errCount = 0;
   m_syncOffset = 0;
   m_enabled = false;
+  m_phasePeriod = 0;
 }
 
 CRenderManager::CRenderManager(CDVDClock &clock, IRenderMsg *player) :
@@ -143,6 +151,7 @@ bool CRenderManager::Configure(const VideoPicture& picture, float fps, unsigned 
         // Clear stale vsync/late-frame state from the old framerate; CheckEnableClockSync() will recalibrate on the next FrameMove on the main thread.
         m_clockSync.Reset();
         m_dvdClock.SetVsyncAdjust(0);
+        m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
         m_lateframes = -1;
       }
       return true;
@@ -184,6 +193,7 @@ bool CRenderManager::Configure(const VideoPicture& picture, float fps, unsigned 
     m_stateEvent.Reset();
     m_clockSync.Reset();
     m_dvdClock.SetVsyncAdjust(0);
+    m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
     m_pConfigPicture = std::make_unique<VideoPicture>();
     m_pConfigPicture->CopyRef(picture);
 
@@ -260,8 +270,10 @@ bool CRenderManager::Configure()
     m_presentsourcePast = -1;
     m_guiPresentSource = -1;
     m_planeSource = -1;
+    m_offTimelineSource = -1;
     for (int i = 0; i < m_QueueSize; i++)
       m_free.push_back(i);
+    PublishQueued();
 
     m_bRenderGUI = true;
     m_videostarted = std::chrono::system_clock::now();
@@ -274,9 +286,11 @@ bool CRenderManager::Configure()
     m_renderDebug = false;
     m_clockSync.Reset();
     m_dvdClock.SetVsyncAdjust(0);
+    m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
     m_overlays.Reset();
     OVERLAY::MarkDirty();
     m_overlays.SetStereoMode(m_picture.stereoMode);
+    UpdateLatencyTweak();
 
     m_renderState = STATE_CONFIGURED;
 
@@ -287,7 +301,8 @@ bool CRenderManager::Configure()
 
   m_pConfigPicture.reset();
 
-  m_stateEvent.Set();
+  if (!result)
+    m_stateEvent.Set();
   m_playerPort->VideoParamsChange();
   return result;
 }
@@ -349,8 +364,9 @@ void CRenderManager::FrameMove()
       StopPresentThread();
       if (!Configure())
         return;
-      UpdateLatencyTweak();
       StartPresentThread();
+      // the release lead a waiter reads depends on whether the vsync presenter runs
+      m_stateEvent.Set();
       threadLock.unlock();
       firstFrame = true;
       FrameWait(50ms);
@@ -423,8 +439,12 @@ void CRenderManager::PrepareNextStep()
 void CRenderManager::StartPresentThread()
 {
   if (m_presentThread || !m_pRenderer || !m_pRenderer->StartVsyncPresent())
+  {
+    m_dvdClock.SetVsyncAdjust(0);
     return;
+  }
 
+  m_dvdClock.GetVsyncPhase().SetVsyncPhasePending();
   m_presentThread = std::make_unique<CPresentThread>(*this);
   m_presenting = true;
   m_presentThread->Create();
@@ -439,10 +459,12 @@ void CRenderManager::StopPresentThread()
   m_pRenderer->StopVsyncPresent();
   m_presentThread->StopThread(true);
   m_presentThread.reset();
+  m_dvdClock.SetVsyncAdjust(0);
 }
 
 void CRenderManager::PresentFromVsync()
 {
+  const auto woke = std::chrono::steady_clock::now();
   std::unique_lock lock(m_statelock);
   // no frame goes out on the old mode while the render loop switches it
   if (m_renderState != STATE_CONFIGURED || m_switching)
@@ -451,9 +473,12 @@ void CRenderManager::PresentFromVsync()
   CheckEnableClockSync();
 
   std::unique_lock lock2(m_presentlock);
+  const int planeSource = m_planeSource;
   // by vsync RDMA a frame queued now goes live a vsync after a GUI flip made now
   m_planeSource = m_presentsource;
+  m_releaseClockTaken = false;
   PrepareNextStep();
+  const bool released = m_presentstep == PRESENT_FRAME;
 
   // frames go back to the plane in the order it handed them out, so skipped ones go first
   for (int idx : m_discard)
@@ -470,6 +495,9 @@ void CRenderManager::PresentFromVsync()
     m_presentstep = m_queued.empty() ? PRESENT_IDLE : PRESENT_READY;
   }
 
+  if (m_planeSource != planeSource && m_planeSource >= 0 && m_planeSource != m_offTimelineSource)
+    m_offTimelineSource = -1;
+
   // the render loop still draws the overlays of its frame; WaitForBuffer
   // releases those of a free slot before it is reused
   for (auto it = m_discard.begin(); it != m_discard.end();)
@@ -482,6 +510,57 @@ void CRenderManager::PresentFromVsync()
     }
     else
       ++it;
+  }
+
+  // a step is followed by a vsync or a timeout within the liveness bound
+  const CBaseRenderer::VsyncPresentWake wake = m_pRenderer->GetVsyncPresentWake();
+  if (m_clockSync.m_enabled && wake != CBaseRenderer::VsyncPresentWake::STEP)
+  {
+    // a picture of the lattice gives the same phase at any vsync, so a vsync that releases
+    // nothing reads it only to restart
+    const int phaseId = m_dvdClock.GetVsyncPhase().GetVsyncPhaseId();
+    const bool restart = released || !m_queued.empty();
+    if (released || phaseId == -1 || (phaseId == 0 && restart))
+    {
+      int epoch = m_releaseClockEpoch;
+      double clock = m_releaseClock;
+      auto clockTime = m_releaseClockTime;
+      double latency = m_displayLatency;
+      if (!m_releaseClockTaken)
+      {
+        bool target{false};
+        clock = m_dvdClock.GetRunningClock(epoch, target);
+        clockTime = std::chrono::steady_clock::now();
+        latency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_appliedVideoDelay);
+      }
+
+      // only a vsync wake knows the picture on screen
+      double pts = DVD_NOPTS_VALUE;
+      if (wake == CBaseRenderer::VsyncPresentWake::VSYNC)
+      {
+        if (released)
+          pts = m_Queue[m_presentsource].pts;
+        else if (!m_queued.empty())
+          pts = m_Queue[m_queued.front()].pts;
+        else if (m_planeSource >= 0 && m_planeSource != m_offTimelineSource)
+          pts = m_Queue[m_planeSource].pts;
+      }
+
+      // the reading is taken at the edge of the vsync this step woke for, projected from the
+      // last vblank the display published, which can be the one before; one later than the
+      // wake or two periods before it is not on this lattice
+      std::chrono::steady_clock::time_point vblank;
+      if (pts != DVD_NOPTS_VALUE && aml_display_last_vblank(vblank))
+      {
+        const double late = std::chrono::duration<double>(woke - vblank).count() * DVD_TIME_BASE;
+        if (late >= 0 && late < 2 * m_vsyncPeriod)
+          clock -= std::chrono::duration<double>(clockTime - woke).count() * DVD_TIME_BASE + late -
+                   m_vsyncPeriod * std::floor(late / m_vsyncPeriod);
+      }
+
+      m_clockSync.m_syncOffset = m_dvdClock.GetVsyncPhase().ApplyVsyncPhaseReading(
+          pts != DVD_NOPTS_VALUE ? clock + latency - pts : DVD_NOPTS_VALUE, epoch, restart);
+    }
   }
 
   m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
@@ -547,6 +626,7 @@ void CRenderManager::UnInit()
   DeleteRenderer();
 
   m_renderState = STATE_UNCONFIGURED;
+  m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
   m_picture.Reset();
   m_bRenderGUI = false;
   CServiceBroker::GetWinSystem()->GetGfxContext().SetHDRType(m_picture.hdrType);
@@ -586,9 +666,11 @@ bool CRenderManager::Flush(bool wait, bool saveBuffers)
         m_presentsourcePast = -1;
         m_guiPresentSource = -1;
         m_planeSource = -1;
+        m_offTimelineSource = -1;
         m_presentstep = PRESENT_IDLE;
         for (int i = 0; i < m_QueueSize; i++)
           m_free.push_back(i);
+        PublishQueued();
       }
 
       m_flushEvent.Set();
@@ -1119,6 +1201,7 @@ bool CRenderManager::AddVideoPicture(const VideoPicture& picture, volatile std::
   m.pts = picture.pts;
   m_queued.push_back(m_free.front());
   m_free.pop_front();
+  PublishQueued();
   m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
 
   // signal to any waiters to check state
@@ -1246,16 +1329,31 @@ void CRenderManager::PrepareNextRender()
   if (!m_showVideo && !m_forceNext)
     return;
 
-  const double frameOnScreen = m_dvdClock.GetClock();
+  // a phase shift can move the clock, so it goes before the clock of the release is taken;
+  // a commit is taken first, so the delays set before it are applied before it is passed on
+  const bool commit = m_videoDelayCommit.exchange(false);
+  const int videoDelay = m_videoDelay;
+  if (videoDelay != m_appliedVideoDelay)
+  {
+    double phase = 0;
+    if (m_dvdClock.GetVsyncPhase().ShiftVsyncPhase(
+            DVD_MSEC_TO_TIME(videoDelay - m_appliedVideoDelay), phase))
+      m_clockSync.m_syncOffset = phase;
+    m_appliedVideoDelay = videoDelay;
+  }
+  if (commit)
+    m_dvdClock.GetVsyncPhase().CommitVsyncShift();
+
+  bool target{false};
+  const double frameOnScreen = m_dvdClock.GetRunningClock(m_releaseClockEpoch, target);
+  m_releaseClockTime = std::chrono::steady_clock::now();
+  m_releaseClock = frameOnScreen;
+  m_releaseClockTaken = true;
   const double frametime =
       1.0 / static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) *
       DVD_TIME_BASE;
 
-  m_displayLatency = DVD_MSEC_TO_TIME(
-      m_latencyTweak +
-      static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency()) -
-      m_videoDelay -
-      static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment()));
+  m_displayLatency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_appliedVideoDelay);
 
   // While the clock is paused, frameOnScreen does not advance, so adding the display
   // latency would pick a frame ahead of the one actually shown. That only holds for
@@ -1272,7 +1370,7 @@ void CRenderManager::PrepareNextRender()
   const double nextFramePts =
       m_dvdClock.GetClockSpeed() < 0 ? renderPts : m_Queue[m_queued.front()].pts;
 
-  if (m_clockSync.m_enabled)
+  if (m_clockSync.m_enabled && !m_presenting)
   {
     double err = fmod(renderPts - nextFramePts, frametime);
     m_clockSync.m_error += err;
@@ -1289,9 +1387,23 @@ void CRenderManager::PrepareNextRender()
     if (!isPaused)
       renderPts += frametime / 2 - m_clockSync.m_syncOffset;
   }
+  else if (m_clockSync.m_enabled)
+  {
+    // the vsync thread reads the phase at the vsync that releases a picture
+    if (!isPaused)
+      renderPts += m_clockSync.m_phasePeriod / 2 - m_clockSync.m_syncOffset;
+  }
   else
   {
-    m_dvdClock.SetVsyncAdjust(0);
+    // the vsync thread leaves the phase to CheckEnableClockSync, which can hold it pending
+    if (!m_presenting)
+    {
+      m_dvdClock.SetVsyncAdjust(0);
+      m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
+    }
+    // with no lock to the display, release at the nearest vsync
+    if (!isPaused)
+      renderPts += frametime / 2;
   }
 
   CLog::LogFC(LOGDEBUG, LOGAVTIMING,
@@ -1299,6 +1411,12 @@ void CRenderManager::PrepareNextRender()
               "forceNext: {:d}",
               frameOnScreen / DVD_TIME_BASE, renderPts / DVD_TIME_BASE, nextFramePts / DVD_TIME_BASE,
               (renderPts - nextFramePts) / DVD_TIME_BASE, renderPts >= nextFramePts, m_forceNext);
+
+  // a forced picture is no release on the timeline; none goes out while a start target is pending,
+  // and one decided on a clock that a start target moved since is decided again at the next vsync
+  if (!m_forceNext && renderPts >= nextFramePts &&
+      !m_dvdClock.CanRelease(m_releaseClockEpoch, target))
+    return;
 
   bool combined = false;
   if (m_presentsourcePast >= 0)
@@ -1362,10 +1480,12 @@ void CRenderManager::PrepareNextRender()
     m_queued.pop_front();
     m_presentpts = m_Queue[m_presentsource].pts - m_displayLatency;
     m_presentevent.notifyAll();
+    PublishQueued();
 
     m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
   }
-  else if (!combined && renderPts > (nextFramePts - frametime))
+  else if (!combined && !m_presenting && renderPts > (nextFramePts - frametime) &&
+           m_dvdClock.CanRelease(m_releaseClockEpoch, target))
   {
     m_lateframes = 0;
     m_presentstep = PRESENT_FLIP;
@@ -1374,7 +1494,33 @@ void CRenderManager::PrepareNextRender()
     m_queued.pop_front();
     m_presentpts = m_Queue[m_presentsource].pts - m_displayLatency - frametime / 2;
     m_presentevent.notifyAll();
+    PublishQueued();
   }
+}
+
+double CRenderManager::CalcReleaseLead()
+{
+  const int presentLatency = m_pRenderer->GetPresentLatency();
+  const double displayLatency =
+      presentLatency >= 0
+          ? presentLatency * 1000.0 /
+                    static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) +
+                m_pRenderer->GetPresentHold()
+          : static_cast<double>(
+                CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency());
+
+  return m_latencyTweak + displayLatency -
+         static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment());
+}
+
+double CRenderManager::GetReleaseLead()
+{
+  std::unique_lock lock(m_statelock);
+
+  if (m_renderState != STATE_CONFIGURED || !m_pRenderer || m_pRenderer->GetPresentLatency() < 0)
+    return UNKNOWN_RELEASE_LEAD_MS;
+
+  return CalcReleaseLead();
 }
 
 void CRenderManager::DiscardBuffer()
@@ -1386,10 +1532,21 @@ void CRenderManager::DiscardBuffer()
     m_discard.push_back(m_queued.front());
     m_queued.pop_front();
   }
+  PublishQueued();
+  m_offTimelineSource = m_presentsource;
 
   if(m_presentstep == PRESENT_READY)
     m_presentstep = PRESENT_IDLE;
   m_presentevent.notifyAll();
+}
+
+void CRenderManager::PublishQueued()
+{
+  if (m_queued.empty())
+    m_dvdClock.SetQueued(DVD_NOPTS_VALUE, DVD_NOPTS_VALUE);
+  else
+    m_dvdClock.SetQueued(m_Queue[m_queued.front()].pts - m_displayLatency,
+                         m_Queue[m_queued.back()].pts - m_displayLatency);
 }
 
 bool CRenderManager::GetStats(int &lateframes, double &pts, int &queued, int &discard)
@@ -1406,6 +1563,7 @@ void CRenderManager::CheckEnableClockSync()
 {
   // refresh rate can be a multiple of video fps
   double diff = 1.0;
+  double framePeriod = 0;
 
   if (m_fps != 0)
   {
@@ -1416,6 +1574,7 @@ void CRenderManager::CheckEnableClockSync()
     {
       fps *= clockspeed;
     }
+    framePeriod = DVD_TIME_BASE / fps;
 
     diff = static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) / fps;
     if (diff < 1.0)
@@ -1427,12 +1586,34 @@ void CRenderManager::CheckEnableClockSync()
 
   if (diff < 0.0005)
   {
+    m_vsyncPeriod = DVD_TIME_BASE /
+                    static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS());
+    double phasePeriod = m_vsyncPeriod;
+    if (m_presenting)
+      phasePeriod = std::min(phasePeriod, framePeriod);
+    // a phase read on another grid or before clock sync was on does not hold
+    if (m_presenting && (!m_clockSync.m_enabled || phasePeriod != m_clockSync.m_phasePeriod))
+    {
+      m_clockSync.m_syncOffset = 0;
+      m_dvdClock.GetVsyncPhase().SetVsyncPhasePending();
+    }
     m_clockSync.m_enabled = true;
+    m_clockSync.m_phasePeriod = phasePeriod;
+    m_dvdClock.GetVsyncPhase().SetPhasePeriod(m_presenting ? phasePeriod : 0);
   }
   else
   {
     m_clockSync.m_enabled = false;
-    m_dvdClock.SetVsyncAdjust(0);
+    // a start sync waits for the refresh rate that the pending switch sets
+    const CGraphicContext& gfx = CServiceBroker::GetWinSystem()->GetGfxContext();
+    if (m_presenting && m_bTriggerUpdateResolution && gfx.IsFullScreenVideo() &&
+        gfx.IsFullScreenRoot() && m_fps > 0.0f &&
+        CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+            CSettings::SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE) != ADJUST_REFRESHRATE_OFF)
+      m_dvdClock.GetVsyncPhase().SetVsyncPhasePending();
+    else
+      m_dvdClock.SetVsyncAdjust(0);
+    m_dvdClock.GetVsyncPhase().SetPhasePeriod(0);
   }
 
   m_playerPort->UpdateClockSync(m_clockSync.m_enabled);

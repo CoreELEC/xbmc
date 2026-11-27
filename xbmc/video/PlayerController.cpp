@@ -42,6 +42,15 @@
 using namespace KODI;
 using namespace UTILS;
 
+namespace
+{
+bool IsAudioDelayAction(int action)
+{
+  return action == ACTION_AUDIO_DELAY || action == ACTION_AUDIO_DELAY_MIN ||
+         action == ACTION_AUDIO_DELAY_PLUS;
+}
+} // namespace
+
 CPlayerController::CPlayerController()
 {
   MOVING_SPEED::EventCfg eventCfg{100.0f, 300.0f, 200};
@@ -245,6 +254,8 @@ bool CPlayerController::OnAction(const CAction &action)
         vs.m_AudioDelay -= videoAudioDelayStep;
         if (vs.m_AudioDelay < -videoAudioDelayRange)
           vs.m_AudioDelay = -videoAudioDelayRange;
+        if (vs.m_AudioDelay != appPlayer->GetVideoSettings().m_AudioDelay)
+          m_audioDelayChanged = true;
         appPlayer->SetAVDelay(vs.m_AudioDelay);
 
         ShowSlider(action.GetID(), 297, appPlayer->GetVideoSettings().m_AudioDelay,
@@ -261,6 +272,8 @@ bool CPlayerController::OnAction(const CAction &action)
         vs.m_AudioDelay += videoAudioDelayStep;
         if (vs.m_AudioDelay > videoAudioDelayRange)
           vs.m_AudioDelay = videoAudioDelayRange;
+        if (vs.m_AudioDelay != appPlayer->GetVideoSettings().m_AudioDelay)
+          m_audioDelayChanged = true;
         appPlayer->SetAVDelay(vs.m_AudioDelay);
 
         ShowSlider(action.GetID(), 297, appPlayer->GetVideoSettings().m_AudioDelay,
@@ -642,6 +655,9 @@ bool CPlayerController::NextAudioStream()
 
 void CPlayerController::ShowSlider(int action, int label, float value, float min, float delta, float max, bool modal)
 {
+  // the open dialog takes the new slider without a close, which ends the change of the old one
+  if (IsAudioDelayAction(action) != IsAudioDelayAction(m_sliderAction))
+    OnSliderClose(nullptr);
   m_sliderAction = action;
   if (modal)
     CGUIDialogSlider::ShowAndGetInput(
@@ -696,6 +712,8 @@ void CPlayerController::OnSliderChange(void *data, CGUISliderControl *slider)
   {
     if (m_sliderAction == ACTION_AUDIO_DELAY)
     {
+      if (slider->GetFloatValue() != appPlayer->GetVideoSettings().m_AudioDelay)
+        m_audioDelayChanged = true;
       appPlayer->SetAVDelay(slider->GetFloatValue());
     }
     else if (m_sliderAction == ACTION_SUBTITLE_DELAY)
@@ -706,5 +724,17 @@ void CPlayerController::OnSliderChange(void *data, CGUISliderControl *slider)
     {
       appPlayer->SetDynamicRangeCompression((long)(slider->GetFloatValue() * 100));
     }
+  }
+}
+
+void CPlayerController::OnSliderClose(void* data)
+{
+  auto& components = CServiceBroker::GetAppComponents();
+  const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+
+  if (IsAudioDelayAction(m_sliderAction) && m_audioDelayChanged)
+  {
+    m_audioDelayChanged = false;
+    appPlayer->CommitAVDelay();
   }
 }

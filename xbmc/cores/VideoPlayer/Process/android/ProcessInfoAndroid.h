@@ -21,7 +21,6 @@ public:
   static CProcessInfo* Create();
   static void Register();
   EINTERLACEMETHOD GetFallbackDeintMethod() override;
-  bool WantsRawPassthrough() override;
 };
 
 } // namespace VIDEOPLAYER

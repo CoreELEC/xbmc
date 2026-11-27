@@ -19,6 +19,8 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
+struct AEPassthroughSilentFrame;
+
 namespace ActiveAE
 {
 
@@ -38,6 +40,7 @@ public:
   int nb_samples;                        // number of frames used
   int max_nb_samples;                    // max number of frames this packet can hold
   int pause_burst_ms;
+  const AEPassthroughSilentFrame* silent_frame{nullptr}; // a raw gap's content, else pause bursts
 };
 
 class CActiveAEBufferPool;
@@ -51,7 +54,7 @@ public:
   void Return();
   std::unique_ptr<CSoundPacket> pkt;
   CActiveAEBufferPool *pool = nullptr;
-  int64_t timestamp = 0;
+  double timestamp = 0;
   int pkt_start_offset = 0;
   int refCount = 0;
   double centerMixLevel;
@@ -65,6 +68,7 @@ public:
   virtual bool Create(unsigned int totaltime);
   CSampleBuffer *GetFreeBuffer();
   void ReturnBuffer(CSampleBuffer *buffer);
+  float GetPlayingTime(const CSampleBuffer* buffer) const;
   AEAudioFormat m_format;
   std::deque<CSampleBuffer*> m_allSamples;
   std::deque<CSampleBuffer*> m_freeSamples;
@@ -103,7 +107,7 @@ protected:
   uint8_t *m_planes[16];
   bool m_empty = true;
   bool m_drain = false;
-  int64_t m_lastSamplePts = 0;
+  double m_lastSamplePts = 0;
   bool m_remap = false;
   CSampleBuffer *m_procSample = nullptr;
   std::unique_ptr<IAEResample> m_resampler;
@@ -145,7 +149,7 @@ protected:
   bool m_drain;
   bool m_changeFilter;
   float m_tempo;
-  int64_t m_lastSamplePts = 0;
+  double m_lastSamplePts = 0;
   bool m_fillPackets;
 };
 

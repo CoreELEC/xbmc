@@ -19,6 +19,13 @@
 #include <memory>
 #include <mutex>
 
+namespace
+{
+// how far the running clock starts behind a start target: past the decision (60 to 130 ms after
+// the start) and under the second after which subtitles reset on a clock that went back
+constexpr double START_LEAD_MS = 500.0;
+} // namespace
+
 CDVDClock::CDVDClock()
 {
   std::unique_lock lock(m_systemsection);
@@ -63,11 +70,21 @@ double CDVDClock::GetClock(bool interpolated /*= true*/)
   m_systemAdjust += m_speedAdjust * (current - m_lastSystemTime);
   m_lastSystemTime = current;
 
-  return SystemToPlaying(current);
+  const double clock = SystemToPlaying(current);
+  return clock + GetStartTargetLead(current);
 }
 
 double CDVDClock::GetClock(double& absolute, bool interpolated /*= true*/)
 {
+  std::unique_lock lock(m_critSection);
+
+  const double clock = GetRunningClock(absolute, interpolated);
+  return clock + GetStartTargetLead(m_lastSystemTime);
+}
+
+double CDVDClock::GetRunningClock(double& absolute, bool interpolated /*= true*/)
+{
+  std::unique_lock critLock(m_critSection);
   int64_t current = m_videoRefClock->GetTime(interpolated);
 
   std::unique_lock lock(m_systemsection);
@@ -79,16 +96,31 @@ double CDVDClock::GetClock(double& absolute, bool interpolated /*= true*/)
   return SystemToPlaying(current);
 }
 
+double CDVDClock::GetClockWithVsyncAdjust()
+{
+  std::unique_lock lock(m_critSection);
+
+  double absolute{0.0};
+  const double clock = GetRunningClock(absolute);
+  return clock + m_vSyncAdjust;
+}
+
+double CDVDClock::GetRunningClock(int& epoch, bool& target)
+{
+  std::unique_lock lock(m_critSection);
+
+  double absolute{0.0};
+  const double clock = GetRunningClock(absolute);
+  epoch = m_clockEpoch;
+  target = m_startPending;
+  return clock;
+}
+
 void CDVDClock::SetVsyncAdjust(double adjustment)
 {
   std::unique_lock lock(m_critSection);
   m_vSyncAdjust = adjustment;
-}
-
-double CDVDClock::GetVsyncAdjust()
-{
-  std::unique_lock lock(m_critSection);
-  return m_vSyncAdjust;
+  m_vsyncPhase.Reset();
 }
 
 void CDVDClock::Pause(bool pause)
@@ -139,15 +171,32 @@ void CDVDClock::SetSpeed(int iSpeed)
     return;
   }
 
+  if (iSpeed != DVD_PLAYSPEED_NORMAL)
+  {
+    m_iDisc += GetStartTargetLead(m_videoRefClock->GetTime());
+    m_startTarget = DVD_NOPTS_VALUE;
+    m_startPending = false;
+  }
+
   if (iSpeed == DVD_PLAYSPEED_PAUSE)
   {
     if (!m_pauseClock)
+    {
       m_pauseClock = m_videoRefClock->GetTime();
+      m_clockEpoch++;
+    }
     return;
   }
 
   int64_t current;
   int64_t newfreq = m_systemFrequency * DVD_PLAYSPEED_NORMAL / iSpeed;
+  // stamped audio keeps its rhythm through a pause and starts only in whole frames, so the
+  // picture waits behind the start value until the audio decided how it meets it
+  const bool startTarget{m_pauseClock && iSpeed == DVD_PLAYSPEED_NORMAL && m_audioStamped &&
+                         !m_bReset};
+
+  if (m_pauseClock || newfreq != m_systemUsed)
+    m_clockEpoch++;
 
   current = m_videoRefClock->GetTime();
   if (m_pauseClock)
@@ -158,6 +207,8 @@ void CDVDClock::SetSpeed(int iSpeed)
 
   m_startClock = current - (int64_t)((double)(current - m_startClock) * newfreq / m_systemUsed);
   m_systemUsed = newfreq;
+  if (startTarget)
+    ArmStartTarget(current);
 }
 
 void CDVDClock::SetSpeedAdjust(double adjust)
@@ -174,7 +225,10 @@ double CDVDClock::GetSpeedAdjust() const
   return m_speedAdjust;
 }
 
-double CDVDClock::ErrorAdjust(double error, const char* log)
+double CDVDClock::ErrorAdjust(double error,
+                              const char* log,
+                              bool exact /* = false */,
+                              bool start /* = false */)
 {
   std::unique_lock lock(m_critSection);
 
@@ -183,14 +237,15 @@ double CDVDClock::ErrorAdjust(double error, const char* log)
 
   // skip minor updates while speed adjust is active
   // -> adjusting buffer levels
-  if (m_speedAdjust != 0 && error < DVD_MSEC_TO_TIME(100))
+  if (!exact && !start && m_speedAdjust != 0 && error < DVD_MSEC_TO_TIME(100))
   {
     return 0;
   }
 
   adjustment = error;
 
-  if (m_vSyncAdjust != 0)
+  // a start under speed adjust has no clock sync phase to keep
+  if (!exact && m_vSyncAdjust != 0 && (!start || m_speedAdjust == 0))
   {
     // Audio ahead is more noticeable then audio behind video.
     // Correct if aufio is more than 20ms ahead or more then
@@ -217,13 +272,18 @@ double CDVDClock::ErrorAdjust(double error, const char* log)
 void CDVDClock::Discontinuity(double clock, double absolute)
 {
   std::unique_lock lock(m_critSection);
+  // a start target moves to `clock`, and the clock stays behind it by the lead left
+  const double lead = GetStartTargetLead(AbsoluteToSystem(absolute));
+  if (m_startTarget != DVD_NOPTS_VALUE)
+    m_startTarget = clock;
   m_startClock = AbsoluteToSystem(absolute);
   if(m_pauseClock)
     m_pauseClock = m_startClock;
-  m_iDisc = clock;
+  m_iDisc = clock - lead;
   m_bReset = false;
   m_systemAdjust = 0;
   m_speedAdjust = 0;
+  m_clockEpoch++;
 }
 
 void CDVDClock::SetMaxSpeedAdjust(double speed)
@@ -297,6 +357,9 @@ double CDVDClock::SystemToPlaying(int64_t system)
     m_speedAdjust = 0;
     m_vSyncAdjust = 0;
     m_bReset = false;
+    m_clockEpoch++;
+    m_startTarget = DVD_NOPTS_VALUE;
+    m_startPending = false;
   }
 
   if (m_pauseClock)
@@ -313,4 +376,104 @@ double CDVDClock::GetClockSpeed() const
 
   double speed = (double)m_systemFrequency / m_systemUsed;
   return m_videoRefClock->GetSpeed() * speed + m_speedAdjust;
+}
+
+double CDVDClock::GetStartTargetLead(int64_t system)
+{
+  if (m_startTarget != DVD_NOPTS_VALUE && !m_bReset)
+  {
+    const double lead = m_startTarget - SystemToPlaying(system);
+    if (lead > 0 || m_startPending)
+      return lead;
+  }
+  m_startTarget = DVD_NOPTS_VALUE;
+  m_startPending = false;
+  return 0.0;
+}
+
+void CDVDClock::SetAudioStamped(bool stamped)
+{
+  std::unique_lock lock(m_critSection);
+  m_audioStamped = stamped;
+}
+
+void CDVDClock::SetQueued(double first, double last)
+{
+  std::unique_lock lock(m_critSection);
+  m_firstQueued = first;
+  m_lastQueued = last;
+}
+
+bool CDVDClock::CanRelease(int epoch, bool target) const
+{
+  std::unique_lock lock(m_critSection);
+
+  return !m_startPending && epoch >= m_startArmEpoch && (epoch == m_clockEpoch || !target);
+}
+
+bool CDVDClock::ArmStartTarget()
+{
+  std::unique_lock lock(m_critSection);
+
+  if (!m_startPending && !m_pauseClock && !m_bReset && m_systemUsed == m_systemFrequency)
+    ArmStartTarget(m_videoRefClock->GetTime());
+  return m_startPending;
+}
+
+void CDVDClock::EndStartTarget()
+{
+  std::unique_lock lock(m_critSection);
+
+  m_audioStamped = false;
+  if (!m_startPending)
+    return;
+
+  m_iDisc += GetStartTargetLead(m_videoRefClock->GetTime());
+  m_startTarget = DVD_NOPTS_VALUE;
+  m_startPending = false;
+  m_clockEpoch++;
+}
+
+bool CDVDClock::GetStartTarget(double& first, double& last, int& epoch)
+{
+  std::unique_lock lock(m_critSection);
+
+  const int64_t current = m_videoRefClock->GetTime();
+  const double lead = GetStartTargetLead(current);
+  const double clock = SystemToPlaying(current);
+  first = m_firstQueued != DVD_NOPTS_VALUE ? m_firstQueued - clock : lead;
+  last = m_lastQueued != DVD_NOPTS_VALUE ? m_lastQueued - clock : lead;
+  epoch = m_clockEpoch;
+  return m_startPending;
+}
+
+bool CDVDClock::SetStartTarget(double move, int epoch)
+{
+  std::unique_lock lock(m_critSection);
+
+  const int64_t current = m_videoRefClock->GetTime();
+  const double running = SystemToPlaying(current);
+  if (!m_startPending || epoch != m_clockEpoch)
+    return false;
+
+  // moved from the running clock as it is now, so a move by whole phase periods keeps the phase
+  const double target = m_startTarget;
+  const double clock = running + move;
+  m_startTarget = DVD_NOPTS_VALUE;
+  m_startPending = false;
+  Discontinuity(clock, SystemToAbsolute(current));
+  if (clock < target)
+    m_startTarget = target;
+  return true;
+}
+
+void CDVDClock::ArmStartTarget(int64_t system)
+{
+  const double clock = SystemToPlaying(system);
+  const double target = clock + GetStartTargetLead(system);
+  m_startTarget = target;
+  m_startPending = true;
+  m_iDisc += target - DVD_MSEC_TO_TIME(START_LEAD_MS) - clock;
+  m_clockEpoch++;
+  m_startArmEpoch = m_clockEpoch;
 }

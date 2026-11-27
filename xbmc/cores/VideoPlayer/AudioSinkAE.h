@@ -47,6 +47,8 @@ public:
   double GetDelay(); // returns the time it takes to play a packet if we add one at this time
   double GetSyncError();
   void SetSyncErrorCorrection(double correction);
+  bool TakeStartSyncError(bool& exact);
+  void SetStartCut(double cut);
 
   /*!
    * \brief Returns the resample ratio, or 0.0 if unknown/invalid
@@ -60,6 +62,13 @@ public:
 
   double GetClock() override;
   double GetClockSpeed() override;
+  double TakeStartCut() override;
+  int GetSyncPhaseId(double& shift, double& period) override;
+  bool TakeSyncShiftCommit() override;
+  bool GetStartTarget(double& first, double& last, int& epoch) override;
+  bool SetStartTarget(double move, int epoch) override;
+  bool ArmStartTarget() override;
+  void EndStartTarget() override;
 
   CAEStreamInfo::DataType GetPassthroughStreamType(AVCodecID codecId, int samplerate, int profile);
 
@@ -69,6 +78,9 @@ protected:
   double m_timeOfPts;
   double m_syncError;
   unsigned int m_syncErrorTime;
+  bool m_startSyncError{false};
+  bool m_startSyncErrorExact{false};
+  std::atomic<double> m_startCut{0.0};
   double m_resampleRatio = 0.0; // invalid
   CCriticalSection m_critSection;
 

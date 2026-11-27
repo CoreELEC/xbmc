@@ -22,7 +22,8 @@ set(SOURCES AudioSinkAE.cpp
             VideoPlayerSubtitle.cpp
             VideoPlayerTeletext.cpp
             VideoPlayerVideo.cpp
-            VideoReferenceClock.cpp)
+            VideoReferenceClock.cpp
+            VsyncPhase.cpp)
 
 set(HEADERS AudioSinkAE.h
             DVDClock.h
@@ -52,6 +53,7 @@ set(HEADERS AudioSinkAE.h
             VideoPlayerTeletext.h
             VideoPlayerVideo.h
             VideoReferenceClock.h
+            VsyncPhase.h
             Interface/StreamInfo.h
             Interface/DemuxPacket.h
             Interface/DemuxCrypto.h

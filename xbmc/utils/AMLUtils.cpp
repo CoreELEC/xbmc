@@ -415,6 +415,29 @@ bool aml_video_started()
   return (StringUtils::EqualsNoCase(videostarted.Get<std::string>().value_or("0x0"), "0x1"));
 }
 
+bool aml_display_last_vblank(std::chrono::steady_clock::time_point& time)
+{
+  const CAMLDisplay* display =
+      static_cast<CWinSystemAmlogic*>(CServiceBroker::GetWinSystem())->GetAmlDisplay();
+  const int fd = display->aml_get_Device_handle();
+  const int crtc = display->aml_get_crtc_index();
+  // the query reads pipe 0 unless it names the CRTC Kodi bound
+  unsigned int type = DRM_VBLANK_RELATIVE;
+  if (crtc == 1)
+    type |= DRM_VBLANK_SECONDARY;
+  else if (crtc > 1)
+    type |= (crtc << DRM_VBLANK_HIGH_CRTC_SHIFT) & DRM_VBLANK_HIGH_CRTC_MASK;
+  drmVBlank vbl = {};
+  vbl.request.type = static_cast<drmVBlankSeqType>(type);
+  vbl.request.sequence = 0;
+  if (drmWaitVBlank(fd, &vbl) != 0)
+    return false;
+
+  time = std::chrono::steady_clock::time_point{std::chrono::seconds{vbl.reply.tval_sec} +
+                                               std::chrono::microseconds{vbl.reply.tval_usec}};
+  return true;
+}
+
 int aml_amdv_wait(StreamHdrType hdrType)
 {
   if (hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)

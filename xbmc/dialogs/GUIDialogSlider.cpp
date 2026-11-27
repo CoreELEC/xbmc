@@ -57,6 +57,8 @@ bool CGUIDialogSlider::OnMessage(CGUIMessage& message)
     }
     break;
   case GUI_MSG_WINDOW_DEINIT:
+    if (m_callback)
+      m_callback->OnSliderClose(m_callbackData);
     m_callback = NULL;
     m_callbackData = NULL;
     break;

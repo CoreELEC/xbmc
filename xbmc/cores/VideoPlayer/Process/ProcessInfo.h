@@ -87,7 +87,6 @@ public:
   void SetAudioQueueDataLevel(int level);
   int GetAudioQueueDataLevel();
   virtual bool AllowDTSHDDecode();
-  virtual bool WantsRawPassthrough() { return false; }
 
   // subtitle info
   void ResetSubtitleCodecInfo();

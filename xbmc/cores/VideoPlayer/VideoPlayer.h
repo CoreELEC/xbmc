@@ -312,6 +312,7 @@ public:
   bool CanPause() const override;
   void SetAVDelay(float fValue = 0.0f) override;
   float GetAVDelay() override;
+  void CommitAVDelay() override;
   bool IsInMenu() const override;
 
   /*!
@@ -687,6 +688,8 @@ protected:
   XbmcThreads::EndTime<> m_syncTimer;
 
   std::optional<std::chrono::steady_clock::time_point> m_syncStartPtsWait;
+  // set by the seek and chapter handlers after their flush, cleared by every flush and open
+  bool m_seekStart{false};
 
   std::optional<std::chrono::steady_clock::time_point> m_syncWait;
 

@@ -33,4 +33,11 @@ public:
    \param slider pointer to the slider control
    */
   virtual void OnSliderChange(void *data, CGUISliderControl *slider) = 0;
+
+  /*!
+   \brief Callback function called when the slider dialog closes
+
+   \param data pointer of callbackData
+   */
+  virtual void OnSliderClose(void* data) {}
 };
