@@ -22,6 +22,12 @@
 #include "windowing/WinSystem.h"
 #include "windowing/amlogic/WinSystemAmlogic.h"
 
+namespace
+{
+// queued in one vsync, picked at the next and live one later
+constexpr int PLANE_PRESENT_VSYNCS = 2;
+} // namespace
+
 CRendererAML::CRendererAML()
  : m_prevVPts(DVD_NOPTS_VALUE)
  , m_bConfigured(false)
@@ -64,6 +70,9 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
   CalculateFrameAspectRatio(picture.iDisplayWidth, picture.iDisplayHeight);
   SetViewMode(m_videoSettings.m_ViewMode);
   ManageRenderArea();
+
+  CAMLVideoBuffer* amli = dynamic_cast<CAMLVideoBuffer*>(picture.videoBuffer);
+  m_presentHold = amli && amli->m_amlCodec ? amli->m_amlCodec->GetPresentHold() : 0.0;
 
   int color_transfer = 0;
   const bool dv_graphics =
@@ -265,6 +274,7 @@ std::shared_ptr<CAMLCodec> CRendererAML::QueueFrame(int index, bool setVideoRect
       }
       if (setVideoRect)
         amli->m_amlCodec->SetVideoRect(m_sourceRect, m_destRect);
+      m_presentHold = amli->m_amlCodec->GetPresentHold();
       m_prevCodec = amli->m_amlCodec;
       std::shared_ptr<CAMLCodec> codec = std::move(amli->m_amlCodec); //Mark frame as processed
       m_prevVPts = pts;
@@ -351,6 +361,17 @@ bool CRendererAML::WaitVsync()
 void CRendererAML::WakeVsyncPresent()
 {
   CAMLCodec::RequestVsyncStep();
+}
+
+int CRendererAML::GetPresentLatency() const
+{
+  // only the vsync presenter releases frames at the vsync
+  return m_vsyncPresent ? PLANE_PRESENT_VSYNCS : -1;
+}
+
+double CRendererAML::GetPresentHold() const
+{
+  return m_vsyncPresent ? m_presentHold.load() : 0.0;
 }
 
 bool CRendererAML::PresentFrame(int index)

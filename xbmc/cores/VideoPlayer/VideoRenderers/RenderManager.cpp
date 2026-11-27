@@ -39,6 +39,12 @@
 
 using namespace std::chrono_literals;
 
+namespace
+{
+// the video start delay the player assumes for a renderer that cannot report its release lead
+constexpr double UNKNOWN_RELEASE_LEAD_MS = 100.0;
+} // namespace
+
 class CRenderManager::CPresentThread : public CThread
 {
 public:
@@ -277,6 +283,7 @@ bool CRenderManager::Configure()
     m_overlays.Reset();
     OVERLAY::MarkDirty();
     m_overlays.SetStereoMode(m_picture.stereoMode);
+    UpdateLatencyTweak();
 
     m_renderState = STATE_CONFIGURED;
 
@@ -287,7 +294,8 @@ bool CRenderManager::Configure()
 
   m_pConfigPicture.reset();
 
-  m_stateEvent.Set();
+  if (!result)
+    m_stateEvent.Set();
   m_playerPort->VideoParamsChange();
   return result;
 }
@@ -349,8 +357,9 @@ void CRenderManager::FrameMove()
       StopPresentThread();
       if (!Configure())
         return;
-      UpdateLatencyTweak();
       StartPresentThread();
+      // the release lead a waiter reads depends on whether the vsync presenter runs
+      m_stateEvent.Set();
       threadLock.unlock();
       firstFrame = true;
       FrameWait(50ms);
@@ -1251,11 +1260,7 @@ void CRenderManager::PrepareNextRender()
       1.0 / static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) *
       DVD_TIME_BASE;
 
-  m_displayLatency = DVD_MSEC_TO_TIME(
-      m_latencyTweak +
-      static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency()) -
-      m_videoDelay -
-      static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment()));
+  m_displayLatency = DVD_MSEC_TO_TIME(CalcReleaseLead() - m_videoDelay);
 
   // While the clock is paused, frameOnScreen does not advance, so adding the display
   // latency would pick a frame ahead of the one actually shown. That only holds for
@@ -1292,6 +1297,9 @@ void CRenderManager::PrepareNextRender()
   else
   {
     m_dvdClock.SetVsyncAdjust(0);
+    // with no lock to the display, release at the nearest vsync
+    if (!isPaused)
+      renderPts += frametime / 2;
   }
 
   CLog::LogFC(LOGDEBUG, LOGAVTIMING,
@@ -1365,7 +1373,7 @@ void CRenderManager::PrepareNextRender()
 
     m_playerPort->UpdateRenderBuffers(m_queued.size(), m_discard.size(), m_free.size());
   }
-  else if (!combined && renderPts > (nextFramePts - frametime))
+  else if (!combined && !m_presenting && renderPts > (nextFramePts - frametime))
   {
     m_lateframes = 0;
     m_presentstep = PRESENT_FLIP;
@@ -1375,6 +1383,31 @@ void CRenderManager::PrepareNextRender()
     m_presentpts = m_Queue[m_presentsource].pts - m_displayLatency - frametime / 2;
     m_presentevent.notifyAll();
   }
+}
+
+double CRenderManager::CalcReleaseLead()
+{
+  const int presentLatency = m_pRenderer->GetPresentLatency();
+  const double displayLatency =
+      presentLatency >= 0
+          ? presentLatency * 1000.0 /
+                    static_cast<double>(CServiceBroker::GetWinSystem()->GetGfxContext().GetFPS()) +
+                m_pRenderer->GetPresentHold()
+          : static_cast<double>(
+                CServiceBroker::GetWinSystem()->GetGfxContext().GetDisplayLatency());
+
+  return m_latencyTweak + displayLatency -
+         static_cast<double>(CServiceBroker::GetWinSystem()->GetFrameLatencyAdjustment());
+}
+
+double CRenderManager::GetReleaseLead()
+{
+  std::unique_lock lock(m_statelock);
+
+  if (m_renderState != STATE_CONFIGURED || !m_pRenderer || m_pRenderer->GetPresentLatency() < 0)
+    return UNKNOWN_RELEASE_LEAD_MS;
+
+  return CalcReleaseLead();
 }
 
 void CRenderManager::DiscardBuffer()

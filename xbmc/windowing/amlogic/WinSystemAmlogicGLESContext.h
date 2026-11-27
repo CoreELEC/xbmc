@@ -51,6 +51,7 @@ public:
 
   bool SupportsStereo(const RenderStereoMode mode) const override;
   void PresentRender(bool rendered, bool videoLayer) override;
+  float GetDisplayLatency() override;
 
   // GUI compositing for HDR
   bool SetGuiCompositing(int colorTransfer) override;
