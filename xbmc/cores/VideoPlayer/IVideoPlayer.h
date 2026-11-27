@@ -75,6 +75,13 @@ struct SStartMsg
   bool timestampPending{false};
 };
 
+struct SResyncMsg
+{
+  double clock;
+  // the streams start after a seek
+  bool seekStart;
+};
+
 struct SStateMsg
 {
   IDVDStreamPlayer::ESyncState syncState;

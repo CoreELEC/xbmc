@@ -31,6 +31,7 @@ public:
 
   bool PackTrueHD(const uint8_t* data, int size);
   std::vector<uint8_t> GetOutputFrame();
+  void Reset();
 
 private:
   struct MATState

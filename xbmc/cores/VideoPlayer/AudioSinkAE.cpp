@@ -90,6 +90,8 @@ void CAudioSinkAE::Destroy(bool finish)
   m_bPassthrough = false;
   m_bPaused = true;
   m_playingPts = DVD_NOPTS_VALUE;
+  m_startSyncError = false;
+  m_startCut = 0.0;
 }
 
 unsigned int CAudioSinkAE::AddPackets(const DVDAudioFrame &audioframe)
@@ -107,6 +109,7 @@ unsigned int CAudioSinkAE::AddPackets(const DVDAudioFrame &audioframe)
     unsigned int newTime = info.errortime;
     if (newTime != m_syncErrorTime)
     {
+      m_startSyncError = info.lateStartHandedOver;
       m_syncErrorTime = info.errortime;
       m_syncError = info.error / 1000 * DVD_TIME_BASE;
       m_resampleRatio = info.rr;
@@ -116,6 +119,7 @@ unsigned int CAudioSinkAE::AddPackets(const DVDAudioFrame &audioframe)
   {
     m_syncErrorTime = 0;
     m_syncError = 0.0;
+    m_startSyncError = false;
   }
 
   // Use wall-clock deadline independent of playback speed (fixes dimensional error
@@ -194,6 +198,10 @@ void CAudioSinkAE::Pause()
     m_pAudioStream->Pause();
   CLog::Log(LOGDEBUG,"CDVDAudio::Pause - pausing audio stream");
   m_playingPts = DVD_NOPTS_VALUE;
+  // the engine syncs the stream anew on resume
+  m_syncError = 0.0;
+  m_syncErrorTime = 0;
+  m_startSyncError = false;
 }
 
 void CAudioSinkAE::Resume()
@@ -228,6 +236,8 @@ void CAudioSinkAE::Flush()
   m_playingPts = DVD_NOPTS_VALUE;
   m_syncError = 0.0;
   m_syncErrorTime = 0;
+  m_startSyncError = false;
+  m_startCut = 0.0;
 }
 
 void CAudioSinkAE::AbortAddPackets()
@@ -311,6 +321,18 @@ void CAudioSinkAE::SetSyncErrorCorrection(double correction)
   m_syncError += correction;
 }
 
+bool CAudioSinkAE::TakeStartSyncError()
+{
+  const bool startSyncError{m_startSyncError};
+  m_startSyncError = false;
+  return startSyncError;
+}
+
+void CAudioSinkAE::SetStartCut(double cut)
+{
+  m_startCut = cut;
+}
+
 double CAudioSinkAE::GetResampleRatio()
 {
   return m_resampleRatio;
@@ -339,6 +361,11 @@ double CAudioSinkAE::GetClockSpeed()
     return m_pClock->GetClockSpeed();
   else
     return 1.0;
+}
+
+double CAudioSinkAE::TakeStartCut()
+{
+  return m_startCut.exchange(0.0) / DVD_TIME_BASE * 1000;
 }
 
 CAEStreamInfo::DataType CAudioSinkAE::GetPassthroughStreamType(AVCodecID codecId,

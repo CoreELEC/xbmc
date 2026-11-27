@@ -253,11 +253,24 @@ protected:
   enum AVAudioServiceType m_audioServiceType;
   bool m_forceResampler;
   IAEClockCallback *m_pClock;
+  // set by the player's free; a free that times out leaves the stream to the engine while the
+  // player's clock goes, so the engine reads no clock of a freed stream
+  std::atomic_bool m_freed{false};
   CSyncError m_syncError;
   double m_lastSyncError;
   CAESyncInfo::AESyncState m_syncState;
   // Whether late audio was left to the player's clock and no error was averaged since
   bool m_lateStartHandedOver{false};
+  // the part of the muted frames' duration their whole-millisecond pause bursts left out
+  double m_pauseBurstCarry{0.0};
+  // whether every frame since the sync start was paused or skipped
+  bool m_silentSinceSyncStart{false};
+  // whether m_lastSyncError holds an error measured since adjusting started
+  bool m_syncErrorBooked{false};
+  // ms of audio the clock start left out on purpose, skipped before the start sync measures
+  double m_startCut{0.0};
+  // the sink reports counted when the start sync began
+  unsigned int m_syncSinkReports{0};
 };
 }
 

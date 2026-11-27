@@ -682,7 +682,7 @@ float CActiveAEStreamBuffers::GetDelay()
 
   for (auto &buf : m_inputSamples)
   {
-    delay += (float)buf->pkt->nb_samples / buf->pkt->config.sample_rate;
+    delay += m_resampleBuffers->GetPlayingTime(buf);
   }
 
   delay += m_resampleBuffers->GetDelay();
@@ -690,7 +690,7 @@ float CActiveAEStreamBuffers::GetDelay()
 
   for (auto &buf : m_outputSamples)
   {
-    delay += (float)buf->pkt->nb_samples / buf->pkt->config.sample_rate;
+    delay += m_atempoBuffers->GetPlayingTime(buf);
   }
 
   return delay;

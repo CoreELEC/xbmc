@@ -26,6 +26,8 @@ public:
   virtual ~IAEClockCallback() = default;
   virtual double GetClock() = 0;
   virtual double GetClockSpeed() { return 1.0; }
+  //! The audio in ms the clock start left out on purpose, once per start
+  virtual double TakeStartCut() { return 0.0; }
 };
 
 class CAESyncInfo
@@ -44,6 +46,8 @@ public:
     SYNC_ADJUST
   };
   AESyncState state;
+  //! The error is a late start the engine left to the player's clock
+  bool lateStartHandedOver{false};
 };
 
 /**

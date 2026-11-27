@@ -68,6 +68,7 @@ double CDVDClock::GetClock(bool interpolated /*= true*/)
 
 double CDVDClock::GetClock(double& absolute, bool interpolated /*= true*/)
 {
+  std::unique_lock critLock(m_critSection);
   int64_t current = m_videoRefClock->GetTime(interpolated);
 
   std::unique_lock lock(m_systemsection);

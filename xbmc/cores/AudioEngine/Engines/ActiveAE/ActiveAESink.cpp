@@ -19,6 +19,7 @@
 #include "utils/log.h"
 
 #include <algorithm>
+#include <cmath>
 #include <new> // for std::bad_alloc
 #include <sstream>
 
@@ -253,6 +254,7 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
         {
         case CSinkControlProtocol::CONFIGURE:
           SinkConfig *data;
+          bool opened;
           data = reinterpret_cast<SinkConfig*>(msg->data);
           if (data)
           {
@@ -261,12 +263,27 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
             m_device = *(data->device);
           }
           m_extError = false;
-          m_extSilenceTimer.Set(0ms);
-          m_extStreaming = false;
+          m_extStreaming = data && data->streaming;
           ReturnBuffers();
           OpenSink();
+          opened = !m_extError;
 
-          if (!m_extError)
+          // the device is empty, the keep-alive fills it before any reader sees its delay
+          if (opened && data && data->fill)
+          {
+            const unsigned int room = static_cast<unsigned int>(
+                std::lround(m_sink->GetCacheTotal() * m_sinkFormat.m_sampleRate));
+            unsigned int filled = 0;
+            unsigned int written = 0;
+            do
+            {
+              written = 0;
+              OutputSamples(&m_sampleOfSilence, &written);
+              filled += written;
+            } while (!m_extError && written > 0 && filled + written < room);
+          }
+
+          if (opened)
           {
             SinkReply reply;
             reply.format = m_sinkFormat;
@@ -282,8 +299,24 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
             reply.cacheTotal = m_sink->GetCacheTotal();
             reply.latency = m_sink->GetLatency();
             reply.hasVolume = m_sink->HasVolume();
-            m_state = S_TOP_CONFIGURED_IDLE;
-            m_extTimeout = 10s;
+            ReportDelay();
+            SetSilenceTimer();
+            // a failed fill write takes the keep-alive's error path at its next turn
+            if (m_extError)
+            {
+              m_state = S_TOP_CONFIGURED_SILENCE;
+              m_extTimeout = 0ms;
+            }
+            else if (!m_extSilenceTimer.IsTimePast())
+            {
+              m_state = S_TOP_CONFIGURED_PLAY;
+              m_extTimeout = 0ms;
+            }
+            else
+            {
+              m_state = S_TOP_CONFIGURED_IDLE;
+              m_extTimeout = 10s;
+            }
             m_sinkLatency = (int64_t)(reply.latency * 1000);
             msg->Reply(CSinkControlProtocol::ACC, &reply, sizeof(SinkReply));
           }
@@ -306,6 +339,9 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
           // Only discards device audio when asked to, as on a stream flush or pause.
           if (m_sink && *reinterpret_cast<const bool*>(msg->data))
             m_sink->Flush();
+          // the engine keeps counting what the device still plays
+          if (m_stats)
+            ReportDelay();
           msg->Reply(CSinkControlProtocol::ACC);
           return;
 
@@ -1089,7 +1125,7 @@ void CActiveAESink::ReturnBuffers()
   }
 }
 
-unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
+unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples, unsigned int* filled)
 {
   uint8_t **buffer = samples->pkt->data;
   uint8_t *packBuffer;
@@ -1099,9 +1135,17 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
   int retry = 0;
   unsigned int written = 0;
   AEDelayStatus status;
+  // as the engine counted it: a packet, a pause burst or nothing
+  int rawPackets = 0;
+  int rawPauseMs = 0;
 
   if (m_requestedFormat.m_dataFormat == AE_FMT_RAW)
   {
+    if (samples->pool && samples->pkt->nb_samples > 0)
+      rawPackets = 1;
+    else if (samples->pool)
+      rawPauseMs = samples->pkt->pause_burst_ms;
+
     bool skipSwap = false;
     if (m_needIecPack)
     {
@@ -1149,13 +1193,12 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
       {
         m_sink->AddPause(samples->pkt->pause_burst_ms);
         m_sink->GetDelay(status);
-        m_stats->UpdateSinkDelay(status, samples->pool ? 1 : 0);
+        if (!filled)
+          m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
         return status.delay * 1000;
       }
     }
   }
-
-  int framesOrPackets;
 
   while (frames > 0)
   {
@@ -1171,10 +1214,10 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
         m_extError = true;
         CLog::Log(LOGERROR, "CActiveAESink::OutputSamples - failed");
         status.SetDelay(0);
-        framesOrPackets = frames;
         if (m_requestedFormat.m_dataFormat == AE_FMT_RAW)
-          framesOrPackets = 1;
-        m_stats->UpdateSinkDelay(status, samples->pool ? framesOrPackets : 0);
+          m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
+        else
+          m_stats->UpdateSinkDelay(status, samples->pool ? frames : 0);
         return 0;
       }
       else
@@ -1185,31 +1228,38 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
       m_extError = true;
       CLog::Log(LOGERROR, "CActiveAESink::OutputSamples - sink returned error");
       status.SetDelay(0);
-      framesOrPackets = frames;
       if (m_requestedFormat.m_dataFormat == AE_FMT_RAW)
-        framesOrPackets = 1;
-      m_stats->UpdateSinkDelay(status, samples->pool ? framesOrPackets : 0);
+        m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
+      else
+        m_stats->UpdateSinkDelay(status, samples->pool ? frames : 0);
       return 0;
     }
     frames -= written;
+    if (filled)
+      *filled += written;
 
     m_sink->GetDelay(status);
 
-    if (m_requestedFormat.m_dataFormat != AE_FMT_RAW)
+    if (m_requestedFormat.m_dataFormat != AE_FMT_RAW && !filled)
       m_stats->UpdateSinkDelay(status, samples->pool ? written : 0);
   }
 
-  if (m_requestedFormat.m_dataFormat == AE_FMT_RAW)
-  {
-    // A packet dropped for a/v sync has no frames and never enters the loop above. Query the
-    // sink anyway, otherwise the engine is told the sink holds no audio at all and the next
-    // sync error measurements are off by the whole sink delay.
-    if (totalFrames == 0)
-      m_sink->GetDelay(status);
-    m_stats->UpdateSinkDelay(status, samples->pool ? 1 : 0);
-  }
+  // a skipped packet or an emptied buffer writes nothing, the device still holds what it had
+  if (totalFrames == 0)
+    m_sink->GetDelay(status);
+
+  if (m_requestedFormat.m_dataFormat == AE_FMT_RAW && !filled)
+    m_stats->UpdateSinkDelay(status, rawPackets, rawPauseMs);
 
   return status.delay * 1000;
+}
+
+void CActiveAESink::ReportDelay()
+{
+  AEDelayStatus status;
+  if (m_sink)
+    m_sink->GetDelay(status);
+  m_stats->UpdateSinkDelay(status, 0);
 }
 
 void CActiveAESink::SwapInit(CSampleBuffer* samples)
